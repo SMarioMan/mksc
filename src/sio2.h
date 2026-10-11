@@ -17,3 +17,6 @@ typedef struct
 extern struc_71 sio2_sMPlayerId;
 
 void sio2_stop(void);
+bool32 sio2_isMaster(void);
+bool32 sio2_isSlave(void);
+u16 sio2_computeGameChecksum(void);

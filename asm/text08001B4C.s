@@ -4715,7 +4715,7 @@ sub_80040A0: @ 0x080040A0
 	bl sub_802DC88
 	cmp r0, #0
 	beq _080040D4
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	beq _080040D4
 	ldr r0, [r4, #0x4c]
@@ -12130,7 +12130,7 @@ _08007BE6:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _08007C1C
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	beq _08007C1C
 	ldr r0, _08007C14 @ =_080C863C
@@ -17478,7 +17478,7 @@ _0800A644:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0800A684
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	beq _0800A684
 	mov r1, sl
