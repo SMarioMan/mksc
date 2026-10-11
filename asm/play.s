@@ -636,8 +636,8 @@ _08051BB0:
 	str r7, [r0, #0x00]
 	b _08051D3A
 	.align 2, 0
-_08051BB8: .4byte 0x03004EA0
-_08051BBC: .4byte 0x03004F30
+_08051BB8: .4byte gKeyTriggerBuf
+_08051BBC: .4byte gKeyBuf
 _08051BC0: .4byte 0x03002E44
 _08051BC4: .4byte 0x0000081C
 _08051BC8: .4byte 0x03005C50
