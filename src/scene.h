@@ -25,11 +25,19 @@ typedef struct
     TrackDef* trackDef;
     u8 gapwtf[0x164];
     FrameHeap frameHeap;
-    u8 gap6EC[0xEE];
+    u8 gap6EC[0xE8];
+    u8 raceOptions;
+    u8 gap7D5[2];
+    u8 humanCount;
+    u8 localPlayerId;
+    u8 gap7D9;
     u16 curRaceStateUnknown;
-    u8 gap7DC;
+    u8 engineClass;
     u8 headerTableIdx;
-    u8 gap7DE[0x1A];
+    u8 gap7DE[0x12];
+    u8 driverCount;
+    u8 driverCapacity;
+    u8 gap7F2[2];
     Driver* drivers[8];
     Driver* playerDriver;
     //...
