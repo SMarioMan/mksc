@@ -35,7 +35,7 @@ race_main: @ 0805167C
 	ldrb r0, [r6, #0x00]
 	cmp r0, #0x01
 	bls _0805170C
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0x00
 	beq _080516D2
 	ldr r1, _080516F0 @ =0x03002C80
@@ -439,7 +439,7 @@ _08051A2A:
 	cmp r0, #0x01
 	bls _08051A90
 	movs r4, #0x00
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0x00
 	bne _08051A48
 	movs r4, #0x01

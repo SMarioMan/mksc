@@ -75,6 +75,7 @@ SECTIONS
         src/main.o(.text);
         src/frameHeap.o(.text);
         asm/text0802D708.o(.text);
+        src/sio2_control.o(.text);
         src/sio2.o(.text);
         asm/text0802DCF0.o(.text);
         src/palette.o(.text);
