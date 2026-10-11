@@ -33,10 +33,15 @@ the single-player script additionally needs the matching `--elf` and optionally
 Player identity badges, map markers, and Battle balloon pips use red, green,
 yellow, pink, blue, orange, cyan, and purple. Portraits use native assets. Menus
 currently use a simple bitmap layout; matching the stock Multi-Pak menu artwork
-is a later visual improvement. HLE is also deferred until BIOS-backed gameplay,
-rounds, replay, and recovery are solid.
+is a later visual improvement. After the BIOS-backed matrix passed, optional
+HLE passed two- and eight-player entry and complete rounds in both modes, plus
+the ordinary GP character-voice regression. Add `--hle` to `test_game.py`,
+`test_rounds.py`, or `test_singleplayer.py` to select it explicitly. Their BIOS
+argument still identifies the supplied validation fixture; it is not loaded
+in HLE mode. The complete 2–8-player matrix, recovery, and replay coverage use
+the real BIOS.
 
-This is an in-progress development build. See `docs/ring-investigation.md` for
+This is an experimental playable build. See `docs/ring-investigation.md` for
 verified coverage and outstanding acceptance criteria. No physical-cable test
 has been performed. The intended stock AGB-005 arrangement puts each large plug
 on a GBA and each small plug in the next cable's middle socket, closing the ring.

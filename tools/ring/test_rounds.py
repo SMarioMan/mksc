@@ -19,6 +19,7 @@ p.add_argument('--nm', default='arm-none-eabi-nm')
 p.add_argument('--players', nargs='+', type=int, default=list(range(2,9)))
 p.add_argument('--modes', nargs='+', choices=['vs','battle'], default=['vs','battle'])
 p.add_argument('--workers', type=int, choices=range(1,5), default=3)
+p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
 a = p.parse_args()
 if any(n < 2 or n > 8 for n in a.players):
     p.error('Player counts must be 2 through 8')
@@ -61,11 +62,16 @@ def run(n,mode):
                '--screens',str(a.results/name)]
     if mode == 'vs':
         command += ['--autodrive-frame','3500','--autofire']
+    if a.hle:
+        bios_index = command.index('--bios')
+        del command[bios_index:bios_index + 2]
+        command += ['--hle']
     proc = subprocess.run(command,capture_output=True,text=True,timeout=600)
     (a.results/(name+'.json')).write_text(proc.stdout)
     (a.results/(name+'.stderr')).write_text(proc.stderr)
     assert proc.returncode == 0 and not proc.stderr, (name,proc.stderr[:2000])
     result = json.loads(proc.stdout)
+    assert result['bios'] == ('hle' if a.hle else 'real'), name
     assert result['collisions'] == 0, name
     states = []
     rounds = []
