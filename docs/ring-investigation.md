@@ -16,8 +16,11 @@ emulator transport as eight-player Mario Kart support.
 - Tested software enumeration, distinct input propagation, nonzero host,
   sequence wrap, and fresh-session recovery after opening/restoring a wire.
 - Connected the stock ROM using the stock mGBA lockstep driver through title,
-  Multi-Pak Link, game selection, and four-console character selection. Gameplay
-  and Battle baselines still need completion; screenshots alone are insufficient.
+  Multi-Pak Link, game selection, four-console character selection, and original
+  Vs./Battle gameplay. `mgba/tools/link/test_stock.py` reproduces menu inputs and
+  checks local IDs, membership, independent held keys, mode flags, and matching
+  racer positions across four consoles. This baseline covers gameplay entry,
+  not a complete race or all Battle mechanics.
 
 ## Sources inspected
 
@@ -73,8 +76,8 @@ build and voice-channel/output trace are needed before game code expansion.
 
 ## Remaining acceptance criteria
 
-1. Stock four-player Vs. race and Battle sessions with reproducible, independent
-   input sequences and verified mode/gameplay state.
+1. Extend the stock four-player baseline through full races and Battle rounds,
+   including results and disconnection behavior.
 2. Matching C for the relevant menu/transport paths, with a hash-verified commit
    before functional changes.
 3. A separate ring menu path, host/lobby/membership flow, integrated transport,
