@@ -2,6 +2,7 @@
 #include "libunk/irq.h"
 #include "main.h"
 #include "sio2.h"
+#include "ringLink.h"
 
 extern const u8 _080DE17C[];
 void sub_802E0D4(const void* config);
@@ -23,6 +24,9 @@ void sio2_stop(void)
     SioControlBytes* control = (SioControlBytes*)REG_ADDR_RCNT;
     register int high asm("r0") = control->high;
     register int mask asm("r1") = 0xC0;
+#ifdef MKSC_RING
+    ring_stop();
+#endif
     control->high = high | mask;
     irq_updateMask(IRQ_UPDATE_MODE_AND, ~(IRQ_MASK_SIO | IRQ_MASK_TIMER3));
     REG_IF = IRQ_MASK_SIO | IRQ_MASK_TIMER3;
@@ -33,8 +37,14 @@ void sio2_stop(void)
 
 bool32 sio2_isConnected(void)
 {
-    int state = sub_802E4DC();
-    bool32 result = FALSE;
+    int state;
+    bool32 result;
+#ifdef MKSC_RING
+    if (ring_active())
+        return sio2_sMPlayerId.playerCount >= 2;
+#endif
+    state = sub_802E4DC();
+    result = FALSE;
     if (state == 0)
         result = TRUE;
     return result;

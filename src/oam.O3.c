@@ -1,6 +1,7 @@
 #include "common.h"
 #include "math.h"
 #include "oam.h"
+#include "ringLink.h"
 
 const int sObjHalfWidth[3][4] = { { 4, 8, 16, 32 }, { 8, 16, 16, 32 }, { 4, 4, 8, 16 } };
 const int sObjHalfHeight[3][4] = { { 4, 8, 16, 32 }, { 4, 4, 8, 16 }, { 8, 16, 16, 32 } };
@@ -426,6 +427,14 @@ void oam_reset(void)
 {
     int i;
     u32* ptr;
+
+#ifdef MKSC_RING
+    /* A ring exchange can span a video frame. Keep a list under construction
+     * until oam_update has published it; VBlank must not reset its allocator
+     * between selecting a cell and filling that cell. */
+    if (ring_active() && sCopyDisabled)
+        return;
+#endif
 
     if (!oam_3002188 || oam_300218C)
         return;

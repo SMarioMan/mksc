@@ -19,3 +19,7 @@ _ReSharper*/
 /lib/*/build
 /lib/*/*.a
 /lib/*/*.h
+/build-ring
+
+__pycache__/
+*.pyc
