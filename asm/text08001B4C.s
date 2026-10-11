@@ -4712,7 +4712,7 @@ sub_80040A0: @ 0x080040A0
 	adds r4, r0, #0
 	adds r7, r4, #0
 	adds r7, #0x54
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _080040D4
 	bl sio2_isSlave
@@ -11799,7 +11799,7 @@ _08007970:
 	cmp r5, r0
 	ble _08007962
 _0800797C:
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0800799E
 	ldr r0, [r7, #0x4c]
@@ -12127,7 +12127,7 @@ _08007BE6:
 	ands r0, r1
 	cmp r0, #0xf
 	bgt _08007C2C
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _08007C1C
 	bl sio2_isSlave
@@ -17475,7 +17475,7 @@ _0800A638:
 	cmp r8, r0
 	blt _0800A5DA
 _0800A644:
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0800A684
 	bl sio2_isSlave
@@ -36051,7 +36051,7 @@ sub_8013D40: @ 0x08013D40
 	bl main_frameProc
 	bl main_frameProc
 	bl sub_8012388
-	bl sub_802DC30
+	bl sio2_start
 	ldr r1, _08013DF8 @ =0x03002C80
 	ldrh r2, [r1, #0x16]
 	movs r3, #0x80

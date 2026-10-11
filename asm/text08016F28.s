@@ -12953,7 +12953,7 @@ _0801DC78: .4byte 0x06000400
 sub_801DC7C: @ 0x0801DC7C
 	push {r4, lr}
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0801DC90
 	bl sio2_isSlave
@@ -16210,7 +16210,7 @@ _0801F670:
 	str r0, [r7, #0x10]
 	movs r2, #0
 	str r2, [sp, #0x48]
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0801F698
 	bl sio2_isSlave
@@ -16441,7 +16441,7 @@ _0801F868:
 	movs r0, #1
 	str r0, [r7, #0x10]
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0801F882
 	bl sio2_isSlave
@@ -16475,7 +16475,7 @@ _0801F8A8:
 	cmp r0, #5
 	bgt _0801F9B4
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0801F8C8
 	bl sio2_isSlave
@@ -16624,7 +16624,7 @@ _0801F9BE:
 	ldr r0, [r7]
 	mov sb, r0
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0801F9DC
 	bl sio2_isSlave
@@ -16776,7 +16776,7 @@ _0801FAF4:
 	movs r0, #0x8e
 	bl m4aSongNumStart
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0801FB0C
 	bl sio2_isSlave
@@ -16816,7 +16816,7 @@ _0801FB44:
 	b _0801FC54
 _0801FB54:
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0801FB66
 	bl sio2_isSlave
@@ -24122,7 +24122,7 @@ sub_8023610: @ 0x08023610
 	movs r0, #1
 	bl pltt_setDirtyFlag
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _08023642
 	bl sio2_isSlave
@@ -24208,7 +24208,7 @@ sub_80236F0: @ 0x080236F0
 	adds r0, r0, r2
 	ldrb r6, [r0]
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0802371E
 	bl sio2_isSlave
@@ -26088,7 +26088,7 @@ _0802456C: .4byte 0x00000818
 _08024570:
 	movs r2, #0
 	mov r8, r2
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _08024584
 	bl sio2_isSlave
@@ -26732,7 +26732,7 @@ sub_8024A48: @ 0x08024A48
 	movs r0, #1
 	bl pltt_setDirtyFlag
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _08024A7A
 	bl sio2_isSlave
@@ -26813,7 +26813,7 @@ sub_8024B1C: @ 0x08024B1C
 	ldrb r0, [r0]
 	str r0, [sp]
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _08024B46
 	bl sio2_isSlave
@@ -28672,7 +28672,7 @@ _08025980:
 _0802598A:
 	movs r3, #0
 	mov sb, r3
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0802599E
 	bl sio2_isSlave
@@ -35358,7 +35358,7 @@ _08028ED2:
 	mov sb, r3
 	bl oam_update
 	bl main_frameProc
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _08028F3E
 	movs r0, #0
@@ -36084,7 +36084,7 @@ _080294C8:
 	str r3, [sp, #0x14]
 	b _08029674
 _080294D0:
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _080294E8
 	mov r5, sb
@@ -41707,7 +41707,7 @@ _0802C130:
 	orrs r0, r1
 	strh r0, [r2]
 	movs r4, #0
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0802C154
 	bl sio2_isSlave
@@ -42074,7 +42074,7 @@ _0802C468: .4byte 0x000007D6
 _0802C46C:
 	movs r1, #0
 	str r1, [sp, #0x28]
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0802C480
 	bl sio2_isSlave
@@ -42925,7 +42925,7 @@ sub_802CB7C: @ 0x0802CB7C
 	ldrb r7, [r2, #3]
 	movs r0, #0
 	str r0, [sp, #4]
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0802CBB2
 	bl sio2_isSlave
@@ -43404,7 +43404,7 @@ sub_802CF78: @ 0x0802CF78
 	lsrs r4, r1, #0x10
 	ldr r0, _0802D070 @ =0x03002C78
 	ldr r7, [r0]
-	bl sub_802DC88
+	bl sio2_isConnected
 	cmp r0, #0
 	beq _0802CF9C
 	bl sio2_isSlave

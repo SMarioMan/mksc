@@ -20,3 +20,6 @@ void sio2_stop(void);
 bool32 sio2_isMaster(void);
 bool32 sio2_isSlave(void);
 u16 sio2_computeGameChecksum(void);
+
+void sio2_start(void);
+bool32 sio2_isConnected(void);
