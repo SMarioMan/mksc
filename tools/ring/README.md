@@ -13,7 +13,9 @@ owns the clock and menus. Choose Vs./Battle, engine class (Vs.), individual
 characters, and a track or arena. Eight controllers, character slots, and
 converted driver input words have separate storage; unused slots stay released.
 
-The normal-32 transport assigns software IDs around the ring. CRC-protected
+The normal-32 transport uses the standard 2 MHz serial clock and assigns
+software IDs around the ring. External-clock receivers HALT between interrupts
+while preserving VBlank audio service. CRC-protected
 READY, FRAME, INPUT, and COMMIT packets form a deterministic input barrier;
 physics advances only after everyone receives the same input vector. Serial-completion IRQs keep receivers armed while rendering and mixing audio.
 Timer 2 supplies forwarding turnaround, preserving audio timers 0/1 and native serial timer 3.
@@ -51,6 +53,13 @@ The modified mGBA Qt GUI supports **File → GBA link topology... → Ring link
 in every window. See `mgba/tools/link/GUI.md` in the emulator repository.
 The title label uses native font glyphs cached after title asset loading;
 `test_title.py` checks visibility of all three labels and normal menu speed.
+
+`test_rendering.py` verifies a frozen eight-player menu on both Mode 4 pages,
+all eight karts and seven colored opponent markers in 700 consecutive stationary
+Vs. frames, distinct native character textures matching their VRAM banks, and
+5,600 valid Battle sprite frames. It needs `--runner`, `--rom`, `--bios`, and
+`--results`, using a runner built with the video-log diagnostics. Its stationary
+grid keeps all eight racers visible so ordinary movement cannot hide flicker.
 
 `test_rounds.py` additionally needs `--elf`; it verifies full rounds and common
 rankings/wins with actual driving and item inputs. `test_flows.py` checks native

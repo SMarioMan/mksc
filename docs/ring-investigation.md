@@ -110,7 +110,47 @@ Concurrent eight-window runs were below real time on the shared cloud VM;
 desktop GUI throughput remains to be measured. GUI checks establish entry and
 lifecycle behavior; completed rounds remain covered by the headless matrix.
 
-## Research and remaining limits
+## Sprite and scheduler corrections
+
+The stock opponent-marker switch has only three entries. When a fourth remote
+kart becomes visible it passes a null cell pointer at the original `0804A1F6`
+call site, producing invalid OAM and displacing normal kart sprites. The ring
+build supplies one valid diamond cell per human ID, with eight identity colors,
+and reuses the stock marker tile region at `06012640`. Native kart texture banks
+and course-object banks remain available. The native remote texture throttle
+also uses video-frame parity, which can permanently skip slots when a ring
+barrier consumes multiple video frames; ring races update these descriptors
+each simulation frame. Both assembly hooks are conditional on `MKSC_RING`.
+The ordinary build still matches SHA-1 `9d327c030c3e2d9007990518594f70c3340ac56f`.
+
+The lobby/results/error bitmap renderer draws to the inactive Mode 4 page and
+flips at VBlank only after the complete menu is ready. Palette uploads and
+native audio service remain active. `test_rendering.py` checks every completed
+frame: 2,400 identical frozen-menu frames across both pages, all eight karts and
+seven identity markers in 700 consecutive rear-view frames, distinct texture
+sources matching native VRAM banks, and 5,600 valid Battle sprite frames.
+
+The transport now uses standard 2 MHz normal-32 serial with the existing
+4,096-cycle forwarding turnaround. External-clock consoles sleep in HALT
+between serial/VBlank interrupts. The GUI adapter batches bounded timestamp-
+ordered slices on sleeping peers rather than handing off an OS thread for each
+small serial slice. Only a core's owning thread waits on its audio/video output;
+GUI interruption and lifecycle operations remain responsive with synchronized
+eight-window playback. This changes scheduling overhead, not serial timing.
+
+For ring ROM SHA-256
+`23a83a53e90504ffe0882367e02a46a300d37ab5982d1a7fd36e82efd3498f44`,
+the real-BIOS revalidation passed all fourteen 2–8-player Vs./Battle entry and
+control cases, complete rounds in both modes at two and eight players, the
+consecutive-frame rendering checks, all title labels with 200 updates in 200
+frames, lobby PCM clearing, and ordinary GP with ten character-voice callbacks.
+The GUI suite passed all ten cases, with an additional synchronized eight-window
+Vs. lifecycle run. The emulator's 34 default CTest targets also passed.
+Cancellation, wire-loss reconnect, pause/resume, and restart passed at two and
+eight players. After BIOS validation, optional HLE entry/control checks also
+passed in both modes at two and eight players.
+
+## Research sources and hardware limits
 
 Inspected GBATEK normal-serial documentation, Faceball2000DX enumeration fixes,
 and DoubleCherryGB's ring implementation. The linked YouTube and Reddit pages

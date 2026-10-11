@@ -18383,6 +18383,15 @@ sub_803CD50: @ 0x0803CD50
 	beq _0803CDD6
 	ldr r2, _0803CDFC @ =0x000007FE
 	adds r0, r5, r2
+	.ifdef MKSC_RING
+	/* Video frames can advance during a ring barrier. Do not use their
+	 * parity to starve particular remote kart texture slots forever. */
+	bl ring_active
+	cmp r0, #0
+	bne _0803CDD6
+	ldr r2, _0803CDFC @ =0x000007FE
+	adds r0, r5, r2
+	.endif
 	ldrh r1, [r0]
 	movs r0, #0x80
 	lsls r0, r0, #6
@@ -46120,6 +46129,15 @@ _0804A118:
 	orrs r2, r0
 	str r2, [sp, #0x24]
 _0804A186:
+	.ifdef MKSC_RING
+	mov r0, sb
+	bl ring_playerMarker
+	cmp r0, #0
+	beq 1f
+	adds r2, r0, #0
+	b _0804A1F6
+1:
+	.endif
 	mov r0, sb
 	cmp r0, #1
 	beq _0804A1C8

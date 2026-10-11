@@ -27,6 +27,6 @@ proc = subprocess.run([str(a.runner), '--ring', '--rom', str(rom), '--bios', str
 assert proc.returncode == 0, proc.stderr
 result = json.loads(proc.stdout)
 for node in result['nodes']:
-    assert node['siocnt'] == 0x5080, node  # Slave armed, waiting for discovery.
+    assert node['siocnt'] == 0x5082, node  # Slave armed at the normal-32 fast clock setting.
     assert len(node['dump']) == 396 and not any(node['dump']), node['slot']
 print('PASS: both waiting consoles clear the complete 1584-byte PCM buffer')
