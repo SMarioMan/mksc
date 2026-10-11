@@ -102,6 +102,14 @@ pause. See `mgba/tools/link/GUI.md` for build/use and fixture-based GUI checks.
 Network play and connected-session savestates are not included.
 The model does not resolve intermediate bit edges or electrical loading.
 
+The Qt build has 34 passing CTest targets. Private real-BIOS GUI fixtures passed
+two/eight-window Ring Vs. and Battle entry, four-window standard Vs. and Battle
+entry using the mod ROM, group pause/resume, reset, middle-window removal,
+close/reopen, synchronized two-window playback, and staggered startup.
+Concurrent eight-window runs were below real time on the shared cloud VM;
+desktop GUI throughput remains to be measured. GUI checks establish entry and
+lifecycle behavior; completed rounds remain covered by the headless matrix.
+
 ## Research and remaining limits
 
 Inspected GBATEK normal-serial documentation, Faceball2000DX enumeration fixes,
