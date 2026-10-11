@@ -1587,7 +1587,7 @@ _080027A4:
 	adds r0, r6, #0
 	adds r1, r4, #0
 	movs r2, #1
-	bl sub_8007138
+	bl spm_chooseCharacter
 	cmp r0, #0
 	beq _080027E2
 	movs r0, #2
@@ -10731,8 +10731,8 @@ _0800712C: .4byte 0x000011F0
 _08007130: .4byte 0x00001208
 _08007134: .4byte 0x00001206
 
-	thumb_func_start sub_8007138
-sub_8007138: @ 0x08007138
+	thumb_func_start spm_chooseCharacter
+spm_chooseCharacter: @ 0x08007138
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
