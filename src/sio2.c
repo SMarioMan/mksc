@@ -5,7 +5,7 @@ extern const u8 _080000A0[];
 
 bool32 sio2_isMaster(void)
 {
-    struc_71* state = &sio2_sMPlayerId;
+    Sio2State* state = &sio2_sMPlayerId;
     bool32 result = FALSE;
     if (state->mPlayerId == 0)
         result = TRUE;
@@ -14,7 +14,7 @@ bool32 sio2_isMaster(void)
 
 bool32 sio2_isSlave(void)
 {
-    struc_71* state = &sio2_sMPlayerId;
+    Sio2State* state = &sio2_sMPlayerId;
     bool32 result = FALSE;
     if (state->mPlayerId > 0)
         result = TRUE;

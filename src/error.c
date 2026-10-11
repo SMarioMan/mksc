@@ -190,7 +190,7 @@ int error_main(void)
 
     error_loadGraphics();
 
-    offset = sio2_sMPlayerId.field_1;
+    offset = sio2_sMPlayerId.playerCount;
     if (offset <= 1)
         offset = 1;
 
@@ -291,7 +291,7 @@ static void error_8016D90(void)
 
     ErrorState* state = sState;
 
-    int v1 = sio2_sMPlayerId.field_1;
+    int v1 = sio2_sMPlayerId.playerCount;
     if (v1 <= 1)
         v1 = 1;
 
@@ -360,7 +360,7 @@ void sub_8016F28(void)
 
     if (dword_203EC20)
     {
-        int idx = sio2_sMPlayerId.field_1;
+        int idx = sio2_sMPlayerId.playerCount;
         u16** cellData = dword_80DA334;
 
         if (--idx < 0)
