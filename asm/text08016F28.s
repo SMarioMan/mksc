@@ -10175,7 +10175,7 @@ _0801C590:
 	adds r0, r0, r1
 	b _0801C662
 	.align 2, 0
-_0801C5AC: .4byte 0x03004EA0
+_0801C5AC: .4byte gKeyTriggerBuf
 _0801C5B0: .4byte gMPlayTable
 _0801C5B4: .4byte gSongTable
 _0801C5B8:
@@ -14801,7 +14801,7 @@ _0801EB56:
 	movs r0, #6
 	bl _0801FDEC
 	.align 2, 0
-_0801EB60: .4byte 0x03004EA0
+_0801EB60: .4byte gKeyTriggerBuf
 _0801EB64:
 	movs r0, #0
 	str r0, [sp, #8]
@@ -14919,7 +14919,7 @@ _0801EC46:
 	movs r0, #0xd
 	bl _0801FDEC
 	.align 2, 0
-_0801EC50: .4byte 0x03004EA0
+_0801EC50: .4byte gKeyTriggerBuf
 _0801EC54:
 	movs r6, #0
 	movs r0, #0xfe
@@ -15019,7 +15019,7 @@ _0801ED08:
 	movs r0, #0xd
 	bl _0801FDEC
 	.align 2, 0
-_0801ED14: .4byte 0x03004EA0
+_0801ED14: .4byte gKeyTriggerBuf
 _0801ED18:
 	ldr r0, [r7, #8]
 	adds r0, #1
@@ -15045,7 +15045,7 @@ _0801ED3C:
 	movs r0, #0xd
 	bl _0801FDEC
 	.align 2, 0
-_0801ED48: .4byte 0x03004EA0
+_0801ED48: .4byte gKeyTriggerBuf
 _0801ED4C:
 	movs r3, #0xfe
 	lsls r3, r3, #3
@@ -15133,7 +15133,7 @@ _0801EDF0:
 	movs r0, #0xd
 	bl _0801FDEC
 	.align 2, 0
-_0801EDFC: .4byte 0x03004EA0
+_0801EDFC: .4byte gKeyTriggerBuf
 _0801EE00:
 	movs r0, #0
 	str r0, [sp, #0xc]
@@ -15305,7 +15305,7 @@ _0801EF58:
 	.align 2, 0
 _0801EF64: .4byte 0x06003800
 _0801EF68: .4byte 0x80000280
-_0801EF6C: .4byte 0x03004EA0
+_0801EF6C: .4byte gKeyTriggerBuf
 _0801EF70:
 	ldr r0, [r7, #0xc]
 	adds r0, #1
@@ -15384,7 +15384,7 @@ _0801EFF8:
 	movs r0, #0x17
 	bl _0801FDEC
 	.align 2, 0
-_0801F004: .4byte 0x03004EA0
+_0801F004: .4byte gKeyTriggerBuf
 _0801F008:
 	ldr r0, [r7, #8]
 	adds r1, r0, #0
@@ -15411,7 +15411,7 @@ _0801F02C:
 	movs r0, #0x17
 	bl _0801FDEC
 	.align 2, 0
-_0801F038: .4byte 0x03004EA0
+_0801F038: .4byte gKeyTriggerBuf
 _0801F03C:
 	bl sub_801E0B8
 	movs r0, #0
@@ -15549,7 +15549,7 @@ _0801F140:
 	movs r0, #0x17
 	bl _0801FDEC
 	.align 2, 0
-_0801F14C: .4byte 0x03004EA0
+_0801F14C: .4byte gKeyTriggerBuf
 _0801F150:
 	ldr r0, [r7, #0xc]
 	adds r0, #1
@@ -15643,7 +15643,7 @@ _0801F206:
 	movs r0, #0x17
 	bl _0801FDEC
 	.align 2, 0
-_0801F214: .4byte 0x03004EA0
+_0801F214: .4byte gKeyTriggerBuf
 _0801F218:
 	bl sub_801E0B8
 	movs r0, #0
@@ -15709,7 +15709,7 @@ _0801F292:
 	movs r0, #0x1a
 	bl _0801FDEC
 	.align 2, 0
-_0801F2A4: .4byte 0x03004EA0
+_0801F2A4: .4byte gKeyTriggerBuf
 _0801F2A8:
 	bl sub_805CD50
 	ldr r0, _0801F2C4 @ =0x000007DD
@@ -16411,7 +16411,7 @@ _0801F824: .4byte 0x0000B0A3
 _0801F828: .4byte 0x0000F103
 _0801F82C: .4byte 0x0000F903
 _0801F830: .4byte 0x00000FFF
-_0801F834: .4byte 0x03004EA0
+_0801F834: .4byte gKeyTriggerBuf
 _0801F838:
 	ldr r4, [r7]
 	cmp r4, #0
@@ -16801,7 +16801,7 @@ _0801FB26:
 	movs r0, #0x25
 	b _0801FDEC
 	.align 2, 0
-_0801FB30: .4byte 0x03004EA0
+_0801FB30: .4byte gKeyTriggerBuf
 _0801FB34: .4byte 0x0000F103
 _0801FB38: .4byte 0x0000F903
 _0801FB3C: .4byte 0x00000FFF
@@ -17180,7 +17180,7 @@ _0801FE14:
 	bl CpuFastSet
 	b _0801FE58
 	.align 2, 0
-_0801FE34: .4byte 0x03004EA0
+_0801FE34: .4byte gKeyTriggerBuf
 _0801FE38: .4byte 0x03002E20
 _0801FE3C: .4byte _080AACF0
 _0801FE40:
@@ -19994,7 +19994,7 @@ _080214F6:
 	str r0, [r2, #4]
 	b _080219F2
 	.align 2, 0
-_08021504: .4byte 0x03004EA0
+_08021504: .4byte gKeyTriggerBuf
 _08021508:
 	movs r0, #0
 	str r0, [sp, #8]
@@ -25705,7 +25705,7 @@ _08024298:
 	str r0, [r4]
 	b _080247CA
 	.align 2, 0
-_080242A8: .4byte 0x03004EA0
+_080242A8: .4byte gKeyTriggerBuf
 _080242AC:
 	mov r6, sb
 	ldr r0, [r6, #8]
@@ -25982,7 +25982,7 @@ _08024492:
 	str r0, [r2]
 	b _080247CA
 	.align 2, 0
-_080244A0: .4byte 0x03004EA0
+_080244A0: .4byte gKeyTriggerBuf
 _080244A4:
 	movs r0, #0
 	movs r1, #0
@@ -26211,7 +26211,7 @@ _08024660: .4byte _080DB89C
 _08024664: .4byte 0x0000F003
 _08024668: .4byte 0x0000F803
 _0802466C: .4byte 0x00000FFF
-_08024670: .4byte 0x03004F48
+_08024670: .4byte gKeyRepeatTriggerBuf
 _08024674:
 	cmp r0, #0x40
 	beq _0802467E
@@ -26341,7 +26341,7 @@ _0802474C:
 	str r0, [r2]
 	b _080247CA
 	.align 2, 0
-_08024768: .4byte 0x03004EA0
+_08024768: .4byte gKeyTriggerBuf
 _0802476C:
 	mov r4, sb
 	ldr r2, [r4, #0xc]
@@ -28406,7 +28406,7 @@ _0802578E:
 	str r0, [r3]
 	b _08025BBC
 	.align 2, 0
-_0802579C: .4byte 0x03004EA0
+_0802579C: .4byte gKeyTriggerBuf
 _080257A0:
 	mov r6, r8
 	ldr r0, [r6, #8]
@@ -28561,7 +28561,7 @@ _080258A6:
 	str r0, [r2]
 	b _08025BBC
 	.align 2, 0
-_080258B4: .4byte 0x03004EA0
+_080258B4: .4byte gKeyTriggerBuf
 _080258B8:
 	movs r0, #0
 	movs r1, #0
@@ -28796,7 +28796,7 @@ _08025A6A:
 	.align 2, 0
 _08025A84: .4byte _080DB9A0
 _08025A88: .4byte 0x00000FFF
-_08025A8C: .4byte 0x03004F48
+_08025A8C: .4byte gKeyRepeatTriggerBuf
 _08025A90:
 	cmp r0, #0x40
 	beq _08025A9A
@@ -28940,7 +28940,7 @@ _08025B86:
 	adds r0, #1
 	b _08025BBA
 	.align 2, 0
-_08025BA0: .4byte 0x03004EA0
+_08025BA0: .4byte gKeyTriggerBuf
 _08025BA4:
 	ldr r1, _08025CD8 @ =_080DBA60
 	mov r3, r8
@@ -35646,7 +35646,7 @@ _08029110: .4byte 0x0000061C
 _08029114: .4byte 0x03004F50
 _08029118: .4byte 0x03002C80
 _0802911C: .4byte 0x03004F70
-_08029120: .4byte 0x03004EA0
+_08029120: .4byte gKeyTriggerBuf
 _08029124: .4byte 0x03002E44
 _08029128: .4byte 0x0000071C
 _0802912C: .4byte _080DC0BC
@@ -36174,7 +36174,7 @@ _08029574: .4byte 0x03002E20
 _08029578: .4byte 0x000007FB
 _0802957C: .4byte 0x0000000B
 _08029580: .4byte 0x03004F70
-_08029584: .4byte 0x03004EA0
+_08029584: .4byte gKeyTriggerBuf
 _08029588: .4byte _08102910+4
 _0802958C: .4byte gMPlayTable
 _08029590: .4byte trns_initDefaultOutTransition
@@ -38389,7 +38389,7 @@ _0802A61A:
 _0802A664: .4byte 0x03002E20
 _0802A668: .4byte 0x000007FB
 _0802A66C: .4byte 0x03004F70
-_0802A670: .4byte 0x03004EA0
+_0802A670: .4byte gKeyTriggerBuf
 _0802A674: .4byte 0x0203EBD8
 _0802A678: .4byte 0x00000DD8
 _0802A67C: .4byte trns_initDefaultOutTransition
@@ -42219,7 +42219,7 @@ _0802C58C: .4byte 0x030001A6
 _0802C590: .4byte gSinTable
 _0802C594: .4byte 0x000003FF
 _0802C598: .4byte _080AAD3C
-_0802C59C: .4byte 0x03004EA0
+_0802C59C: .4byte gKeyTriggerBuf
 _0802C5A0: .4byte 0x030001A4
 _0802C5A4:
 	subs r0, r2, #1
@@ -42255,7 +42255,7 @@ _0802C5C2:
 	b _0802C5F0
 	.align 2, 0
 _0802C5E4: .4byte 0x030001A4
-_0802C5E8: .4byte 0x03004EA0
+_0802C5E8: .4byte gKeyTriggerBuf
 _0802C5EC:
 	ldrh r0, [r1]
 	adds r0, #1
@@ -42299,7 +42299,7 @@ _0802C62E:
 	mov pc, r0
 	.align 2, 0
 _0802C638: .4byte 0x030001A4
-_0802C63C: .4byte 0x03004EA0
+_0802C63C: .4byte gKeyTriggerBuf
 _0802C640: .4byte _0802C644
 _0802C644: @ jump table
 	.4byte _0802C668 @ case 0
