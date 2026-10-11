@@ -17,7 +17,9 @@
 /* Serial transport owns timer 2 only. Audio owns timers 0/1; stock cable
  * transports keep timer 3. All software IDs travel through the cable. */
 #define RING_DATA (*(vu32*)0x04000120)
-#define RING_CONTROL 0x5000
+/* Standard normal-32 mode at 2 MHz. Keep the IRQ forwarding turnaround;
+ * the slower 256 kHz clock needlessly stretched eight-player barriers. */
+#define RING_CONTROL 0x5002
 #define RING_START 0x80
 #define RING_INTERNAL 1
 #define RING_INVALID 0xFF
@@ -286,6 +288,18 @@ static void poll(void)
     REG_SIOCNT = control | RING_START;
 }
 
+static void waitReceiver(void)
+{
+    if (sRing.owner) return;
+    /* Serial and VBlank IRQs wake HALT even with IME masked. Check and sleep
+     * atomically so a COMMIT between the check and HALT cannot strand a peer.
+     * Keep external-clock consoles from spending the whole barrier spinning. */
+    REG_IME = 0;
+    if (sRing.enabled && sRing.inFlight && !sRing.complete && !sRing.failed)
+        *(vu8*)0x04000301 = 0;
+    REG_IME = 1;
+}
+
 u16* ring_peerWords(Sio2State* nativeState)
 {
     return sRing.enabled ? ring_sControlWords : (u16*)nativeState + 1;
@@ -432,17 +446,34 @@ bool32 ring_exchange(void)
             sRing.timeouts++;
             sRing.failed = TRUE;
         }
+        waitReceiver();
     } while (!sRing.complete && !sRing.failed);
     return sRing.failed;
 }
 
 static const u16 sPlayerColors[8] = { 0x001F, 0x03E0, 0x03FF, 0x7C1F, 0x7C00, 0x021F, 0x7FE0, 0x5014 };
 
+/* The native opponent marker switch has only three entries. Reuse its OBJ
+ * tile region for a diamond, with each kart's reserved identity palette. */
+static const u16 sKartMarkerCells[8][4] = {
+    {1, 0x00F6, 0x01FC, 0x8532}, {1, 0x00F6, 0x01FC, 0x9532},
+    {1, 0x00F6, 0x01FC, 0xA532}, {1, 0x00F6, 0x01FC, 0xB532},
+    {1, 0x00F6, 0x01FC, 0xC532}, {1, 0x00F6, 0x01FC, 0xD532},
+    {1, 0x00F6, 0x01FC, 0xE532}, {1, 0x00F6, 0x01FC, 0xF532}
+};
+
+const u16* ring_playerMarker(unsigned id)
+{
+    return sRing.enabled && id < sRing.count ? sKartMarkerCells[id] : 0;
+}
+
 /* Keep identity art in the unused BG HUD gap 2B00..2DFF. All eight
  * kart texture slots and both course-object banks remain untouched. */
 static void badgeTiles(void)
 {
     u16 tiles[256];
+    static const u16 marker[16] = {0x1000,0,0x1100,1,0x2110,0x12,0x2211,0x1122,
+                                  0x2110,0x12,0x1100,1,0x1000,0,0,0};
     u32 i, row, col;
     u16* palette = pltt_getBuffer(0);
     for (i = 0; i < 256; i++) tiles[i] = 0;
@@ -459,6 +490,7 @@ static void badgeTiles(void)
                     tiles[128 + i * 16 + row * 2 + col / 4] |= (i + 1) << ((col % 4) * 4);
     }
     CpuCopy16(tiles, (void*)0x06002B00, sizeof(tiles));
+    CpuCopy16(marker, (void*)0x06012640, sizeof(marker));
     pltt_setDirtyFlag(0);
     /* Native kart/balloon palettes leave their first two entries reserved. */
     palette = pltt_getBuffer(1);
@@ -595,9 +627,37 @@ static unsigned glyph(char c)
     return 36;
 }
 
+static vu16* sMenuPixels;
+static volatile bool32 sMenuReady;
+static void resetMenuDisplay(void);
+
+static void menuVblank(void)
+{
+    if (sMenuReady)
+    {
+        REG_DISPCNT ^= 0x10;
+        sMenuReady = FALSE;
+    }
+}
+
+static void menuPixel(int x, int y, u32 color)
+{
+    u32 at = y * 120 + x / 2;
+    u32 shift = (x & 1) * 8;
+    /* Bitmap VRAM does not support byte stores. */
+    sMenuPixels[at] = (sMenuPixels[at] & ~(255 << shift)) | color << shift;
+}
+
+static u32 menuColor(u16 color)
+{
+    u32 i;
+    for (i = 0; i < 8; i++) if (color == sPlayerColors[i]) return i;
+    return color == 0x7FFF ? 10 : 11;
+}
+
 static void text(int x, int y, const char* string, u16 color)
 {
-    vu16* pixels = (vu16*)0x06000000;
+    u32 index = menuColor(color);
     int row, col;
     while (*string)
     {
@@ -605,7 +665,7 @@ static void text(int x, int y, const char* string, u16 color)
         for (row = 0; row < 7; row++)
             for (col = 0; col < 5; col++)
                 if (bitmap[row] & (16 >> col))
-                    pixels[(y + row) * 240 + x + col] = color;
+                    menuPixel(x + col, y + row, index);
         x += 6;
     }
 }
@@ -624,7 +684,7 @@ static void portrait(int x, int y, int menuCharacter)
             u32 tile = firstTile + (row / 8) * 2 + col / 8;
             u32 pixel = _08062834[tile * 32 + (row % 8) * 4 + (col % 8) / 2];
             pixel = (pixel >> ((col & 1) * 4)) & 15;
-            if (pixel) ((vu16*)0x06000000)[(y + row) * 240 + x + col] = _08062774[48 + pixel];
+            if (pixel) menuPixel(x + col, y + row, 32 + pixel);
         }
 }
 
@@ -639,9 +699,10 @@ static void number(int x, int y, unsigned n, u16 color)
 
 static void screen(const char* heading)
 {
-    vu16* pixels = (vu16*)0x06000000;
-    DMA_FILL(3, 0x7FA0, (void*)pixels, 240 * 26 * 2, 16);
-    DMA_FILL(3, 0x4108, (void*)(pixels + 240 * 26), 240 * (160 - 26) * 2, 16);
+    sMenuReady = FALSE;
+    sMenuPixels = (vu16*)((REG_DISPCNT & 0x10) ? 0x06000000 : 0x0600A000);
+    DMA_FILL(3, 0x0808, (void*)sMenuPixels, 240 * 26, 16);
+    DMA_FILL(3, 0x0909, (void*)(sMenuPixels + 120 * 26), 240 * (160 - 26), 16);
     text(12, 10, heading, 0x001F);
     text(12, 148, "A CONFIRM    B BACK", 0x7FFF);
 }
@@ -764,23 +825,7 @@ bool32 ring_main(void)
     u16 previous = 0, keys, trigger;
     u32 i, lastAudioFrame;
     extern u16 gKeyTriggerBuf[8], gKeyBuf[8];
-    scene_setVBlankFunc(0);
-    DmaStop(0);
-    vcount_reset();
-    irq_updateMask(IRQ_UPDATE_MODE_SET, IRQ_MASK_VBLANK | IRQ_MASK_CARTRIDGE | IRQ_MASK_IME | (sRing.enabled ? IRQ_MASK_SIO : 0));
-    oam_802FE4C(FALSE);
-    trns_init();
-    REG_DISPCNT = 0x403;
-    /* agbcc rereads volatile chained assignments; affine registers are write-only. */
-    REG_BG2PA = 0x100;
-    REG_BG2PD = 0x100;
-    REG_BG2PB = 0;
-    REG_BG2PC = 0;
-    REG_BG2X_L = 0;
-    REG_BG2X_H = 0;
-    REG_BG2Y_L = 0;
-    REG_BG2Y_H = 0;
-    REG_BLDCNT = 0;
+    resetMenuDisplay();
     if (sResume && ring_active()) goto connected;
     sSession = TRUE;
     for (i = 0; i < 8; i++) sWins[i] = 0;
@@ -788,6 +833,7 @@ bool32 ring_main(void)
     text(12, 42, "CONNECT ALL GBAS IN A RING", 0x7FFF);
     text(12, 60, "PRESS START ON ONE CONSOLE", 0x03FF);
     text(12, 78, "WAITING FOR OTHER PLAYERS", 0x7FFF);
+    sMenuReady = TRUE;
     /* Discovery polls without the normal frame loop. Continue servicing
      * MP2000 every VBlank so the last title sample cannot loop indefinitely. */
     m4aMPlayAllStop();
@@ -817,6 +863,7 @@ bool32 ring_main(void)
         poll();
         if (gSceneState.field14 - sRing.startVideoFrame > 180 && sRing.owner)
             sRing.failed = TRUE;
+        waitReceiver();
     }
     if (sRing.failed) goto lost;
 connected:
@@ -923,6 +970,7 @@ connected:
             if (trigger & A_BUTTON) goto launch;
             break;
         }
+        sMenuReady = TRUE;
     }
 launch:
     prepareRace(characters, battle, engine, course, retro);
@@ -1014,13 +1062,30 @@ bool32 ring_finishRace(void)
 
 static void resetMenuDisplay(void)
 {
+    extern const u16 _08062774[];
+    u16* palette = pltt_getBuffer(0);
+    u32 i;
+    sMenuReady = FALSE;
     scene_setVBlankFunc(0);
+    DmaStop(0);
+    vcount_reset();
+    REG_DISPCNT = 0x80;
+    for (i = 0; i < 8; i++) palette[i] = sPlayerColors[i];
+    palette[8] = 0x7FA0;
+    palette[9] = 0x4108;
+    palette[10] = 0x7FFF;
+    palette[11] = 0x03FF;
+    for (i = 0; i < 16; i++) palette[32 + i] = _08062774[48 + i];
+    pltt_setDirtyFlag(TRUE);
+    pltt_copyBufferToHw();
+    DMA_FILL(3, 0x0909, (void*)0x06000000, 240 * 160, 16);
+    scene_setVBlankFunc(menuVblank);
     DmaStop(0);
     vcount_reset();
     irq_updateMask(IRQ_UPDATE_MODE_SET, IRQ_MASK_VBLANK | IRQ_MASK_CARTRIDGE | IRQ_MASK_IME | (sRing.enabled ? IRQ_MASK_SIO : 0));
     oam_802FE4C(FALSE);
     trns_init();
-    REG_DISPCNT = 0x403;
+    REG_DISPCNT = 0x404;
     /* agbcc rereads volatile chained assignments; affine registers are write-only. */
     REG_BG2PA = 0x100;
     REG_BG2PD = 0x100;
@@ -1040,6 +1105,7 @@ static bool32 connectionError_main(void)
     screen("LINK CONNECTION LOST");
     text(12, 50, "CHECK THE RING CABLES", 0x7FFF);
     text(12, 75, "A OR B RETURNS TO THE MENU", 0x03FF);
+    sMenuReady = TRUE;
     while (1)
     {
         u16 keys, trigger;
@@ -1071,6 +1137,7 @@ static bool32 results_main(void)
         text(x + 18, y + 10, "WINS", 0x7FFF);
         number(x + 50, y + 10, sWins[id], sPlayerColors[id]);
     }
+    sMenuReady = TRUE;
     while (1)
     {
         main_frameProc();
