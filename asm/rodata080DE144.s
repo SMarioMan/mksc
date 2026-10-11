@@ -47,7 +47,9 @@ _080DE178: .4byte main_dummyIrqHandler
 
 	.global _080DE17C
 _080DE17C:
-	.incbin "baserom.gba", 0x000DE17C, 0x0000004C
+	.incbin "baserom.gba", 0x000DE17C, 0x00000038
+	.4byte sub_0802DB5C
+	.incbin "baserom.gba", 0x000DE1B8, 0x00000010
 
 	.global _080DE1C8
 _080DE1C8:

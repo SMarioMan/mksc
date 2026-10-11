@@ -2394,15 +2394,23 @@ _080EC8B8:
 
 	.global _080EC8F4
 _080EC8F4:
-	.incbin "baserom.gba", 0x000EC8F4, 0x00000028
+	.incbin "baserom.gba", 0x000EC8F4, 0x0000000C
+	.4byte sub_0803E2B4
+	.incbin "baserom.gba", 0x000EC904, 0x0000000C
+	.4byte sub_08040D8C
+	.incbin "baserom.gba", 0x000EC914, 0x00000008
 
 	.global _080EC91C
 _080EC91C:
-	.incbin "baserom.gba", 0x000EC91C, 0x00000018
+	.incbin "baserom.gba", 0x000EC91C, 0x0000000C
+	.4byte sub_0803E36C
+	.incbin "baserom.gba", 0x000EC92C, 0x00000008
 
 	.global _080EC934
 _080EC934:
-	.incbin "baserom.gba", 0x000EC934, 0x00000018
+	.incbin "baserom.gba", 0x000EC934, 0x0000000C
+	.4byte sub_0803E36C
+	.incbin "baserom.gba", 0x000EC944, 0x00000008
 
 	.global _080EC94C
 _080EC94C:

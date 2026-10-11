@@ -14323,11 +14323,23 @@ _080DC2C4: .4byte _080DC3C8
 
 	.global _080DC2C8
 _080DC2C8:
-	.incbin "baserom.gba", 0x000DC2C8, 0x00000038
+	.incbin "baserom.gba", 0x000DC2C8, 0x0000000C
+	.4byte sub_8028524
+	.incbin "baserom.gba", 0x000DC2D8, 0x0000000C
+	.4byte sub_8028524
+	.incbin "baserom.gba", 0x000DC2E8, 0x0000000C
+	.4byte sub_8028524
+	.incbin "baserom.gba", 0x000DC2F8, 0x00000008
 
 	.global _080DC300
 _080DC300:
-	.incbin "baserom.gba", 0x000DC300, 0x00000028
+	.incbin "baserom.gba", 0x000DC300, 0x0000000C
+	.4byte sub_08029B40
+	.incbin "baserom.gba", 0x000DC310, 0x00000004
+	.4byte sub_08029B74
+	.incbin "baserom.gba", 0x000DC318, 0x00000004
+	.4byte sub_08029ACC
+	.incbin "baserom.gba", 0x000DC320, 0x00000008
 
 	.global _080DC328
 _080DC328:
