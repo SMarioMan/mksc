@@ -12956,7 +12956,7 @@ sub_801DC7C: @ 0x0801DC7C
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0801DC90
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0801DC92
 _0801DC90:
@@ -16213,7 +16213,7 @@ _0801F670:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0801F698
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0801F69C
 _0801F698:
@@ -16444,7 +16444,7 @@ _0801F868:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0801F882
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0801F884
 _0801F882:
@@ -16478,7 +16478,7 @@ _0801F8A8:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0801F8C8
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0801F8CA
 _0801F8C8:
@@ -16627,7 +16627,7 @@ _0801F9BE:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0801F9DC
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0801F9DE
 _0801F9DC:
@@ -16779,7 +16779,7 @@ _0801FAF4:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0801FB0C
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0801FB0E
 _0801FB0C:
@@ -16819,7 +16819,7 @@ _0801FB54:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0801FB66
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0801FB68
 _0801FB66:
@@ -24125,7 +24125,7 @@ sub_8023610: @ 0x08023610
 	bl sub_802DC88
 	cmp r0, #0
 	beq _08023642
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _08023644
 _08023642:
@@ -24211,7 +24211,7 @@ sub_80236F0: @ 0x080236F0
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0802371E
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _08023720
 _0802371E:
@@ -26091,7 +26091,7 @@ _08024570:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _08024584
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _08024588
 _08024584:
@@ -26735,7 +26735,7 @@ sub_8024A48: @ 0x08024A48
 	bl sub_802DC88
 	cmp r0, #0
 	beq _08024A7A
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _08024A7C
 _08024A7A:
@@ -26816,7 +26816,7 @@ sub_8024B1C: @ 0x08024B1C
 	bl sub_802DC88
 	cmp r0, #0
 	beq _08024B46
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _08024B48
 _08024B46:
@@ -28675,7 +28675,7 @@ _0802598A:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0802599E
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _080259A2
 _0802599E:
@@ -41710,7 +41710,7 @@ _0802C130:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0802C154
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0802C156
 _0802C154:
@@ -42077,7 +42077,7 @@ _0802C46C:
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0802C480
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0802C484
 _0802C480:
@@ -42928,7 +42928,7 @@ sub_802CB7C: @ 0x0802CB7C
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0802CBB2
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0802CBB6
 _0802CBB2:
@@ -43407,7 +43407,7 @@ sub_802CF78: @ 0x0802CF78
 	bl sub_802DC88
 	cmp r0, #0
 	beq _0802CF9C
-	bl sub_802DCB4
+	bl sio2_isSlave
 	cmp r0, #0
 	bne _0802D060
 _0802CF9C:
