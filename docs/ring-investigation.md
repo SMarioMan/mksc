@@ -108,6 +108,10 @@ the next cable's middle socket, closing SO-to-SI with shared SC/GND. No custom
 cable is assumed. Software tests cannot establish cable loading, oscillator
 phase/drift tolerance, or signal integrity on real hardware.
 
-Stock-menu visual parity and HLE are stretch goals. HLE validation follows the
-BIOS-backed core checks. Do not describe untested hardware, every possible
+Stock-menu visual parity remains a stretch goal. After the BIOS-backed core
+checks passed, explicit HLE validation passed entry and complete Vs./Battle
+rounds at two and eight players, and ordinary GP character-voice callbacks.
+The runner rejects unsupported BIOS calls and confirms that no external BIOS
+was loaded. Recovery/replay and the intermediate player counts retain the
+real-BIOS coverage described above. Do not describe untested hardware, every possible
 course/item combination, or a complete C menu decompilation as verified.

@@ -22,6 +22,7 @@ p.add_argument('--players', nargs='+', type=int, default=list(range(2, 9)))
 p.add_argument('--host', type=int, default=0)
 p.add_argument('--arena', type=int, choices=range(4), default=0)
 p.add_argument('--modes', nargs='+', choices=['vs', 'battle'], default=['vs', 'battle'])
+p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
 a = p.parse_args()
 if hashlib.sha1(a.bios.read_bytes()).hexdigest() != BIOS_SHA1:
     p.error('The supplied real GBA BIOS is required')
@@ -58,18 +59,24 @@ for n in a.players:
         name = f'{mode}-{n}'
         inputs = a.results / f'{name}.csv'
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))
-        proc = subprocess.run([str(a.runner), '--ring', '--rom', str(rom),
+        command = [str(a.runner), '--ring', '--rom', str(rom),
                                '--bios', str(a.bios), '--players', str(n),
                                '--frames', '3750', '--input', str(inputs),
                                '--keys-address', '0x03006B00', '--key-slots', '8',
                                '--dump', '0x03006B40', '--barrier-state', '0x03006B40',
-                               '--screens', str(a.results / name)],
+                               '--screens', str(a.results / name)]
+        if a.hle:
+            bios_index = command.index('--bios')
+            del command[bios_index:bios_index + 2]
+            command += ['--hle']
+        proc = subprocess.run(command,
                               capture_output=True, text=True, timeout=300)
         (a.results / f'{name}.json').write_text(proc.stdout)
         (a.results / f'{name}.stderr').write_text(proc.stderr)
         if proc.returncode:
             raise RuntimeError(f'{name}: {proc.stderr}')
         data = json.loads(proc.stdout)
+        assert data['bios'] == ('hle' if a.hle else 'real'), name
         assert data['collisions'] == 0, name
         positions, rounds = [], []
         for node in data['nodes']:
@@ -91,5 +98,5 @@ for n in a.players:
         assert all(s == positions[0] for s in positions), (name, positions)
         assert len({tuple(pos) for pos in positions[0]}) == n, (name, positions[0])
         print(f'PASS {name}: {rounds[0]} commits, distinct controls and synchronized positions', flush=True)
-(a.results / 'manifest.json').write_text(json.dumps({'rom_sha256': rom_hash, 'bios_sha1': BIOS_SHA1,
+(a.results / 'manifest.json').write_text(json.dumps({'rom_sha256': rom_hash, 'bios_sha1': BIOS_SHA1, 'bios_mode': 'hle' if a.hle else 'real',
                                                     'players': a.players, 'modes': a.modes}, indent=2))
