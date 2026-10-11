@@ -507,6 +507,11 @@ static void title_loadGraphics(void)
     }
     main_frameProc();
     state->bg0Cnt = BGCNT_TXT512x256 | BGCNT_16COLOR | BGCNT_SCREENBASE(2) | BGCNT_CHARBASE(1) | BGCNT_PRIORITY(0);
+#ifdef MKSC_RING
+    /* Generate the native lettering before the menu starts rendering. Doing
+     * this each frame crosses VBlank and resets a partly drawn OAM buffer. */
+    ring_initTitleOption();
+#endif
     state->bg1Cnt = BGCNT_TXT256x256 | BGCNT_16COLOR | BGCNT_SCREENBASE(4) | BGCNT_CHARBASE(1) | BGCNT_PRIORITY(1);
     state->bg2Cnt = BGCNT_TXT256x512 | BGCNT_16COLOR | BGCNT_SCREENBASE(5) | BGCNT_CHARBASE(2) | BGCNT_PRIORITY(2);
     state->bg3Cnt = BGCNT_TXT256x256 | BGCNT_16COLOR | BGCNT_SCREENBASE(7) | BGCNT_CHARBASE(2) | BGCNT_PRIORITY(3);

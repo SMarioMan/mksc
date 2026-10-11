@@ -676,16 +676,13 @@ static u32 titlePixel(const u16* cells, int x, int y)
     return 0;
 }
 
-void ring_drawTitleOption(int y, bool32 selected)
+void ring_initTitleOption(void)
 {
     extern const u16* off_80D8E4C[];
-    static const u16 cellsSelected[] = { 2, 0x40F8, 0x81E0, 0x93F0, 0x40F8, 0x8000, 0x93F8 };
-    static const u16 cellsNormal[] = { 2, 0x40F8, 0x81E0, 0xA3F0, 0x40F8, 0x8000, 0xA3F8 };
     /* R from PLAYER, ING from SINGLE, LINK from SINGLE-PAK LINK. */
     static const s16 slices[3][4] = { {0,31,8,3}, {0,-32,18,11}, {5,23,27,33} };
     u16 tiles[256];
     int i, row, col, x, offset;
-    Vec2s16 position;
     for (i = 0; i < 256; i++) tiles[i] = 0;
     for (i = 0; i < 3; i++)
         for (row = 0; row < 16; row++)
@@ -697,6 +694,13 @@ void ring_drawTitleOption(int y, bool32 selected)
                 tiles[offset] |= pixel << ((x % 4) * 4);
             }
     CpuCopy16(tiles, (void*)(OBJ_VRAM0 + 0x7E00), sizeof(tiles));
+}
+
+void ring_drawTitleOption(int y, bool32 selected)
+{
+    static const u16 cellsSelected[] = { 2, 0x40F8, 0x81E0, 0x93F0, 0x40F8, 0x8000, 0x93F8 };
+    static const u16 cellsNormal[] = { 2, 0x40F8, 0x81E0, 0xA3F0, 0x40F8, 0x8000, 0xA3F8 };
+    Vec2s16 position;
     position.x = 120;
     position.y = y;
     oam_renderCellData(selected ? cellsSelected : cellsNormal, &position, 0, 0, 0, 0);

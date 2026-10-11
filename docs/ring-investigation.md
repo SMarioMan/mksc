@@ -27,6 +27,9 @@ serial transport, eight controller slots, gameplay setup, failure recovery,
 rankings, and cumulative wins. The title lettering samples native loaded glyphs
 and preserves their selected/unselected palettes. Menus use native portraits;
 their bitmap layout is still simpler than the original Multi-Pak artwork.
+Title glyphs are sampled once after the native assets load, rather than during
+every draw. Repeated sampling previously crossed VBlank, allowing `oam_reset`
+to erase the stock Single-Pak/Multi-Pak labels and slowing the submenu.
 
 A clock owner circulates discovery and announces membership. CRC-8 packets
 carry software ID, sequence, and keypad/control bits. Repeated READY probes
@@ -81,6 +84,8 @@ CPU flags, items, rankings, or menu state into game RAM.
 - `tools/ring/test_lobby.py`: all 1584 PCM buffer bytes are cleared while waiting.
 - `tools/ring/test_singleplayer.py`: ordinary GP with eight native racers and
   observed character-voice callbacks after item use in the shifted ROM.
+- `tools/ring/test_title.py`: native Single-Pak/Multi-Pak/Ring Link sprite
+  visibility and 200 menu updates across 200 video frames using the real BIOS.
 
 The interrupt build has passed full rounds with counts 2–8 in both modes,
 all recovery/restart/cancellation flows with two and eight participants,
@@ -91,8 +96,10 @@ hash when assessing a test. An entry snapshot is not a completed-round test.
 
 The emulator's 30 CTest targets passed. The ring driver supports normal-8 and
 normal-32, native transfer timing, start/IRQ behavior, unarmed receivers, wire
-loss, reset cancellation, and collision reporting. It is currently a local
-headless runner feature; Qt/network/savestate ring integration is not included.
+loss, reset cancellation, and collision reporting. Local Qt windows now expose
+a shared File-menu ring topology selector, eight input/save slots, and group
+pause. See `mgba/tools/link/GUI.md` for build/use and fixture-based GUI checks.
+Network play and connected-session savestates are not included.
 The model does not resolve intermediate bit edges or electrical loading.
 
 ## Research and remaining limits
