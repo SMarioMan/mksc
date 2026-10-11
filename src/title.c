@@ -13,6 +13,7 @@
 #include "sio2.h"
 #include "songs.h"
 #include "title.h"
+#include "ringLink.h"
 
 extern const struc_76 stru_80D8DF8[3];
 extern const u16 dword_80D8BA4[];
@@ -265,6 +266,13 @@ static void title_8000350(TitleState* state)
             u32 tmp;
             u32 tmp2;
             optionId = items[i].optionId;
+#ifdef MKSC_RING
+            if (optionId == RING_OPTION_ID)
+            {
+                ring_drawTitleOption(state->field_134 + i * v37 - 24, i == state->cursorPos);
+                continue;
+            }
+#endif
             if (i < state->cursorPos || i > state->cursorPos)
                 v22 = off_80D8E4C[optionId];
             else if (!items[i].field4)
@@ -649,6 +657,9 @@ bool32 title_main(void)
                 case 4:
                     menuItems[k].field4 = 1;
                     break;
+#ifdef MKSC_RING
+                case RING_OPTION_ID:
+#endif
                 case 5:
                     menuItems[k].field4 = 1;
                     break;
@@ -856,9 +867,17 @@ bool32 title_main(void)
                         {
                             m4aSongNumStart(SONG_142);
                             state->linkSubMenuItemCount = 2;
+#ifdef MKSC_RING
+                            state->linkSubMenuItemCount = 3;
+#endif
                             for (i = 0; i < state->linkSubMenuItemCount; i++)
                             {
-                                state->linkSubMenuItems[i].optionId = dword_80D8E67[i];
+#ifdef MKSC_RING
+                                if (i == 2)
+                                    state->linkSubMenuItems[i].optionId = RING_OPTION_ID;
+                                else
+#endif
+                                    state->linkSubMenuItems[i].optionId = dword_80D8E67[i];
                                 state->linkSubMenuItems[i].field4 = 0;
                             }
 
@@ -961,6 +980,11 @@ bool32 title_main(void)
                         scene_setMainFunc(multilink_main);
                         return 1;
 
+#ifdef MKSC_RING
+                    case RING_OPTION_ID:
+                        scene_setMainFunc(ring_main);
+                        return 1;
+#endif
                     case 5:
                         scene_setMainFunc(singlelink_main);
                         return 1;

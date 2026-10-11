@@ -26,11 +26,17 @@ GBA normal serial mode, 32-bit transfers, 256 kHz clock:
 - The final console's SO connects back to the first console's SI.
 - Common ground. No connection of multiple SO outputs to the same wire.
 
-This is an explicit cable model, not a claim that an unmodified collection of
-standard GBA cables supports it. GBATEK documents that standard multiplayer
-cables ground the master's SI. Closing the ring requires replacing that grounded
-input with the return path. Real cable construction, electrical loading, and
-hardware timing remain unvalidated. 2 MHz is deliberately not used.
+For standard AGB-005 cables, connect each GBA to a large plug, then connect
+that cable's small plug to the next cable's middle socket, closing the last
+connection back to the first. The grounded SI on each small plug connects to
+an unused middle-socket SI, not to a console. Middle-socket SO forwards the next
+console's output into the large-plug SI path. SC and ground are common across
+all cables. The earlier claim that this necessarily required a modified cable
+was incorrect: it assumed a console remained connected to a small plug.
+
+This documents the stock cable wiring contract, not a physical test result.
+Electrical loading, cable variants, and hardware timing remain unvalidated.
+2 MHz is deliberately not used.
 
 ## Protocol
 

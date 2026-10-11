@@ -50,8 +50,14 @@ _0802D758: .4byte 0x03002C80
 _0802D75C: .4byte 0x00003FFF
 _0802D760: .4byte 0x03000208
 
+	.ifdef MKSC_RING
+	thumb_func_start sio2_stockVblank
+sio2_stockVblank:
+	.else
 	thumb_func_start sio2_vblank
-sio2_vblank: @ 0x0802D764
+sio2_vblank:
+	.endif
+@ 0x0802D764
 	push {r4, r5, r6, lr}
 	ldr r6, _0802D7D8 @ =0x03000208
 	ldrh r5, [r6]

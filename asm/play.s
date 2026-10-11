@@ -212,7 +212,13 @@ _0805183A:
 	beq _0805185E
 	adds r5, r4, #0x0
 	mov r2, r8
+	.ifdef MKSC_RING
+	adds r0, r2, #0
+	bl ring_peerWords
+	adds r2, r0, #0
+	.else
 	adds r2, #0x02
+	.endif
 	mov r1, r8
 	ldrb r3, [r1, #0x01]
 _0805184E:
@@ -620,6 +626,15 @@ _08051B88:
 	adds r6, #0x01
 	cmp r6, #0x03
 	ble _08051AA2
+	.ifdef MKSC_RING
+	push {r0-r3}
+	mov r0, r12
+	push {r0}
+	bl ring_extendDriverInputs
+	pop {r0}
+	mov r12, r0
+	pop {r0-r3}
+	.endif
 	ldr r4, [sp, #0x004]
 	ldrb r1, [r4, #0x00]
 	movs r0, #0x40
@@ -639,7 +654,12 @@ _08051BB0:
 _08051BB8: .4byte gKeyTriggerBuf
 _08051BBC: .4byte gKeyBuf
 _08051BC0: .4byte 0x03002E44
-_08051BC4: .4byte 0x0000081C
+_08051BC4:
+	.ifdef MKSC_RING
+	.4byte ring_sDriverInputs - 0x03002E44
+	.else
+	.4byte 0x0000081C
+	.endif
 _08051BC8: .4byte 0x03005C50
 _08051BCC:
 	movs r0, #0x80
@@ -693,6 +713,16 @@ _08051C12:
 	bl sub_8049D78
 	ldr r0, _08051D68 @ =0x03002E44
 	bl sub_804C38C
+	.ifdef MKSC_RING
+	push {r0-r3}
+	bl ring_checkRoundEnd
+	cmp r0, #0
+	pop {r0-r3}
+	beq _ringContinueRace
+	b _08051D50
+	nop
+_ringContinueRace:
+	.endif
 	bl sub_804389C
 	ldr r1, _08051D68 @ =0x03002E44
 	ldr r2, _08051D74 @ =0x000007DA
@@ -826,6 +856,16 @@ _08051D42:
 	beq _08051D50
 	b _08051940
 _08051D50:
+.ifdef MKSC_RING
+    push {r0-r3}
+    bl ring_finishRace
+    cmp r0, #0
+    pop {r0-r3}
+    beq _ringNativeRaceEnd
+    b _08051F0A
+    nop
+_ringNativeRaceEnd:
+.endif
 	movs r4, #0x00
 	movs r7, #0x00
 	ldr r2, [sp, #0x00C]

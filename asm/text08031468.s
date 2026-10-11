@@ -1239,8 +1239,13 @@ _08031F90:
 	bx r0
 	.align 2, 0
 
+	.ifdef MKSC_RING
+	thumb_func_start loadtrack_stockStartGrid
+loadtrack_stockStartGrid:
+	.else
 	thumb_func_start loadtrack_8031F9C
 loadtrack_8031F9C: @ 0x08031F9C
+	.endif
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb

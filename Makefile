@@ -33,6 +33,19 @@ ELF = $(ROM:.gba=.elf)
 MAP = $(ROM:.gba=.map)
 SYMS= $(ROM:.gba=.sym)
 OBJ_DIR := build
+LD_SCRIPT := ld_script.ld
+SYMBOL_FILE := symbols.txt
+COMPARE_TARGET := compare
+
+ifeq ($(RING),1)
+ROM := mksc-ring.gba
+COMPARE_TARGET :=
+OBJ_DIR := build-ring
+CPPFLAGS += -DMKSC_RING=1
+ASFLAGS += --defsym MKSC_RING=1
+LD_SCRIPT := build-ring/ld_script.ld
+SYMBOL_FILE := build-ring/symbols.txt
+endif
 
 C_SUBDIR = src
 ASM_SUBDIR = asm
@@ -77,7 +90,7 @@ endef
 # Rules
 .PHONY: tools libraries rom clean progress
 
-rom: tools libraries $(ROM) compare $(SYMS)
+rom: tools libraries $(ROM) $(COMPARE_TARGET) $(SYMS)
  
 compare: $(ROM)
 	@$(SHA1) rom.sha1
@@ -141,8 +154,8 @@ $(DATA_BUILDDIR)/%.o : $(DATA_SUBDIR)/%.bin
 	@echo $(notdir $<)
 	@$(bin2o)
 
-$(ELF): $(OBJS)
-	cd $(OBJ_DIR) && $(LD) -Map ../$(MAP) -T ../ld_script.ld -o ../$@ $(LDFLAGS) $(OBJS_REL)
+$(ELF): $(OBJS) $(LD_SCRIPT) $(SYMBOL_FILE)
+	cd $(OBJ_DIR) && $(LD) -Map ../$(MAP) -T ../$(LD_SCRIPT) -o ../$@ $(filter-out --just-symbols=../symbols.txt,$(LDFLAGS)) --just-symbols=../$(SYMBOL_FILE) $(OBJS_REL)
 
 $(MAP): rom
 

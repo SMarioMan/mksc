@@ -5,6 +5,13 @@
 #include "title.h"
 #include "sio2.h"
 #include "main.h"
+#include "ringLink.h"
+
+#ifdef MKSC_RING
+#define KEY_SLOTS 8
+#else
+#define KEY_SLOTS 4
+#endif
 
 void main_vblankHandler(void);
 static void initKeys(void);
@@ -14,12 +21,12 @@ extern u8 dword_81E9B1C;
 extern u8 dword_81E9BCC;
 extern u8 unk_203EBE0;
 
-extern u16 sio2_sKeyBuf[4];
-extern u16 gKeyRepeatTriggerBuf[4];
-extern u16 gKeyTriggerBuf[4];
-extern u16 gKeyBuf[4];
+extern u16 sio2_sKeyBuf[KEY_SLOTS];
+extern u16 gKeyRepeatTriggerBuf[KEY_SLOTS];
+extern u16 gKeyTriggerBuf[KEY_SLOTS];
+extern u16 gKeyBuf[KEY_SLOTS];
 
-static s16 sKeyRepeatCounters[4];
+static s16 sKeyRepeatCounters[KEY_SLOTS];
 
 static u32 sRandom;
 static int sFrameCounter;
@@ -92,11 +99,18 @@ void main_vblankHandler(void)
     SoundVSync_rev01();
     main_increaseFrameCounter();
     DmaStop(0);
-    oam_dmaCopyToHw();
-    oam_reset();
-    dmaq_process(dmaq_getVBlankDmaQueue());
-    pltt_copyBufferToHw();
-    map_copyBuffersToHw();
+#ifdef MKSC_RING
+    /* Forwarding must not be interrupted by bulk graphics DMA. The frame's
+     * normal VBlank publishes graphics before entering the input barrier. */
+    if (!ring_transferring())
+#endif
+    {
+        oam_dmaCopyToHw();
+        oam_reset();
+        dmaq_process(dmaq_getVBlankDmaQueue());
+        pltt_copyBufferToHw();
+        map_copyBuffersToHw();
+    }
     if (sceneState->vBlankFunc)
         sceneState->vBlankFunc();
     sio2_vblank();
@@ -115,9 +129,13 @@ static void initKeys(void)
     SceneState* sceneState = &gSceneState;
 
     main_setKeyRepeat(24, 6);
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < KEY_SLOTS; i++)
     {
+#ifdef MKSC_RING
+        sio2_sKeyBuf[i] = i < 4 ? 0 : 1023;
+#else
         sio2_sKeyBuf[i] = 0;
+#endif
         gKeyBuf[i] = gKeyTriggerBuf[i] = gKeyRepeatTriggerBuf[i] = 0;
         sKeyRepeatCounters[i] = sceneState->initialRepeatWait;
     }
@@ -131,7 +149,7 @@ static void updateKeys(void)
     u16* ptr;
     SceneState* sceneState = &gSceneState;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < KEY_SLOTS; i++)
     {
         keys = sio2_sKeyBuf[i] ^ 0x3FF;
         ptr = &gKeyTriggerBuf[i];
@@ -159,7 +177,7 @@ void main_setKeyRepeat(int initialRepeatWait, int nextRepeatWait)
 
     sceneState->initialRepeatWait = initialRepeatWait;
     sceneState->nextRepeatWait = nextRepeatWait;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < KEY_SLOTS; i++)
         sKeyRepeatCounters[i] = sceneState->initialRepeatWait;
 }
 
@@ -325,12 +343,25 @@ void main_restoreVBlankCheckFlag(bool32 value)
 
 void main_frameProc(void)
 {
-    do
+#ifdef MKSC_RING
+    if (ring_active())
     {
         sFrameCounter = 0;
         VBlankIntrWait();
         m4aSoundMain();
-    } while (sio2_update());
+        if (ring_exchange())
+            sio2_stop();
+    }
+    else
+#endif
+    {
+        do
+        {
+            sFrameCounter = 0;
+            VBlankIntrWait();
+            m4aSoundMain();
+        } while (sio2_update());
+    }
     updateKeys();
     trns_update();
 }

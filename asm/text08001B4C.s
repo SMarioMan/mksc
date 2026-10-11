@@ -179,7 +179,7 @@ _08001C58:
 	.align 2, 0
 _08001C94: .4byte 0x000007D7
 _08001C98: .4byte 0x000007F4
-_08001C9C: .4byte 0x0300002C
+_08001C9C: .4byte gSelectedCharacters
 _08001CA0: .4byte 0x000007DC
 _08001CA4: .4byte 0x000007DD
 
@@ -333,7 +333,7 @@ _08001DB2:
 	.align 2, 0
 _08001DCC: .4byte 0x000007DA
 _08001DD0: .4byte 0x00008110
-_08001DD4: .4byte 0x0300002C
+_08001DD4: .4byte gSelectedCharacters
 _08001DD8: .4byte 0x0203EBE4
 
 	thumb_func_start sub_8001DDC
@@ -1322,7 +1322,7 @@ _0800257A:
 	str r0, [r1]
 	b _080025B6
 	.align 2, 0
-_080025A4: .4byte 0x0300002C
+_080025A4: .4byte gSelectedCharacters
 _080025A8: .4byte 0x000007DD
 _080025AC: .4byte 0x000011E4
 _080025B0:
@@ -1460,7 +1460,7 @@ _0800268A:
 	str r0, [r1]
 	b _080026DC
 	.align 2, 0
-_080026A4: .4byte 0x0300002C
+_080026A4: .4byte gSelectedCharacters
 _080026A8: .4byte 0x00000D84
 _080026AC:
 	ldr r0, [r6, #8]
@@ -2079,7 +2079,7 @@ sub_8002B68: @ 0x08002B68
 	b _08002BBC
 	.align 2, 0
 _08002B90: .4byte 0x000007DA
-_08002B94: .4byte 0x0300002C
+_08002B94: .4byte gSelectedCharacters
 _08002B98:
 	movs r4, #0
 	ldr r1, _08002BC8 @ =0x000007D7
@@ -2108,7 +2108,7 @@ _08002BBC:
 	bx r0
 	.align 2, 0
 _08002BC8: .4byte 0x000007D7
-_08002BCC: .4byte 0x0300002C
+_08002BCC: .4byte gSelectedCharacters
 _08002BD0: .4byte 0x0203EBE4
 
 	thumb_func_start sub_8002BD4

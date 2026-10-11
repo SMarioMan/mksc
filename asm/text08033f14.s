@@ -45021,8 +45021,12 @@ _080498FE:
 	adds r0, #0xec
 	ldrb r1, [r0]
 	lsls r1, r1, #1
+	.ifdef MKSC_RING
+	ldr r0, _ringDriverInputAddress
+	.else
 	adds r2, #0x28
 	adds r0, r5, r2
+	.endif
 	adds r0, r0, r1
 	ldrh r7, [r0]
 _08049924:
@@ -45048,6 +45052,9 @@ _0804994C: .4byte 0x0000A020
 _08049950: .4byte 0x00000BD8
 _08049954: .4byte 0x00000814
 _08049958: .4byte 0x000007DA
+	.ifdef MKSC_RING
+_ringDriverInputAddress: .4byte ring_sDriverInputs
+	.endif
 _0804995C:
 	movs r2, #0x80
 	lsls r2, r2, #6
@@ -53717,8 +53724,13 @@ _0804DCA4: .4byte 0x030023A8
 _0804DCA8: .4byte _080EE6FA
 _0804DCAC: .4byte 0x0000D080
 
+	.ifdef MKSC_RING
+	thumb_func_start ring_stockBattleHud
+ring_stockBattleHud:
+	.else
 	thumb_func_start sub_804DCB0
-sub_804DCB0: @ 0x0804DCB0
+sub_804DCB0:
+	.endif @ 0x0804DCB0
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
@@ -55146,8 +55158,13 @@ _0804E7D4:
 _0804E7E4: .4byte 0x0203EC54
 _0804E7E8: .4byte 0x030023D0
 
+	.ifdef MKSC_RING
+	thumb_func_start ring_stockMapMarker
+ring_stockMapMarker:
+	.else
 	thumb_func_start sub_804E7EC
-sub_804E7EC: @ 0x0804E7EC
+sub_804E7EC:
+	.endif @ 0x0804E7EC
 	push {r4, r5, r6, lr}
 	sub sp, #0xc
 	adds r4, r0, #0
@@ -56494,8 +56511,13 @@ _0804F2BA:
 	pop {r0}
 	bx r0
 
+	.ifdef MKSC_RING
+	thumb_func_start ring_stockVsHud
+ring_stockVsHud:
+	.else
 	thumb_func_start sub_804F2C0
-sub_804F2C0: @ 0x0804F2C0
+sub_804F2C0:
+	.endif @ 0x0804F2C0
 	push {r4, r5, r6, lr}
 	adds r6, r0, #0
 	movs r1, #0xfe
