@@ -10,4 +10,5 @@ bool32 ring_exchange(void);
 bool32 ring_checkRoundEnd(void);
 bool32 ring_finishRace(void);
 void ring_drawTitleOption(int y, bool32 selected);
+void ring_initTitleOption(void);
 #endif

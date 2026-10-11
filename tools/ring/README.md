@@ -46,6 +46,12 @@ verified coverage and outstanding acceptance criteria. No physical-cable test
 has been performed. The intended stock AGB-005 arrangement puts each large plug
 on a GBA and each small plug in the next cable's middle socket, closing the ring.
 
+The modified mGBA Qt GUI supports **File → GBA link topology... → Ring link
+(up to 8 players)**, followed by New multiplayer window and loading this ROM
+in every window. See `mgba/tools/link/GUI.md` in the emulator repository.
+The title label uses native font glyphs cached after title asset loading;
+`test_title.py` checks visibility of all three labels and normal menu speed.
+
 `test_rounds.py` additionally needs `--elf`; it verifies full rounds and common
 rankings/wins with actual driving and item inputs. `test_flows.py` checks native
 pause/restart, cancellation, and wire-loss reconnect. `test_repeat.py` needs the
