@@ -21659,7 +21659,7 @@ sub_0805CC50: @ 0x0805CC50
 	ldrb r1, [r1]
 	adds r0, r0, r1
 	adds r0, #1
-	bl sub_8002C30
+	bl spm_setTrackSelection
 	movs r1, #0xad
 	lsls r1, r1, #3
 	adds r0, r6, r1
@@ -21761,7 +21761,7 @@ sub_805CD50: @ 0x0805CD50
 	push {r4, r5, r6, r7, lr}
 	ldr r7, _0805CE18 @ =0x02032B80
 	ldr r5, _0805CE1C @ =0x03002E20
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	adds r4, r0, #0
 	movs r0, #3
 	ands r4, r0
@@ -21772,7 +21772,7 @@ sub_805CD50: @ 0x0805CD50
 	ldr r2, _0805CE20 @ =0x00000565
 	adds r0, r7, r2
 	strb r1, [r0]
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x1a
 	ldr r3, _0805CE24 @ =0x00000566

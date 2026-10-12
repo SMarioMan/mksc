@@ -2159,71 +2159,7 @@ sub_8002C10: @ 0x08002C10
 	.align 2, 0
 _08002C20: .4byte 0x0203EBE4
 
-	thumb_func_start sub_8002C24
-sub_8002C24: @ 0x08002C24
-	ldr r0, _08002C2C @ =0x03000008
-	ldr r0, [r0]
-	bx lr
-	.align 2, 0
-_08002C2C: .4byte 0x03000008
-
-	thumb_func_start sub_8002C30
-sub_8002C30: @ 0x08002C30
-	ldr r1, _08002C38 @ =0x03000008
-	str r0, [r1]
-	bx lr
-	.align 2, 0
-_08002C38: .4byte 0x03000008
-
-	thumb_func_start sub_8002C3C
-sub_8002C3C: @ 0x08002C3C
-	ldr r0, _08002C44 @ =0x0300000C
-	ldrb r0, [r0]
-	bx lr
-	.align 2, 0
-_08002C44: .4byte 0x0300000C
-
-	thumb_func_start sub_08002C48
-sub_08002C48: @ 0x08002C48
-	ldr r1, _08002C50 @ =0x0300000C
-	strb r0, [r1]
-	bx lr
-	.align 2, 0
-_08002C50: .4byte 0x0300000C
-
-	thumb_func_start sub_8002C54
-sub_8002C54: @ 0x08002C54
-	ldr r1, _08002C64 @ =0x0300000C
-	ldrb r0, [r1]
-	cmp r0, #0
-	beq _08002C60
-	subs r0, #1
-	strb r0, [r1]
-_08002C60:
-	bx lr
-	.align 2, 0
-_08002C64: .4byte 0x0300000C
-
-	thumb_func_start sub_08002C68
-sub_08002C68: @ 0x08002C68
-	ldr r1, _08002C70 @ =0x0203EBE8
-	str r0, [r1]
-	bx lr
-	.align 2, 0
-_08002C70: .4byte 0x0203EBE8
-
-	thumb_func_start sub_8002C74
-sub_8002C74: @ 0x08002C74
-	ldr r0, _08002C84 @ =0x03000010
-	movs r1, #0x17
-	ldrsb r1, [r0, r1]
-	adds r1, r1, r0
-	movs r0, #0
-	ldrsb r0, [r1, r0]
-	bx lr
-	.align 2, 0
-_08002C84: .4byte 0x03000010
-
+	.section .text.menuQueriesTail, "ax", %progbits
 	thumb_func_start sub_8002C88
 sub_8002C88: @ 0x08002C88
 	ldr r2, _08002C9C @ =0x03000010
@@ -5124,7 +5060,7 @@ _080043A6:
 	blt _080043A6
 _080043CE:
 	mov r0, sl
-	bl sub_8002C74
+	bl spm_getSavedPlayerCount
 	str r0, [r6]
 	movs r0, #1
 	rsbs r0, r0, #0

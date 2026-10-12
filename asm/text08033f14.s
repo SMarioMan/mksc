@@ -31543,7 +31543,7 @@ sub_80430EC: @ 0x080430EC
 	beq _0804311C
 	movs r6, #0x64
 _0804311C:
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	movs r1, #3
 	ands r1, r0
 	lsls r1, r1, #5
@@ -31682,7 +31682,7 @@ _080431C8:
 	adds r2, r2, r0
 	subs r6, r6, r2
 	strh r2, [r7, #0x10]
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	movs r1, #3
 	subs r2, r1, r0
 	cmp r2, #0
@@ -31722,14 +31722,14 @@ _08043256:
 	lsrs r2, r0, #2
 	subs r6, r6, r2
 	strh r2, [r7, #0x16]
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	movs r4, #3
 	ands r0, r4
 	lsls r0, r0, #1
 	adds r0, r5, r0
 	strh r6, [r0]
 	strh r6, [r7, #0x18]
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	ands r0, r4
 	cmp r0, #3
 	bne _080432C6
@@ -44025,7 +44025,7 @@ _08049124:
 	bne _08049136
 	b _08049394
 _08049136:
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	movs r1, #3
 	ands r1, r0
 	cmp r1, #0
@@ -44320,7 +44320,7 @@ _0804937A:
 	adds r0, r5, #0
 	bl ring_prepareGpGrid
 	.endif
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	adds r1, r0, #0
 	movs r0, #3
 	ands r0, r1

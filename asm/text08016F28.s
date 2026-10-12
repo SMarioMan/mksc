@@ -15745,7 +15745,7 @@ _0801F2E4:
 	bl sub_801DC7C
 	movs r0, #0
 	str r0, [r7, #8]
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	cmp r0, #0
 	beq _0801F2FA
 	movs r0, #0x1c
@@ -16268,7 +16268,7 @@ _0801F6B0:
 	movs r3, #1
 	add r8, r3
 _0801F700:
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	cmp r8, r0
 	blt _0801F6B0
 	ldr r6, [sp, #0x48]
@@ -16425,7 +16425,7 @@ _0801F838:
 _0801F844:
 	movs r0, #0x8f
 	bl m4aSongNumStart
-	bl sub_8002C54
+	bl spm_previousPageSelection
 	movs r0, #1
 	movs r1, #0xfd
 	lsls r1, r1, #3
@@ -16986,7 +16986,7 @@ _0801FC78:
 	ands r1, r0
 	cmp r1, #0
 	beq _0801FCDA
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	adds r4, r0, #0
 	lsls r4, r4, #1
 	movs r6, #0x1b
@@ -17020,7 +17020,7 @@ _0801FC78:
 	strh r6, [r0]
 	b _0801FD2A
 _0801FCDA:
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	adds r4, r0, #0
 	lsls r4, r4, #1
 	movs r6, #0x1b
@@ -40374,12 +40374,12 @@ _0802B6B8:
 	adds r4, r0, #0
 	ldr r0, _0802B7E0 @ =0x0203EBD8
 	str r4, [r0]
-	bl sub_8002C24
+	bl spm_getTrackSelection
 	ldr r2, _0802B7E4 @ =0x00000DD4
 	adds r4, r4, r2
 	str r0, [r4]
 	movs r0, #0
-	bl sub_8002C30
+	bl spm_setTrackSelection
 	ldr r0, _0802B7E8 @ =0x0203EBDC
 	str r5, [r0]
 	bl sub_802B2BC
@@ -41550,7 +41550,7 @@ _0802BFEA:
 	.align 2, 0
 _0802C000: .4byte _080DDF4C
 _0802C004:
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	cmp r0, #0
 	beq _0802C014
 	ldr r1, _0802C010 @ =_080DDEF4
@@ -42045,7 +42045,7 @@ _0802C3D4:
 	strh r1, [r0]
 	adds r7, #1
 _0802C420:
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	cmp r7, r0
 	blt _0802C3D4
 	movs r0, #2
@@ -42391,7 +42391,7 @@ _0802C6FA:
 	ands r0, r1
 	cmp r0, #0
 	beq _0802C760
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	adds r4, r0, #0
 	subs r4, #1
 	lsls r4, r4, #1
@@ -42428,7 +42428,7 @@ _0802C6FA:
 	.align 2, 0
 _0802C75C: .4byte 0x030001A6
 _0802C760:
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	adds r4, r0, #0
 	subs r4, #1
 	lsls r4, r4, #1
@@ -42619,10 +42619,10 @@ _0802C914:
 	movs r1, #9
 	b _0802C92A
 _0802C918:
-	bl sub_8002C3C
+	bl spm_getPageSelection
 	cmp r0, #0
 	beq _0802C928
-	bl sub_8002C54
+	bl spm_previousPageSelection
 	movs r1, #1
 	b _0802C92A
 _0802C928:
