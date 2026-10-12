@@ -2,6 +2,7 @@
 #include "gba/m4a_internal.h"
 #ifdef MKSC_RING_MUSIC_SHARED
 extern int ring_sharedMusicActive(void);
+extern int ring_sharedMusicMuted(void);
 extern u16 ring_sharedMusicSong(u16 song);
 #endif
 
@@ -103,6 +104,7 @@ void m4aSongNumStart(u16 n)
     if (song->ms == 0) return;
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
+    if (song->ms == 0 && ring_sharedMusicMuted()) return;
     if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
 #endif
 
@@ -124,6 +126,7 @@ void m4aSongNumStartOrChange(u16 n)
     if (song->ms == 0) return;
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
+    if (song->ms == 0 && ring_sharedMusicMuted()) return;
     if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
 #endif
 
@@ -155,6 +158,7 @@ void m4aSongNumStartOrContinue(u16 n)
     if (song->ms == 0) return;
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
+    if (song->ms == 0 && ring_sharedMusicMuted()) return;
     if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
 #endif
 
@@ -198,6 +202,9 @@ void m4aMPlayAllStop(void)
 
 void m4aMPlayContinue(struct MusicPlayerInfo* mplayInfo)
 {
+#ifdef MKSC_RING_MUSIC_SHARED
+    if (mplayInfo == gMPlayTable[0].info && ring_sharedMusicMuted()) return;
+#endif
     MPlayContinue(mplayInfo);
 }
 
@@ -206,7 +213,11 @@ void m4aMPlayAllContinue(void)
     s32 i;
 
     for (i = 0; i < NUM_MUSIC_PLAYERS; i++)
+#ifdef MKSC_RING_MUSIC_SHARED
+        m4aMPlayContinue(gMPlayTable[i].info);
+#else
         MPlayContinue(gMPlayTable[i].info);
+#endif
 }
 
 void m4aMPlayFadeOut(struct MusicPlayerInfo* mplayInfo, u16 speed)
@@ -228,6 +239,9 @@ void m4aMPlayFadeOutTemporarily(struct MusicPlayerInfo* mplayInfo, u16 speed)
 
 void m4aMPlayFadeIn(struct MusicPlayerInfo* mplayInfo, u16 speed)
 {
+#ifdef MKSC_RING_MUSIC_SHARED
+    if (mplayInfo == gMPlayTable[0].info && ring_sharedMusicMuted()) return;
+#endif
     if (mplayInfo->ident == ID_NUMBER)
     {
         mplayInfo->ident++;
@@ -594,6 +608,11 @@ void MPlayStart(struct MusicPlayerInfo* mplayInfo, struct SongHeader* songHeader
     s32 i;
     u8 unk_B;
     struct MusicPlayerTrack* track;
+
+#ifdef MKSC_RING_MUSIC_SHARED
+    /* Keep effects/voices on every console; BGM is owned by software P1. */
+    if (mplayInfo == gMPlayTable[0].info && ring_sharedMusicMuted()) return;
+#endif
 
     if (mplayInfo->ident != ID_NUMBER)
         return;

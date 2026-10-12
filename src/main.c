@@ -8,6 +8,7 @@
 #include "ringLink.h"
 
 #ifdef MKSC_RING
+#include "dmaQueue.h"
 #define KEY_SLOTS 8
 #else
 #define KEY_SLOTS 4
@@ -104,11 +105,34 @@ static inline void main_publishGraphics(void)
     oam_dmaCopyToHw();
     oam_reset();
     dmaq_process(dmaq_getVBlankDmaQueue());
+#ifdef MKSC_RING
+    ring_publishIdentityPalette();
+#endif
     pltt_copyBufferToHw();
     map_copyBuffersToHw();
 }
 
 #ifdef MKSC_RING
+static bool32 main_ringPublicationFits(u32 line)
+{
+    DmaQueueEntry* entry = (DmaQueueEntry*)dmaq_getVBlankDmaQueue()->list.head;
+    u32 cycles = 8000;
+    /* Conservative DMA cost plus chunk setup. Leave eight complete scanlines
+     * for the native callback/IRQ tail. Large texture uploads keep an early
+     * deadline; small Battle updates can use more of the blanking interval. */
+    while (entry)
+    {
+        u32 count = entry->config & 0xFFFF;
+        u32 bytes;
+        if (!count) return FALSE;
+        bytes = count << ((entry->config & (DMA_32BIT << 16)) ? 2 : 1);
+        cycles += bytes * 3 + ((bytes + 2047) >> 11) * 192;
+        entry = (DmaQueueEntry*)entry->link.next;
+    }
+    line = REG_VCOUNT;
+    return line >= 160 && line < 220 && cycles < (220 - line) * 1232;
+}
+
 bool32 main_tryPublishRingGraphics(void)
 {
     u16 ime = REG_IME;
@@ -117,8 +141,8 @@ bool32 main_tryPublishRingGraphics(void)
     /* Rendering can finish just after the VBlank IRQ rejected an incomplete
      * buffer. Publish in the same blanking interval when enough time remains,
      * rather than discard an entire game tick waiting for the next IRQ. */
-    if ((REG_IE & IRQ_MASK_VBLANK) && REG_VCOUNT >= 160 && REG_VCOUNT <= 190 &&
-        ring_canPublishLateGraphics())
+    if ((REG_IE & IRQ_MASK_VBLANK) && REG_VCOUNT >= 160 && REG_VCOUNT <= 212 &&
+        ring_canPublishLateGraphics() && main_ringPublicationFits(REG_VCOUNT))
     {
         DmaStop(0);
         main_publishGraphics();

@@ -18711,8 +18711,13 @@ _0803CFEE:
 _0803D004: .4byte characterPalettes_bin + 0x1006
 _0803D008: .4byte 0x030022E8
 
+	.ifdef MKSC_RING
+	thumb_func_start ring_stockTargetResponse
+ring_stockTargetResponse:
+	.else
 	thumb_func_start sub_803D00C
 sub_803D00C: @ 0x0803D00C
+	.endif
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
@@ -44311,6 +44316,10 @@ _0804936A:
 	ands r0, r1
 	strh r0, [r2]
 _0804937A:
+	.ifdef MKSC_RING
+	adds r0, r5, #0
+	bl ring_prepareGpGrid
+	.endif
 	bl sub_8002C24
 	adds r1, r0, #0
 	movs r0, #3
@@ -53674,6 +53683,11 @@ sub_804DBF4: @ 0x0804DBF4
 	adds r0, r2, r7
 	adds r0, r0, r1
 	ldr r0, [r0]
+	.ifdef MKSC_RING
+	adds r0, r2, #0
+	mov r1, sb
+	bl ring_battleHudDriver
+	.endif
 	b _0804DC38
 	.align 2, 0
 _0804DC24: .4byte 0x000007DA
@@ -53780,11 +53794,17 @@ _0804DCD0:
 	lsls r1, r1, #1
 	mov sb, r1
 _0804DCE4:
+	.ifdef MKSC_RING
+	mov r0, r8
+	adds r1, r4, #0
+	bl ring_battleHudDriver
+	.else
 	lsls r1, r4, #2
 	ldr r0, _0804DD4C @ =0x000007F4
 	add r0, r8
 	adds r0, r0, r1
 	ldr r0, [r0]
+	.endif
 	ldr r1, _0804DD50 @ =0x0000017D
 	adds r0, r0, r1
 	ldrb r5, [r0]
@@ -54068,6 +54088,15 @@ sub_804DF08: @ 0x0804DF08
 	adds r0, r2, #0
 	adds r0, #0xec
 	ldrb r1, [r0]
+	.ifdef MKSC_RING
+	mov r4, ip
+	push {r0, r2, r3, r4}
+	adds r0, r1, #0
+	bl ring_battleHudRow
+	adds r1, r0, #0
+	pop {r0, r2, r3, r4}
+	mov ip, r4
+	.endif
 	b _0804DF44
 	.align 2, 0
 _0804DF30: .4byte 0x03002E20

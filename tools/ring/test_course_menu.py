@@ -10,7 +10,7 @@ for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines(
  f,i,k=line.split(',');f=int(f)
  if int(i)==0 and f<2350:base.append((f,int(k,16)))
 font=[list(map(int,x.split(','))) for x in re.findall(r'\{([\d,]+)\}',(Path(__file__).resolve().parents[2]/'src/ringFont.h').read_text())]
-def glyph(c):return ord(c)-65 if 'A'<=c<='Z' else ord(c)-48+26 if c.isdigit() else 36
+def glyph(c):return ord(c)-65 if 'A'<=c<='Z' else ord(c)-48+26 if c.isdigit() else 37 if c=='/' else 36
 for case,last in [('cup',2150),('track',2300)]:
  events=[]
  for f,k in base:
@@ -35,7 +35,9 @@ for case,last in [('cup',2150),('track',2300)]:
        assert tuple(pixels[at:at+3])==color,(case,slot,text,c,row,col,tuple(pixels[at:at+3]))
     x+=6
   check(144,132,'RETRO',(255,255,255))
-  check(12,148,'SELECT  SUPER OR RETRO',(255,255,0))
+  check(6,148,'A OK B BACK',(255,255,255))
+  check(78,148,'SELECT SUPER/RETRO',(255,255,255))
+  assert 6+len('A OK B BACK')*6 < 78 and 78+len('SELECT SUPER/RETRO')*6 <=240
   if case=='track':
    for i,name in enumerate(['MARIO CIRCUIT 1','DONUT PLAINS 1','GHOST VALLEY 1','BOWSER CASTLE 1']):
     check(20,40+i*22,name,(255,255,0) if i==0 else (255,255,255))

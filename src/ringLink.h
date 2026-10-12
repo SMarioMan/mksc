@@ -10,6 +10,7 @@ void ring_newVideoFrame(void);
 bool32 ring_canPublishGraphics(void);
 bool32 ring_canPublishLateGraphics(void);
 void ring_graphicsPublished(void);
+void ring_publishIdentityPalette(void);
 void ring_waitGraphics(void);
 void ring_stop(void);
 void ring_serviceAudio(void);

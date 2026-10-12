@@ -50,11 +50,18 @@ u8 ring_balloonAffineIndex[8];
 u8 ring_selectedCharacters[8];
 extern u8 gSelectedCharacters[8];
 extern u16 sio2_sKeyBuf[8];
+void sub_804AE58(RaceState* state, int character, int human);
+int spm_menuCharIdxToCharId(int menuIndex);
 enum { GAME, ENGINE, CHARACTERS, CUP, COURSE, ARENA };
 static u8 sSession, sResume, sCharacters[8], sPlaces[8];
 static u16 sWins[8];
 static u8 sBattlePlaces[8], sEliminated;
-static int sBattle, sEngine, sCourse, sRetro;
+static u8 sBattleHudIds[4];
+enum { VS_MODE, BATTLE_MODE, GP_MODE };
+static int sGame, sBattle, sEngine, sCourse, sRetro;
+static u16 sGPPoints[8];
+static u8 sGPRace;
+static u32 sGPCupComplete;
 u32 ring_frameTiming[5];
 static u32 sRenderStart;
 static u32 ring_cycles(void)
@@ -79,6 +86,10 @@ int ring_sharedMusicActive(void)
 {
     return sRing.enabled && sRing.inGame && sMusicRacing;
 }
+int ring_sharedMusicMuted(void)
+{
+    return sRing.enabled && sRing.count && sRing.id != 0;
+}
 u16 ring_sharedMusicSong(u16 song)
 {
     return ring_sharedMusicActive() && song >= 5 && song <= 7 ? 5 : song;
@@ -91,8 +102,15 @@ static void ring_updateSharedMusic(void)
     extern void m4aMPlayTempoControl(struct MusicPlayerInfo*, u16);
     RaceState* state = &gSceneState.raceState;
     u32 i, fast = 0, music, finished = 0, alive = 0;
+    if (ring_sharedMusicMuted())
+    {
+        if (!(gMPlayTable[0].info->status & MUSICPLAYER_STATUS_PAUSE))
+            m4aMPlayStop(gMPlayTable[0].info);
+        sSharedSong = 0; sSharedFinalLap = 0;
+        return;
+    }
     if (!ring_sharedMusicActive()) { sSharedSong = 0; sSharedFinalLap = 0; return; }
-    for (i = 0; i < sRing.count; i++)
+    for (i = 0; i < state->driverCount; i++)
     {
         u8* driver = (u8*)state->drivers[i];
         if (*(u32*)(driver + 0x48) & 8) fast = 1;
@@ -100,7 +118,7 @@ static void ring_updateSharedMusic(void)
         if (driver[0x17D]) alive++;
     }
     /* Preserve the common result jingle during native end-of-race cleanup. */
-    if ((!sBattle && finished >= sRing.count - 1) || (sBattle && alive <= 1)) return;
+    if ((!sBattle && finished >= state->driverCount - 1) || (sBattle && alive <= 1)) return;
     if (sBattle) fast = 0;
     music = sBattle ? 18 : sub_8032C38(state);
     if (music == 36) music = 28;
@@ -131,6 +149,29 @@ bool32 ring_ignoreLocalMusic(void)
 #else
     return FALSE;
 #endif
+}
+
+void ring_prepareGpGrid(RaceState* state)
+{
+    u32 i, rank;
+    Driver** order = (Driver**)((u8*)state + 0xC38);
+    if (!sRing.enabled || sGame != GP_MODE) return;
+    /* Native GP assumes one human. Recreate our shared roster after its
+     * single-player CPU setup, then assign every human a separate grid slot. */
+    state->driverCount = sRing.count;
+    for (i = sRing.count; i < 8; i++)
+        sub_804AE58(state, spm_menuCharIdxToCharId(sCharacters[i]), 0);
+    for (i = 0; i < 8; i++)
+    {
+        if (sGPRace)
+        {
+            for (rank = 0; rank < 8 && sPlaces[rank] != i; rank++);
+            if (rank == 8) rank = i;
+        }
+        else rank = i < sRing.count ? 8 - sRing.count + i : i - sRing.count;
+        *(u16*)((u8*)state->drivers[i] + 0xBA) = rank * 2;
+        order[rank] = state->drivers[i];
+    }
 }
 
 static u32 sLastAudioFrame;
@@ -294,6 +335,39 @@ static void beginCommit(void)
     sRing.requested = FALSE;
 }
 
+/* Discovery runs once per connection, outside the hot IRQ text region. */
+static bool32 receiveDiscovery(u32 word, u32 type, u32 payload)
+{
+    if (type == DISCOVER)
+    {
+        if (sRing.owner)
+        {
+            if (payload < 2 || payload > 8) return FALSE;
+            sRing.count = payload;
+            enqueue(packet(ANNOUNCE, 0, 0, payload));
+        }
+        else
+        {
+            if (payload >= 8 || sRing.inGame) return FALSE;
+            sRing.head = sRing.tail = sRing.queued = sRing.seen = 0;
+            sRing.sequence = sRing.count = 0;
+            sRing.id = payload;
+            enqueue(packet(DISCOVER, 0, 0, payload + 1));
+        }
+    }
+    else
+    {
+        if (payload < 2 || payload > 8 || sRing.id >= payload) return FALSE;
+        sRing.count = payload;
+        sio2_sMPlayerId.mPlayerId = sRing.id;
+        sio2_sMPlayerId.playerCount = payload;
+        sio2_sMPlayerId.field_16 = 0x8001;
+        if (!sRing.owner) enqueue(word);
+        else sRing.complete = TRUE;
+    }
+    return TRUE;
+}
+
 static void RING_IRQ receive(u32 word)
 {
     u32 type, node, seq, payload, i;
@@ -316,34 +390,8 @@ static void RING_IRQ receive(u32 word)
     switch (type)
     {
     case DISCOVER:
-        if (sRing.owner)
-        {
-            if (payload < 2 || payload > 8)
-                goto invalid;
-            sRing.count = payload;
-            enqueue(packet(ANNOUNCE, 0, 0, payload));
-        }
-        else
-        {
-            if (payload >= 8 || sRing.inGame)
-                goto invalid;
-            sRing.head = sRing.tail = sRing.queued = sRing.seen = 0;
-            sRing.sequence = sRing.count = 0;
-            sRing.id = payload;
-            enqueue(packet(DISCOVER, 0, 0, payload + 1));
-        }
-        break;
     case ANNOUNCE:
-        if (payload < 2 || payload > 8 || sRing.id >= payload)
-            goto invalid;
-        sRing.count = payload;
-        sio2_sMPlayerId.mPlayerId = sRing.id;
-        sio2_sMPlayerId.playerCount = payload;
-        sio2_sMPlayerId.field_16 = 0x8001;
-        if (!sRing.owner)
-            enqueue(word);
-        else
-            sRing.complete = TRUE;
+        if (!receiveDiscovery(word, type, payload)) goto invalid;
         break;
     case READY:
         /* Probes can be lost during graphics DMA; repeat the same sampled
@@ -359,10 +407,13 @@ static void RING_IRQ receive(u32 word)
             goto invalid;
         sRing.staged[node] = payload;
         sRing.seen |= 1 << node;
+        /* A returning own READY proves that every node has forwarded this
+         * immutable input. Its sender can stop repeating it while the last
+         * renderer finishes; COMMIT replay still repairs missing vectors. */
+        if (!sRing.frameStarted && node == sRing.id) sRing.ownReturned = TRUE;
         if (sRing.owner)
         {
             sRing.readySeen |= 1 << node;
-            if (!sRing.frameStarted && node == sRing.id) sRing.ownReturned = TRUE;
         }
         if (node != sRing.id) enqueue(word);
         if (sRing.owner && sRing.requested && !sRing.frameStarted && sRing.ownReturned && sRing.readySeen == (1 << sRing.count) - 1)
@@ -432,7 +483,7 @@ static void RING_IRQ ring_serialHandler(void)
     sRing.lastShift = REG_TM2CNT_L;
     sRing.packets++;
     receive(word);
-    if (sRing.count && sRing.requested && !sRing.frameStarted && !(sRing.packets & 15))
+    if (sRing.count && sRing.requested && !sRing.frameStarted && !sRing.ownReturned && !(sRing.packets & 15))
         enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
     if (sRing.owner && sRing.frameStarted && !sRing.complete &&
         sRing.packets - sRing.commitPacket > sRing.count + 1 &&
@@ -454,8 +505,15 @@ static void RING_IRQ ring_serialHandler(void)
     }
     else if (sRing.owner && !sRing.failed && !sRing.complete)
     {
+        u32 delay = RING_TURNAROUND;
+        /* Once our READY has circled, idle clocks only probe peers still
+         * rendering. Avoid flooding their audio/physics with NOP IRQs; keep
+         * full-rate forwarding whenever data or COMMIT is in circulation. */
+        if (!word && !sRing.queued && sRing.count >= 5 && sRing.inGame &&
+            sTickEpochStarted && sRing.ownReturned && !sRing.frameStarted)
+            delay = RING_TURNAROUND * 2;
         REG_TM2CNT_H = 0;
-        REG_TM2CNT_L = 65536 - RING_TURNAROUND;
+        REG_TM2CNT_L = 65536 - delay;
         REG_TM2CNT_H = 0xC0;
     }
 }
@@ -645,6 +703,20 @@ bool32 ring_exchange(void)
     u32 started = ring_cycles();
     if (sRing.failed)
         return TRUE;
+    if (sRing.count == 1)
+    {
+        u32 i;
+        sRing.barrierWaiting = TRUE;
+        sRing.rounds++;
+        for (i = 0; i < 8; i++)
+        {
+            ring_sControlWords[i] = i ? 1023 : (REG_KEYINPUT & 1023) ^ (*(vu16*)0x03004F50 & 0x1C00);
+            sio2_sKeyBuf[i] = ring_sControlWords[i] & 1023;
+        }
+        sRenderStart = ring_cycles();
+        sRing.barrierWaiting = FALSE;
+        return FALSE;
+    }
     /* A reproducible snapshot may stop here without withholding an already
      * sampled input or suspending an active clock train. */
     sRing.barrierWaiting = TRUE;
@@ -703,7 +775,7 @@ static const u16 sKartMarkerCells[8][4] = {
 
 const u16* ring_playerMarker(unsigned id)
 {
-    return sRing.enabled && id < sRing.count ? sKartMarkerCells[id] : 0;
+    return sRing.enabled && id < (sGame == GP_MODE ? 8 : sRing.count) ? sKartMarkerCells[id] : 0;
 }
 
 static const u16 sBalloonCells[8][4] = {
@@ -731,6 +803,7 @@ static const u16 sBalloonHudCells[8][4] = {
 const u16* ring_balloonHudCell(unsigned id)
 {
     extern const u16 _0807B9A8[];
+    if (sRing.enabled && id < 4) id = sBattleHudIds[id];
     return sRing.enabled && id < 8 ? sBalloonHudCells[id] : _0807B9A8;
 }
 
@@ -778,7 +851,17 @@ static void markerTiles(void)
         sBalloonArtReady = TRUE;
     }
     CpuCopy16(pixels, (void*)0x06012640, sizeof(pixels));
-    for (i = 0; i < sRing.count; i++)
+}
+
+/* Course palette animations run after HUD drawing. Restore the two identity
+ * entries at publication, after their writes and graphics DMA have finished. */
+void ring_publishIdentityPalette(void)
+{
+    u16* palette;
+    u32 i;
+    if (!sRing.enabled || !sRing.inGame) return;
+    palette = pltt_getBuffer(PLTT_BUFFER_OBJ);
+    for (i = 0; i < (sGame == GP_MODE ? 8 : sRing.count); i++)
     {
         palette[(8 + i) * 16 + 1] = sPlayerColors[i];
         palette[(8 + i) * 16 + 2] = (sPlayerColors[i] >> 1 & 0x3DEF) + 0x4210;
@@ -793,8 +876,37 @@ int sub_8032D0C(RaceState* state);
 
 void sub_804DCB0(RaceState* state)
 {
-    if (sRing.enabled) markerTiles();
+    if (sRing.enabled)
+    {
+        u8 order[8];
+        u32 i, j;
+        for (i = 0; i < sRing.count; i++) order[i] = i;
+        for (i = 1; i < sRing.count; i++)
+        {
+            u8 id = order[i];
+            u32 balloons = ((u8*)state->drivers[id])[0x17D];
+            j = i;
+            while (j && ((u8*)state->drivers[order[j - 1]])[0x17D] < balloons)
+            { order[j] = order[j - 1]; j--; }
+            order[j] = id;
+        }
+        for (i = 0; i < 4; i++) sBattleHudIds[i] = order[i < sRing.count ? i : 0];
+        markerTiles();
+    }
     ring_stockBattleHud(state);
+}
+
+Driver* ring_battleHudDriver(RaceState* state, unsigned row)
+{
+    return state->drivers[sRing.enabled && row < 4 ? sBattleHudIds[row] : row];
+}
+
+unsigned ring_battleHudRow(unsigned id)
+{
+    unsigned row;
+    if (!sRing.enabled) return id;
+    for (row = 0; row < 4; row++) if (sBattleHudIds[row] == id) break;
+    return row;
 }
 
 void sub_804F2C0(RaceState* state)
@@ -816,11 +928,13 @@ void sub_804E7EC(Driver* driver, int local)
         int scale = sub_8032D0C(&gSceneState.raceState) + 19;
         s32* xyz = (s32*)driver;
         u32 id = bytes[0xEC];
-        if (id >= sRing.count) return;
+        if (id >= (sGame == GP_MODE ? 8 : sRing.count)) return;
         position.x = 168 + (xyz[0] >> scale);
         position.y = 88 + (xyz[1] >> scale);
         cell[0] = 1;
-        cell[1] = cell[2] = 0;
+        /* Native 8x8 marker: offset 4 plus its central pixels at 3/4.
+         * Our 2x2 dot needs offset 7 for the identical pixel center. */
+        cell[1] = cell[2] = 7;
         cell[3] = 0x133 | (8 + id) << 12;
         oam_renderCellData(cell, &position, 0, 0, 0, 0);
     }
@@ -850,6 +964,7 @@ static unsigned glyph(char c)
 {
     if (c >= 'A' && c <= 'Z') return c - 'A';
     if (c >= '0' && c <= '9') return c - '0' + 26;
+    if (c == '/') return 37;
     return 36;
 }
 
@@ -932,7 +1047,7 @@ static void screen(const char* heading)
     DMA_FILL(3, 0x0808, (void*)sMenuPixels, 240 * 26, 16);
     DMA_FILL(3, 0x0909, (void*)(sMenuPixels + 120 * 26), 240 * (160 - 26), 16);
     text(12, 10, heading, 0x001F);
-    text(12, 148, "A CONFIRM    B BACK", 0x7FFF);
+    text(6, 148, "A OK B BACK", 0x7FFF);
 }
 
 /* Sample the stock lettering already loaded by title_init. Keeping palette
@@ -969,7 +1084,10 @@ void ring_initTitleOption(void)
 {
     extern const u16* off_80D8E4C[];
     /* R from PLAYER, ING from SINGLE, LINK from SINGLE-PAK LINK. */
-    static const s16 slices[3][4] = { {0,31,8,3}, {0,-32,18,11}, {5,23,27,33} };
+    /* Include each glyph's outline, excluding the adjacent E/L columns.
+     * The former crops picked up the preceding E beside R and the following
+     * L beside ING, producing stray edges when the fragments were joined. */
+    static const s16 slices[3][4] = { {0,32,7,3}, {0,-33,18,11}, {5,25,25,34} };
     u16 tiles[256];
     int i, row, col, x, offset;
     for (i = 0; i < 256; i++) tiles[i] = 0;
@@ -1007,7 +1125,7 @@ u8 track_getRetroTrack(int track);
 bool32 race_main(void);
 int spm_menuCharIdxToCharId(int menuIndex);
 
-static void prepareRace(const u8* characters, int battle, int engine, int course, int retro)
+static void prepareRace(const u8* characters, int mode, int engine, int course, int retro)
 {
     RaceState* state = &gSceneState.raceState;
     u32 i;
@@ -1022,7 +1140,9 @@ static void prepareRace(const u8* characters, int battle, int engine, int course
     sMusicRacing = FALSE;
 #endif
     sTickEpochStarted = FALSE;
-    sBattle = battle; sEngine = engine; sCourse = course; sRetro = retro;
+    sGame = mode; sBattle = mode == BATTLE_MODE; sEngine = engine; sCourse = course; sRetro = retro;
+    if (sBattle && (course < 0 || course > 3)) { sRing.failed = TRUE; return; }
+    if (!sBattle && (course < 0 || course > 19)) { sRing.failed = TRUE; return; }
     scene_setVBlankFunc(0);
     sub_8048C74(state);
     *(vu8*)0x0300000C = 3;
@@ -1032,7 +1152,7 @@ static void prepareRace(const u8* characters, int battle, int engine, int course
     sub_80152D4(0);
     state->humanCount = sRing.count;
     state->localPlayerId = sRing.id;
-    state->curRaceStateUnknown = battle ? 0x800 : 0x400;
+    state->curRaceStateUnknown = sBattle ? 0x800 : mode == GP_MODE ? 0x100 : 0x400;
     state->engineClass = engine;
     for (i = 0; i < sRing.count; i++)
     {
@@ -1040,7 +1160,19 @@ static void prepareRace(const u8* characters, int battle, int engine, int course
         gSelectedCharacters[i] = character;
         sub_804AE58(state, character, 1);
     }
-    state->headerTableIdx = battle ? track_getBattleTrack(course) :
+    if (mode == GP_MODE)
+    {
+        u32 used = 0, character;
+        for (i = 0; i < sRing.count; i++) used |= 1 << sCharacters[i];
+        for (i = sRing.count; i < 8; i++)
+        {
+            for (character = 0; used & (1 << character); character++);
+            used |= 1 << character;
+            sCharacters[i] = character;
+            sub_804AE58(state, spm_menuCharIdxToCharId(character), 0);
+        }
+    }
+    state->headerTableIdx = sBattle ? track_getBattleTrack(course) :
                            retro ? track_getRetroTrack(course) : track_getMKSCTrack(course);
     *(vu32*)0x03000008 = course;
     sRing.inGame = TRUE;
@@ -1050,7 +1182,7 @@ static void prepareRace(const u8* characters, int battle, int engine, int course
 bool32 ring_main(void)
 {
     int phase = sResume ? sResume : GAME;
-    int battle = sResume ? sBattle : 0, engine = sResume ? sEngine : 0;
+    int mode = sResume ? sGame : VS_MODE, engine = sResume ? sEngine : 0;
     int cup = sResume ? sCourse / 4 : 0, course = sResume ? sCourse : 0;
     int retro = sResume ? sRetro : 0;
     u8 characters[8], ready = 0, ignoreStart = !sResume;
@@ -1066,6 +1198,7 @@ bool32 ring_main(void)
     text(12, 42, "CONNECT ALL GBAS IN A RING", 0x7FFF);
     text(12, 60, "PRESS START ON ONE CONSOLE", 0x03FF);
     text(12, 78, "WAITING FOR OTHER PLAYERS", 0x7FFF);
+    text(12, 100, "SELECT SOLO GRAND PRIX", 0x7FFF);
     sMenuReady = TRUE;
     /* Discovery polls without the normal frame loop. Continue servicing
      * MP2000 every VBlank so the last title sample cannot loop indefinitely. */
@@ -1079,6 +1212,12 @@ bool32 ring_main(void)
         trigger = keys & ~previous;
         previous = keys;
         if (trigger & B_BUTTON) goto cancelled;
+        if ((trigger & SELECT_BUTTON) && sRing.id == RING_INVALID)
+        {
+            sRing.id = 0; sRing.count = 1; sRing.owner = TRUE;
+            mode = GP_MODE; phase = ENGINE; ignoreStart = FALSE;
+            break;
+        }
         if ((trigger & START_BUTTON) && sRing.id == RING_INVALID)
         {
             REG_SIOCNT = RING_CONTROL;
@@ -1120,18 +1259,31 @@ connected:
         if (phase != CHARACTERS && (trigger & B_BUTTON))
         {
             if (phase == GAME) goto cancelled;
-            if (phase == ENGINE) phase = GAME;
+            if (phase == ENGINE)
+            {
+                if (sRing.count == 1) goto cancelled;
+                phase = GAME;
+            }
             else if (phase == COURSE) phase = CUP;
             else { phase = CHARACTERS; ready = 0; }
+            /* Consume Back once. CUP -> CHARACTERS must not process the same
+             * B edge a second time in the character handler below. */
+            continue;
         }
         switch (phase)
         {
         case GAME:
-            if (trigger & (DPAD_UP | DPAD_DOWN)) battle ^= 1;
-            if (trigger & (A_BUTTON | START_BUTTON)) phase = battle ? CHARACTERS : ENGINE;
+            if (sRing.count == 1) { mode = GP_MODE; phase = ENGINE; continue; }
+            if (trigger & (DPAD_UP | DPAD_DOWN))
+            {
+                mode = (mode + ((trigger & DPAD_UP) ? 2 : 1)) % 3;
+                course = cup = 0;
+            }
+            if (trigger & (A_BUTTON | START_BUTTON)) phase = mode == BATTLE_MODE ? CHARACTERS : ENGINE;
             screen("CHOOSE A GAME");
-            text(30, 55, "VS", battle ? 0x7FFF : 0x03FF);
-            text(30, 85, "BATTLE", battle ? 0x03FF : 0x7FFF);
+            text(30, 45, "VS", mode == VS_MODE ? 0x03FF : 0x7FFF);
+            text(30, 70, "BATTLE", mode == BATTLE_MODE ? 0x03FF : 0x7FFF);
+            text(30, 95, "GRAND PRIX", mode == GP_MODE ? 0x03FF : 0x7FFF);
             break;
         case ENGINE:
             if ((trigger & DPAD_UP) && engine > 0) engine--;
@@ -1146,7 +1298,7 @@ connected:
             if ((trigger & B_BUTTON) && !(ready & 1))
             {
                 ready = 0;
-                phase = battle ? GAME : ENGINE;
+                phase = mode == BATTLE_MODE ? GAME : ENGINE;
                 continue;
             }
             for (i = 0; i < sRing.count; i++)
@@ -1176,17 +1328,28 @@ connected:
                 text(x + 34, y, sCharacterNames[characters[i]], sPlayerColors[i]);
                 if (ready & (1 << i)) text(x + 34, y + 10, "READY", 0x7FFF);
             }
-            if (ready == (1 << sRing.count) - 1) phase = battle ? ARENA : CUP;
+            if (ready == (1 << sRing.count) - 1) phase = mode == BATTLE_MODE ? ARENA : CUP;
             break;
         case CUP:
             if ((trigger & DPAD_UP) && cup > 0) cup--;
             if ((trigger & DPAD_DOWN) && cup < 4) cup++;
             if (trigger & SELECT_BUTTON) retro ^= 1;
-            if (trigger & A_BUTTON) { course = cup * 4; phase = COURSE; }
+            if (trigger & A_BUTTON)
+            {
+                course = cup * 4;
+                if (mode == GP_MODE)
+                {
+                    sGPRace = 0;
+                    sGPCupComplete = 0;
+                    for (i = 0; i < 8; i++) sGPPoints[i] = 0;
+                    goto launch;
+                }
+                phase = COURSE;
+            }
             screen("CHOOSE A CUP");
             for (i = 0; i < 5; i++) text(24, 35 + i * 18, sCupNames[i], i == cup ? 0x03FF : 0x7FFF);
             text(144, 132, retro ? "RETRO" : "SUPER", 0x7FFF);
-            text(12, 148, "SELECT  SUPER OR RETRO", 0x03FF);
+            text(78, 148, "SELECT SUPER/RETRO", 0x7FFF);
             break;
         case COURSE:
             if (trigger & SELECT_BUTTON) retro ^= 1;
@@ -1198,10 +1361,11 @@ connected:
                 text(20, 40 + i * 22, (retro ? sRetroTracks : sTracks)[cup * 4 + i], cup * 4 + i == course ? 0x03FF : 0x7FFF);
             }
             text(144, 132, retro ? "RETRO" : "SUPER", 0x7FFF);
-            text(12, 148, "SELECT  SUPER OR RETRO", 0x03FF);
+            text(78, 148, "SELECT SUPER/RETRO", 0x7FFF);
             if (trigger & A_BUTTON) goto launch;
             break;
         case ARENA:
+            if (course < 0 || course > 3) course = 0;
             if ((trigger & DPAD_UP) && course > 0) course--;
             if ((trigger & DPAD_DOWN) && course < 3) course++;
             screen("CHOOSE A BATTLE COURSE");
@@ -1212,7 +1376,7 @@ connected:
         sMenuReady = TRUE;
     }
 launch:
-    prepareRace(characters, battle, engine, course, retro);
+    prepareRace(characters, mode, engine, course, retro);
     return TRUE;
 lost:
     ring_stop();
@@ -1232,7 +1396,7 @@ bool32 ring_checkRoundEnd(void)
     RaceState* state = &gSceneState.raceState;
     u32 i, finished = 0, alive = 0;
     if (!sRing.enabled || !sRing.inGame) return FALSE;
-    for (i = 0; i < sRing.count; i++)
+    for (i = 0; i < state->driverCount; i++)
     {
         u8* driver = (u8*)state->drivers[i];
         if (sBattle)
@@ -1243,7 +1407,7 @@ bool32 ring_checkRoundEnd(void)
         }
         else if (driver[0xC7] >= 0x83) finished++;
     }
-    if ((sBattle && alive <= 1) || (!sBattle && finished >= sRing.count - 1))
+    if ((sBattle && alive <= 1) || (!sBattle && finished >= state->driverCount - 1))
     {
         *((u8*)state + 0x7E8) = 0;
         return TRUE;
@@ -1266,7 +1430,7 @@ bool32 ring_finishRace(void)
         scene_setMainFunc(connectionError_main);
     }
     else if (choice == 1)
-        prepareRace(sCharacters, sBattle, sEngine, sCourse, sRetro);
+        prepareRace(sCharacters, sGame, sEngine, sCourse, sRetro);
     else if (choice == 5)
     {
         sSession = FALSE;
@@ -1275,12 +1439,12 @@ bool32 ring_finishRace(void)
     }
     else if (choice == 2 || choice == 3 || choice == 4)
     {
-        sResume = choice == 4 ? CHARACTERS : sBattle ? ARENA : choice == 3 ? CUP : COURSE;
+        sResume = choice == 4 ? CHARACTERS : sBattle ? ARENA : sGame == GP_MODE || choice == 3 ? CUP : COURSE;
         scene_setMainFunc(ring_main);
     }
     else
     {
-        for (i = 0; i < sRing.count; i++)
+        for (i = 0; i < state->driverCount; i++)
         {
             if (sBattle)
             {
@@ -1293,7 +1457,13 @@ bool32 ring_finishRace(void)
                 sPlaces[i] = ((u8*)driver)[0xEC];
             }
         }
-        if (sPlaces[0] < sRing.count) sWins[sPlaces[0]]++;
+        if (sGame == GP_MODE)
+        {
+            static const u8 points[8] = {9, 6, 3, 1, 0, 0, 0, 0};
+            for (i = 0; i < 8; i++) if (sPlaces[i] < 8) sGPPoints[sPlaces[i]] += points[i];
+            if (sGPRace == 3) sGPCupComplete = 1;
+        }
+        else if (sPlaces[0] < sRing.count) sWins[sPlaces[0]]++;
         scene_setMainFunc(results_main);
     }
     return TRUE;
@@ -1365,16 +1535,30 @@ static bool32 results_main(void)
     extern u16 gKeyTriggerBuf[8];
     u32 i;
     resetMenuDisplay();
-    screen(sBattle ? "BATTLE RESULTS" : "VS RESULTS");
-    for (i = 0; i < sRing.count; i++)
+    screen(sBattle ? "BATTLE RESULTS" : sGame == GP_MODE ? "GRAND PRIX POINTS" : "VS RESULTS");
+    if (sGame == GP_MODE)
+    {
+        /* Cup standings: points descending; the latest finish breaks ties. */
+        for (i = 1; i < 8; i++)
+        {
+            u8 id = sPlaces[i];
+            u32 j = i;
+            while (j && sGPPoints[sPlaces[j - 1]] < sGPPoints[id])
+            { sPlaces[j] = sPlaces[j - 1]; j--; }
+            sPlaces[j] = id;
+        }
+        text(12, 136, sGPRace == 3 ? "CUP COMPLETE  A CHOOSE CUP" : "A NEXT RACE", 0x7FFF);
+    }
+    for (i = 0; i < (sGame == GP_MODE ? 8 : sRing.count); i++)
     {
         u32 id = sPlaces[i];
         int x = (i & 1) ? 126 : 8, y = 35 + (i / 2) * 26;
-        if (id >= sRing.count) continue;
+        if (id >= (sGame == GP_MODE ? 8 : sRing.count)) continue;
         number(x, y, i + 1, 0x7FFF);
         text(x + 18, y, sCharacterNames[sCharacters[id]], sPlayerColors[id]);
-        text(x + 18, y + 10, "WINS", 0x7FFF);
-        number(x + 50, y + 10, sWins[id], sPlayerColors[id]);
+        text(x + 18, y + 10, sGame == GP_MODE ? "PTS" : "WINS", 0x7FFF);
+        number(x + 50, y + 10, sGame == GP_MODE ? sGPPoints[id] : sWins[id], sPlayerColors[id]);
+        if (sGame == GP_MODE && id >= sRing.count) text(x + 72, y + 10, "CPU", 0x7FFF);
     }
     sMenuReady = TRUE;
     while (1)
@@ -1383,7 +1567,13 @@ static bool32 results_main(void)
         if (!ring_active()) { scene_setMainFunc(connectionError_main); return TRUE; }
         if (gKeyTriggerBuf[0] & A_BUTTON)
         {
-            sResume = sBattle ? ARENA : COURSE;
+            if (sGame == GP_MODE && sGPRace < 3)
+            {
+                sGPRace++;
+                prepareRace(sCharacters, GP_MODE, sEngine, sCourse + 1, sRetro);
+                return TRUE;
+            }
+            sResume = sBattle ? ARENA : sGame == GP_MODE ? CUP : COURSE;
             scene_setMainFunc(ring_main);
             return TRUE;
         }

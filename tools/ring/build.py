@@ -29,6 +29,7 @@ link = link.replace('        src/vcount.o(COMMON);', '''        src/vcount.o(COM
         ASSERT(. < 0x7500, "Ring state overlaps the system stack reserve");''')
 link = link.replace('        data/characterTiles.o(.rodata*);', '''        data/characterTiles.o(.rodata*);
         src/ringLink.o(.text);
+        src/ringTarget.O3.o(.text);
         src/ringLink.o(.rodata);''')
 link = link.replace('    /* Discard everything not specifically mentioned above. */', '''    .ring_irq ALIGN(ADDR(.bss) + SIZEOF(.bss), 4) : AT(ALIGN(LOADADDR(.text) + SIZEOF(.text), 4))
     {
