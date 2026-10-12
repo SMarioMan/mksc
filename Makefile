@@ -41,7 +41,13 @@ ifeq ($(RING),1)
 ROM := mksc-ring.gba
 COMPARE_TARGET :=
 OBJ_DIR := build-ring
-CPPFLAGS += -DMKSC_RING=1
+CPPFLAGS += -DMKSC_RING=1 -DMKSC_RING_BOOT=$(or $(RING_BOOT),0)
+ifeq ($(RING_MUSIC),off)
+CPPFLAGS += -DMKSC_RING_MUSIC_OFF=1
+endif
+ifeq ($(RING_MUSIC),shared)
+CPPFLAGS += -DMKSC_RING_MUSIC_SHARED=1
+endif
 ASFLAGS += --defsym MKSC_RING=1
 LD_SCRIPT := build-ring/ld_script.ld
 SYMBOL_FILE := build-ring/symbols.txt

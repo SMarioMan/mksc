@@ -43,7 +43,7 @@ typedef struct
     u8 barrierWaiting, commitPending;
     u32 commitPacket;
 } RingState;
-static volatile RingState sRing;
+static volatile RingState sRing __attribute__((section(".ring_state")));
 u16 ring_sControlWords[8];
 u16 ring_sDriverInputs[8];
 u8 ring_balloonAffineIndex[8];
@@ -73,8 +73,76 @@ void ring_profileRender(void)
     ring_frameTiming[1] = ring_cycles() - sRenderStart;
 }
 
+#ifdef MKSC_RING_MUSIC_SHARED
+static u8 sMusicRacing, sSharedSong, sSharedFinalLap;
+int ring_sharedMusicActive(void)
+{
+    return sRing.enabled && sRing.inGame && sMusicRacing;
+}
+u16 ring_sharedMusicSong(u16 song)
+{
+    return ring_sharedMusicActive() && song >= 5 && song <= 7 ? 5 : song;
+}
+/* Derive BGM from the whole race, ignoring local power-up themes. Native
+ * final-lap flag is bit 3; finished drivers keep it set, so tempo never drops. */
+static void ring_updateSharedMusic(void)
+{
+    extern u8 sub_8032C38(RaceState*);
+    extern void m4aMPlayTempoControl(struct MusicPlayerInfo*, u16);
+    RaceState* state = &gSceneState.raceState;
+    u32 i, fast = 0, music, finished = 0, alive = 0;
+    if (!ring_sharedMusicActive()) { sSharedSong = 0; sSharedFinalLap = 0; return; }
+    for (i = 0; i < sRing.count; i++)
+    {
+        u8* driver = (u8*)state->drivers[i];
+        if (*(u32*)(driver + 0x48) & 8) fast = 1;
+        if (driver[0xC7] >= 0x83) finished++;
+        if (driver[0x17D]) alive++;
+    }
+    /* Preserve the common result jingle during native end-of-race cleanup. */
+    if ((!sBattle && finished >= sRing.count - 1) || (sBattle && alive <= 1)) return;
+    if (sBattle) fast = 0;
+    music = sBattle ? 18 : sub_8032C38(state);
+    if (music == 36) music = 28;
+    if (sSharedSong != music || sSharedFinalLap != fast)
+    {
+        if (fast && !sSharedFinalLap)
+        {
+            m4aSongNumStart(19);
+            sSharedSong = music; sSharedFinalLap = fast;
+            return;
+        }
+        m4aSongNumStart(music);
+        sSharedSong = music; sSharedFinalLap = fast;
+    }
+    /* Resume after the common final-lap jingle, never an individual star. */
+    if (gMPlayTable[0].info->songHeader == gSongTable[19].header &&
+        (gMPlayTable[0].info->status & MUSICPLAYER_STATUS_TRACK)) return;
+    if (gMPlayTable[0].info->songHeader != gSongTable[music].header)
+        m4aSongNumStart(music);
+    m4aMPlayTempoControl(gMPlayTable[gSongTable[music].ms].info, fast ? 320 : 256);
+}
+#endif
+
+bool32 ring_ignoreLocalMusic(void)
+{
+#ifdef MKSC_RING_MUSIC_SHARED
+    return ring_sharedMusicActive();
+#else
+    return FALSE;
+#endif
+}
+
 static u32 sLastAudioFrame;
 static volatile bool32 sGraphicsReady;
+static volatile u32 sVideoTick;
+static u32 sTickEpochFrame, sTickEpochRound;
+static bool32 sTickEpochStarted;
+
+void ring_newVideoFrame(void)
+{
+    sVideoTick = gSceneState.field14 + 1;
+}
 
 void ring_queueGraphics(void)
 {
@@ -83,7 +151,15 @@ void ring_queueGraphics(void)
 
 bool32 ring_canPublishGraphics(void)
 {
-    return !sRing.enabled || !sRing.inGame || (sGraphicsReady && !sRing.frameStarted);
+    return !sRing.enabled || !sRing.inGame || (sGraphicsReady && !sRing.frameStarted &&
+        (!sTickEpochStarted || sRing.rounds - sTickEpochRound <= sVideoTick - sTickEpochFrame));
+}
+
+bool32 ring_canPublishLateGraphics(void)
+{
+    /* Menus and native load/countdown handshakes retain one VBlank barrier.
+     * Only the initialized physics loop may consume the late-publish path. */
+    return sRing.enabled && sRing.inGame && sTickEpochStarted && ring_canPublishGraphics();
 }
 
 void ring_graphicsPublished(void)
@@ -93,8 +169,10 @@ void ring_graphicsPublished(void)
 
 void ring_waitGraphics(void)
 {
+    extern bool32 main_tryPublishRingGraphics(void);
     while (sRing.enabled && sGraphicsReady)
     {
+        if (main_tryPublishRingGraphics()) break;
         VBlankIntrWait();
         /* Start the input train before mixing the newly published frame.
          * Timer 2 can then clock it while SoundMain runs in the main thread. */
@@ -109,6 +187,9 @@ void ring_serviceAudio(void)
     {
         u32 started = ring_cycles();
         sLastAudioFrame = frame;
+#ifdef MKSC_RING_MUSIC_SHARED
+        ring_updateSharedMusic();
+#endif
         m4aSoundMain();
         ring_frameTiming[4] = ring_cycles() - started;
     }
@@ -436,6 +517,18 @@ void ring_extendDriverInputs(void)
 {
     extern u16 gKeyBuf[8], gKeyTriggerBuf[8];
     u32 i;
+    if (sRing.enabled && !sTickEpochStarted)
+    {
+        /* Start the fixed video-rate tick budget at the native physics loop,
+         * after loading/countdown setup. A missed presentation may catch up
+         * inside VBlank, but cannot advance the whole race faster than video. */
+        sTickEpochFrame = sVideoTick;
+        sTickEpochRound = sRing.rounds;
+        sTickEpochStarted = TRUE;
+    }
+#ifdef MKSC_RING_MUSIC_SHARED
+    sMusicRacing = sRing.enabled && sRing.inGame;
+#endif
     for (i = sRing.enabled ? 0 : 4; i < 8; i++)
         ring_sDriverInputs[i] = sRing.enabled && i < sRing.count
             ? ring_translateInput(gKeyBuf[i], gKeyTriggerBuf[i]) : 0;
@@ -466,7 +559,7 @@ int sub_8032990(RaceState* state, int x, int y, int layer);
 void loadtrack_8031F9C(RaceState* state)
 {
     u32 i, candidate;
-    static const s16 offsets[4][2] = { {24,0}, {-24,0}, {0,24}, {0,-24} };
+
     /* Stock Vs. generates only two, three or four start positions. Tracks
      * already contain the eight-position Grand Prix grid. */
     if (sRing.enabled && sRing.count > 4 && (state->curRaceStateUnknown & 0x400))
@@ -475,25 +568,29 @@ void loadtrack_8031F9C(RaceState* state)
         loadtrack_stockStartGrid(state);
     if (sRing.enabled && sRing.count > 4 && (state->curRaceStateUnknown & 0x800))
     {
-        /* Battle arenas have four spawn markers. Place each additional kart
-         * beside a stock spawn, rejecting void/lava tiles before using it. */
+        /* Pair each new slot with its native marker, symmetrically across
+         * the marker's facing direction. Shrink both offsets together when
+         * the arena edge would put either racer in a void/lava tile. */
         for (i = 4; i < sRing.count; i++)
         {
             s32* base = (s32*)((u8*)state + 0x24 + (i - 4) * 16);
             s32* extra = (s32*)((u8*)state + 0x24 + i * 16);
-            for (candidate = 0; candidate < 4; candidate++)
+            s32 x = base[0], y = base[1];
+            s16 yaw = base[2];
+            for (candidate = 12; candidate >= 4; candidate -= 4)
             {
-                s32 x = base[0] + offsets[candidate][0] * 65536;
-                s32 y = base[1] + offsets[candidate][1] * 65536;
-                if (!(sub_8032990(state, x >> 16, y >> 16, 0) & 0x80))
+                s32 dx = math_cos(yaw) * candidate * 2;
+                s32 dy = math_sin(yaw) * candidate * 2;
+                if (!(sub_8032990(state, (x + dx) >> 16, (y + dy) >> 16, 0) & 0x80) &&
+                    !(sub_8032990(state, (x - dx) >> 16, (y - dy) >> 16, 0) & 0x80))
                 {
-                    extra[0] = x;
-                    extra[1] = y;
-                    extra[2] = base[2];
+                    base[0] = x - dx; base[1] = y - dy;
+                    extra[0] = x + dx; extra[1] = y + dy;
+                    extra[2] = base[2]; extra[3] = base[3];
                     break;
                 }
             }
-            if (candidate == 4) sRing.failed = TRUE;
+            if (candidate < 4) sRing.failed = TRUE;
         }
     }
 }
@@ -509,6 +606,7 @@ void ring_stop(void)
     irq_setHandler(IRQ_ID_TIMER2, main_dummyIrqHandler);
     REG_TM2CNT_H = 0;
     sRing.enabled = FALSE;
+    sTickEpochStarted = FALSE;
     sio2_sMPlayerId.mPlayerId = -1;
     sio2_sMPlayerId.playerCount = 0;
     sio2_sMPlayerId.field_16 = 0;
@@ -920,6 +1018,10 @@ static void prepareRace(const u8* characters, int battle, int engine, int course
     }
     sEliminated = 0;
     sBalloonArtReady = FALSE;
+#ifdef MKSC_RING_MUSIC_SHARED
+    sMusicRacing = FALSE;
+#endif
+    sTickEpochStarted = FALSE;
     sBattle = battle; sEngine = engine; sCourse = course; sRetro = retro;
     scene_setVBlankFunc(0);
     sub_8048C74(state);
@@ -1083,17 +1185,20 @@ connected:
             if (trigger & A_BUTTON) { course = cup * 4; phase = COURSE; }
             screen("CHOOSE A CUP");
             for (i = 0; i < 5; i++) text(24, 35 + i * 18, sCupNames[i], i == cup ? 0x03FF : 0x7FFF);
-            text(144, 132, retro ? "EXTRA" : "SUPER", 0x7FFF);
+            text(144, 132, retro ? "RETRO" : "SUPER", 0x7FFF);
+            text(12, 148, "SELECT  SUPER OR RETRO", 0x03FF);
             break;
         case COURSE:
+            if (trigger & SELECT_BUTTON) retro ^= 1;
             if ((trigger & DPAD_UP) && course > cup * 4) course--;
             if ((trigger & DPAD_DOWN) && course < cup * 4 + 3) course++;
             screen("CHOOSE A TRACK");
             for (i = 0; i < 4; i++)
             {
-                if (!retro) text(20, 40 + i * 22, (retro ? sRetroTracks : sTracks)[cup * 4 + i], cup * 4 + i == course ? 0x03FF : 0x7FFF);
-                else number(40, 40 + i * 22, cup * 4 + i + 1, cup * 4 + i == course ? 0x03FF : 0x7FFF);
+                text(20, 40 + i * 22, (retro ? sRetroTracks : sTracks)[cup * 4 + i], cup * 4 + i == course ? 0x03FF : 0x7FFF);
             }
+            text(144, 132, retro ? "RETRO" : "SUPER", 0x7FFF);
+            text(12, 148, "SELECT  SUPER OR RETRO", 0x03FF);
             if (trigger & A_BUTTON) goto launch;
             break;
         case ARENA:

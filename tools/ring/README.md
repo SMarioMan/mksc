@@ -81,3 +81,54 @@ product wrapping; `test_camera.py` builds a separate homebrew and compares
 393,216 scanlines against the native arithmetic using the supplied BIOS.
 Balloons sharing the same transform reuse an affine matrix, preserving space
 in the GBA's 32-matrix OAM budget for karts and course objects.
+
+## Build and launch options
+
+```sh
+python3 tools/ring/build.py                         # Normal title-menu boot/music
+python3 tools/ring/build.py --boot-ring --shared-music
+python3 tools/ring/build.py --boot-ring --no-music
+```
+
+Each command writes `mksc-ring.gba`, `.elf`, and `.sym`; changing options
+rebuilds the variant's objects automatically. The stock matching build and ROM
+remain separate. `--music normal|off|shared` is an alternative to the two music
+flags. `--boot-ring` enters the connection menu directly and still waits for
+Start on one console. It supports the same connection, Vs., and Battle flow.
+
+`--no-music` disables player-zero BGM and jingles, retaining effects and voices.
+`--shared-music` retains course/Battle music, suppresses individual power-up
+music, and derives final-lap tempo from the whole race. The first racer reaching
+the final lap triggers the common jingle and fast course tempo. Audio reacts
+on the next video frame. End-of-race jingles use the common victory theme.
+
+The modified Qt emulator can launch all windows in one command:
+
+```sh
+mgba-qt --ring-players 8 --instance-settings ./ring-settings --hide-menu \
+  --bios gba.bin mksc-ring.gba
+```
+
+Replace the executable with `mGBA.exe` on Windows. Open Settings in each window
+to save independent bindings; Alt reveals the hidden windowed menu. Press Start
+in P1 to host. Select switches between Super and Retro on both the cup and track
+screens, and the Retro track screen displays course names.
+
+Battle slots 5–8 pair with slots 1–4. Each pair moves symmetrically left/right
+of the native marker's heading; candidate distances shrink together if either
+side would land on a void/lava tile. The native marker remains the midpoint.
+`test_spawns.py` checks the midpoint, heading, right-hand side, and synchronization
+on all four arenas.
+
+Completed race graphics that miss the initial VBlank IRQ can publish during
+the remaining blanking interval (through line 190). This applies only after
+the native physics loop starts; menus/loading retain their VBlank barrier.
+The tick budget tracks elapsed video frames, allowing missed ticks to catch up
+without running the whole race faster than the video clock. The horizon
+callback runs every video IRQ, including when bulk graphics publication waits.
+The native cell renderer is retained outside ring sessions.
+
+Additional regression tools: `test_course_menu.py` checks the published text
+pixels, `test_music.py` checks the music policies through an entire moving race,
+and `test_singleplayer.py --character 6` traverses DK to Wario in the native
+3×3 selector, then exercises GP and voice callbacks.

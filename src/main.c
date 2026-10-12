@@ -75,7 +75,11 @@ void AgbMain(void)
     sio2_sMPlayerId.field_16 = 0;
     sio2_stop();
     irq_enableIme();
+#if defined(MKSC_RING) && MKSC_RING_BOOT
+    sceneState->sceneMainFunc = ring_main;
+#else
     sceneState->sceneMainFunc = title_main;
+#endif
     sceneState->byte_3002E28 = 1;
     save_805EEF4();
     save_805C8A4();
@@ -95,6 +99,38 @@ void AgbMain(void)
     SoftReset(255);
 }
 
+static inline void main_publishGraphics(void)
+{
+    oam_dmaCopyToHw();
+    oam_reset();
+    dmaq_process(dmaq_getVBlankDmaQueue());
+    pltt_copyBufferToHw();
+    map_copyBuffersToHw();
+}
+
+#ifdef MKSC_RING
+bool32 main_tryPublishRingGraphics(void)
+{
+    u16 ime = REG_IME;
+    bool32 published = FALSE;
+    REG_IME = 0;
+    /* Rendering can finish just after the VBlank IRQ rejected an incomplete
+     * buffer. Publish in the same blanking interval when enough time remains,
+     * rather than discard an entire game tick waiting for the next IRQ. */
+    if ((REG_IE & IRQ_MASK_VBLANK) && REG_VCOUNT >= 160 && REG_VCOUNT <= 190 &&
+        ring_canPublishLateGraphics())
+    {
+        DmaStop(0);
+        main_publishGraphics();
+        ring_graphicsPublished();
+        if (gSceneState.vBlankFunc) gSceneState.vBlankFunc();
+        published = TRUE;
+    }
+    REG_IME = ime;
+    return published;
+}
+#endif
+
 void main_vblankHandler(void)
 {
 #ifdef MKSC_RING
@@ -104,6 +140,9 @@ void main_vblankHandler(void)
 
     SoundVSync_rev01();
     main_increaseFrameCounter();
+#ifdef MKSC_RING
+    ring_newVideoFrame();
+#endif
     DmaStop(0);
 #ifdef MKSC_RING
     /* Forwarding must not be interrupted by bulk graphics DMA. The frame's
@@ -111,17 +150,15 @@ void main_vblankHandler(void)
     if (ring_canPublishGraphics())
 #endif
     {
-        oam_dmaCopyToHw();
-        oam_reset();
-        dmaq_process(dmaq_getVBlankDmaQueue());
-        pltt_copyBufferToHw();
-        map_copyBuffersToHw();
-        if (sceneState->vBlankFunc)
-            sceneState->vBlankFunc();
+        main_publishGraphics();
 #ifdef MKSC_RING
         ring_graphicsPublished();
 #endif
     }
+    /* The native callback rearms the horizon VCOUNT interrupt every video
+     * frame. Deferring OAM/VRAM publication must not leave it disabled. */
+    if (sceneState->vBlankFunc)
+        sceneState->vBlankFunc();
     sio2_vblank();
     sceneState->field14++;
     main_setVBlankCheckFlag();

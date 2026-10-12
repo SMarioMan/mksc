@@ -392,6 +392,16 @@ _080522A0: .4byte 0x06000E00
 
 	thumb_func_start sub_80522A4
 sub_80522A4: @ 0x080522A4
+    .ifdef MKSC_RING
+    push {r0, lr}
+    bl ring_ignoreLocalMusic
+    cmp r0, #0
+    pop {r0, r1}
+    beq .Lnative_sub_80522A4
+    bx r1
+.Lnative_sub_80522A4:
+    mov lr, r1
+    .endif
 	push {r4, r5, r6, lr}
 	lsls r0, r0, #0x10
 	lsrs r5, r0, #0x10
@@ -519,6 +529,16 @@ _080523D8: .4byte 0x00000C72
 
 	thumb_func_start sub_80523DC
 sub_80523DC: @ 0x080523DC
+    .ifdef MKSC_RING
+    push {r0, lr}
+    bl ring_ignoreLocalMusic
+    cmp r0, #0
+    pop {r0, r1}
+    beq .Lnative_sub_80523DC
+    bx r1
+.Lnative_sub_80523DC:
+    mov lr, r1
+    .endif
 	push {r4, r5, r6, lr}
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
