@@ -127,7 +127,7 @@ _08051782:
 	str r0, [r1, #0x00]
 	bl sub_805A7C0
 	ldr r0, _080517B4 @ =0x03002E44
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #0x0C

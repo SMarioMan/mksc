@@ -98,7 +98,7 @@ u16 ring_sharedMusicSong(u16 song)
  * final-lap flag is bit 3; finished drivers keep it set, so tempo never drops. */
 static void ring_updateSharedMusic(void)
 {
-    extern u8 sub_8032C38(RaceState*);
+    extern u8 track_getRaceMusic(RaceState*);
     extern void m4aMPlayTempoControl(struct MusicPlayerInfo*, u16);
     RaceState* state = &gSceneState.raceState;
     u32 i, fast = 0, music, finished = 0, alive = 0;
@@ -120,7 +120,7 @@ static void ring_updateSharedMusic(void)
     /* Preserve the common result jingle during native end-of-race cleanup. */
     if ((!sBattle && finished >= state->driverCount - 1) || (sBattle && alive <= 1)) return;
     if (sBattle) fast = 0;
-    music = sBattle ? 18 : sub_8032C38(state);
+    music = sBattle ? 18 : track_getRaceMusic(state);
     if (music == 36) music = 28;
     if (sSharedSong != music || sSharedFinalLap != fast)
     {

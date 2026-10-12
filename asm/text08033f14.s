@@ -12233,7 +12233,7 @@ _08039E64:
 	bl sub_805BDC4
 _08039EB8:
 	mov r0, sl
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #8
@@ -12588,7 +12588,7 @@ _0803A1BA:
 	str r0, [r4]
 _0803A1BC:
 	mov r0, sl
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #0xc
@@ -14622,7 +14622,7 @@ _0803B13C:
 _0803B148:
 	asrs r4, r0, #0x10
 	adds r0, r5, #0
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #8
@@ -14673,7 +14673,7 @@ _0803B1A4:
 _0803B1B0:
 	asrs r4, r2, #0x10
 	adds r0, r5, #0
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #8
@@ -14948,7 +14948,7 @@ _0803B3B8:
 	ldr r4, _0803B3F0 @ =0x03002E20
 	adds r4, #0x24
 	mov r0, sb
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r1, r0, #0x18
 	mov r8, r4
@@ -17745,7 +17745,7 @@ _0803C8DC:
 	cmp r0, #0x50
 	bne _0803C8FA
 	adds r0, r5, #0
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #0xc
@@ -20405,7 +20405,7 @@ sub_803DCA4: @ 0x0803DCA4
 	cmp r0, #0
 	bne _0803DCD8
 	adds r0, r1, #0
-	bl sub_8032C44
+	bl track_getRaceTargetTable
 	adds r1, r4, #0
 	adds r1, #0xba
 	ldrh r1, [r1]
@@ -43580,7 +43580,7 @@ _08048DA4: .4byte _08066E4C
 _08048DA8: .4byte sub_804B13C
 _08048DAC:
 	adds r0, r5, #0
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	ldr r1, _08048DC0 @ =sub_804B0A0
@@ -47757,7 +47757,7 @@ _0804ADC4: .4byte 0x00007FFF
 _0804ADC8: .4byte sub_804B13C
 _0804ADCC:
 	adds r0, r4, #0
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	ldr r1, _0804ADE0 @ =sub_804B0A0
@@ -50243,7 +50243,7 @@ sub_804C12C: @ 0x0804C12C
 	movs r2, #0x10
 	bl CpuSet
 	adds r0, r4, #0
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #0x12
@@ -60523,7 +60523,7 @@ _080511B4:
 	str r0, [r3]
 	ldr r0, _080511D8 @ =0x03002E20
 	adds r0, #0x24
-	bl sub_8032C2C
+	bl track_getRaceMaterial
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #0xe

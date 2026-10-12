@@ -2947,33 +2947,7 @@ _08032C1C:
 	bx r1
 	.align 2, 0
 
-	thumb_func_start sub_8032C2C
-sub_8032C2C: @ 0x08032C2C
-	movs r1, #0xaf
-	lsls r1, r1, #3
-	adds r0, r0, r1
-	ldr r0, [r0]
-	ldrb r0, [r0, #0x10]
-	bx lr
-
-	thumb_func_start sub_8032C38
-sub_8032C38: @ 0x08032C38
-	movs r1, #0xaf
-	lsls r1, r1, #3
-	adds r0, r0, r1
-	ldr r0, [r0]
-	ldrb r0, [r0, #0x18]
-	bx lr
-
-	thumb_func_start sub_8032C44
-sub_8032C44: @ 0x08032C44
-	movs r1, #0xaf
-	lsls r1, r1, #3
-	adds r0, r0, r1
-	ldr r0, [r0]
-	ldr r0, [r0, #0x1c]
-	bx lr
-
+	.section .text.trackQueriesTail, "ax", %progbits
 	thumb_func_start sub_8032C50
 sub_8032C50: @ 0x08032C50
 	cmp r1, #0
