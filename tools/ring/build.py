@@ -5,11 +5,15 @@ import subprocess
 import argparse
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument("--boot-ring", action="store_true", help="Boot directly into the ring connection menu")
+p.add_argument("--code-padding", type=lambda value: int(value, 0), default=0,
+               help="Insert aligned ROM padding before game code to test relocation")
 music = p.add_mutually_exclusive_group()
 music.add_argument("--music", choices=("normal", "off", "shared"), default="normal", help="Music policy; effects remain enabled")
 music.add_argument("--no-music", dest="music", action="store_const", const="off")
 music.add_argument("--shared-music", dest="music", action="store_const", const="shared")
 a = p.parse_args()
+if a.code_padding < 0 or a.code_padding > 65536 or a.code_padding % 4:
+    p.error("Code padding must be a multiple of four from 0 to 65536 bytes")
 root = Path(__file__).resolve().parents[2]
 out = root / 'build-ring'
 out.mkdir(exist_ok=True)
@@ -21,6 +25,9 @@ if not stamp.exists() or stamp.read_text() != configuration:
         obj.unlink()
     stamp.write_text(configuration)
 link = (root / 'ld_script.ld').read_text()
+if a.code_padding:
+    link = link.replace('        asm/crt0.o(.text);',
+                        '        asm/crt0.o(.text);\n        . += %d;' % a.code_padding)
 link = link.replace('        src/vcount.o(COMMON);', '''        src/vcount.o(COMMON);
         . = 0x6B40;
         src/ringLink.o(.ring_state);

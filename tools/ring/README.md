@@ -13,7 +13,10 @@ owns the clock and menus. Choose Vs., Battle, or Grand Prix, engine class (races
 characters, and a track or arena. Eight controllers, character slots, and
 converted driver input words have separate storage; unused slots stay released.
 Grand Prix supports 1–8 humans, fills the remaining grid slots with CPUs, and
-runs four-course cups with native 9/6/3/1 points. Select in the disconnected
+runs four-course cups with native 9/6/3/1 points and the native three Super /
+five Retro laps. Awards use the original points table; cumulative standings
+use the original eight-racer builder and its tied ranks and human/CPU rules.
+Select in the disconnected
 Ring Link lobby starts solo GP. In linked GP, choose a cup rather than a single
 course; A advances results to the next race, then returns to cup selection.
 
@@ -45,8 +48,11 @@ Battle shows the four players with the most remaining balloons, with stable
 player-order ties. Floating balloons retain native highlights; the reserved
 identity palettes are restored after course animation and graphics DMA so
 those highlights do not become white/gray while moving. Course palettes and minimap background tiles remain owned by the original renderer. Menus
-currently use a simple bitmap layout; matching the stock Multi-Pak menu artwork
-is a later visual improvement. After the BIOS-backed matrix passed, optional
+currently use a simple bitmap layout. Migration to the shared stock Multi-Pak
+mode, character and course pages, and native results presentation, is ongoing.
+The character-order queries and shared eight-entry result records have been
+decompiled to matching C as foundations for that work.
+After the BIOS-backed matrix passed, optional
 HLE passed two- and eight-player entry and complete rounds in both modes, plus
 the ordinary GP character-voice regression. Add `--hle` to `test_game.py`,
 `test_rounds.py`, or `test_singleplayer.py` to select it explicitly. Their BIOS
@@ -157,6 +163,29 @@ players 1–4 and checks that players 5–8 occupy every console's Battle HUD.
 Battle, guarding against carried course indexes and double-consumed Back.
 `test_gp.py` checks first-race points and next-course loading at one, two, and
 eight humans. `test_gp_cup.py` completes a four-course Retro cup, checking
-synchronized human/CPU physics and a total of 76 awarded points. Both GP
+synchronized human/CPU physics, five laps per Retro race, and a total of 76
+awarded points. Its optional `--autofire` also uses items. Both GP
 scripts need the matching `--elf`. `test_target.py` compares the Battle target
 response C implementation to the actual native Thumb code in 4096 fixtures.
+
+Music regressions accept `--players 2..8`, `--gp` and `--retro`; the GP/Retro
+case checks that final-lap BGM begins on lap five and remains host-only while
+six CPUs and two humans race.
+
+The GP cup fixture writes `*-progress.csv` during the run. Its steering revisits
+the current route point when a corner-cut leaves a car blocked, using only
+keypad inputs. The GP finish-name updater repairs invalid stock menu records
+at rendering time so late finishers can continue racing without corrupting
+scene memory.
+
+`test_start_music.py` covers the opening fanfare before course BGM in eight-player
+Vs./Battle/GP (including a host in another physical window). Shared music waits
+for the native opening song to end, preserves common final-lap/result jingles,
+and ignores local power-up themes. Peers retain sound effects and voices.
+
+For relocation checks, build the same configuration with and without
+`--code-padding 0x400`, save immutable ROM/ELF copies, and run
+`audit_relocation.py --rom ORIGINAL --elf ORIGINAL_ELF --shifted-rom SHIFTED
+--shifted-elf SHIFTED_ELF`. Follow this static callback check with the real-BIOS
+`test_singleplayer.py` voice/item regression and the relevant ring game tests.
+This flag only pads the ROM for validation; normal builds use no added padding.
