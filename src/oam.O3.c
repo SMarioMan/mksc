@@ -49,9 +49,16 @@ inline int oam_bufferCellAffineMtx(OamCell* cell)
     return sNextAffineId++;
 }
 
+#ifdef MKSC_RING
+static void ring_renderAllCells(void);
+#endif
+
 inline void oam_renderAllCells(void)
 {
     OamCellListEntry* listEntry;
+#ifdef MKSC_RING
+    if (ring_active()) { ring_renderAllCells(); return; }
+#endif
 
     if (!sCellListHead)
         return;
@@ -72,10 +79,15 @@ asm_unified(".include \"nonmatching/text0802F6BC.s\"");
 bool32 ring_stockRenderCell(OamCell* cell);
 s32 ring_spriteDivide(s32 numerator, s32 denominator);
 extern u8 ring_balloonAffineIndex[8];
+typedef struct
+{
+    u16 scaleX, scaleY;
+    s16 x, y;
+} BalloonOffsetCache;
 
 /* Most scaled game objects contain one sprite. Avoid the general renderer's
  * repeated buffer/mask loads while retaining its native coordinate rounding. */
-static bool32 ring_renderSingleScaledCell(OamCell* cell)
+static bool32 ring_renderSingleScaledCell(OamCell* cell, BalloonOffsetCache* cache)
 {
     const u16* data = cell->cellData + 1;
     u32 attr0 = data[0], attr1 = data[1], attr2 = data[2];
@@ -113,12 +125,24 @@ static bool32 ring_renderSingleScaledCell(OamCell* cell)
         if (id >= 0) ring_balloonAffineIndex[id] = affine;
     }
     flags = cell->scaleX < 256 || cell->scaleY < 256 ? 0x300 : 0x100;
-    if (x > 255) x = -(x ^ 511);
-    x += halfWidth;
-    y += halfHeight;
-    x = (attr1 & 511) + ring_spriteDivide(x * 256, cell->scaleX) - x;
-    y = (attr0 & 255) + ring_spriteDivide(y * 256, cell->scaleY) - y;
-    if (flags == 0x300) { x -= halfWidth; y -= halfHeight; }
+    if (cache && id >= 0 && cache[id].scaleX == cell->scaleX && cache[id].scaleY == cell->scaleY)
+    {
+        x = cache[id].x; y = cache[id].y;
+    }
+    else
+    {
+        if (x > 255) x = -(x ^ 511);
+        x += halfWidth;
+        y += halfHeight;
+        x = (attr1 & 511) + ring_spriteDivide(x * 256, cell->scaleX) - x;
+        y = (attr0 & 255) + ring_spriteDivide(y * 256, cell->scaleY) - y;
+        if (flags == 0x300) { x -= halfWidth; y -= halfHeight; }
+        if (cache && id >= 0)
+        {
+            cache[id].scaleX = cell->scaleX; cache[id].scaleY = cell->scaleY;
+            cache[id].x = x; cache[id].y = y;
+        }
+    }
     attr0 = ((y + cell->offsetY) & 255) | (attr0 & 0xFF00);
     attr1 = ((x + cell->offsetX) & 511) | (affine << 9) | (attr1 & 0xC000);
     packed = attr0 | (attr1 << 16);
@@ -128,6 +152,24 @@ static bool32 ring_renderSingleScaledCell(OamCell* cell)
     sBufferOffset = offset + 4;
     return 0;
 }
+
+static void ring_renderAllCells(void)
+{
+    BalloonOffsetCache cache[8];
+    OamCellListEntry* entry = sCellListHead;
+    u32 i;
+    for (i = 0; i < 8; i++) { cache[i].scaleX = 0; cache[i].scaleY = 0; }
+    while (entry)
+    {
+        OamCell* cell = &entry->cell;
+        const u16* data = cell->cellData;
+        if ((cell->scaleX != 256 || cell->scaleY != 256 || cell->affinePa != 256 || cell->affinePb) &&
+            data[0] == 1 && (data[1] >> 14) < 3)
+            ring_renderSingleScaledCell(cell, cache);
+        else oam_renderCell(cell);
+        entry = entry->next;
+    }
+}
 bool32 oam_renderCell(OamCell* cell)
 {
     const u16* data = cell->cellData;
@@ -136,7 +178,7 @@ bool32 oam_renderCell(OamCell* cell)
     if (cell->scaleX != 256 || cell->scaleY != 256 || cell->affinePa != 256 || cell->affinePb)
     {
         if (data[0] == 1 && (data[1] >> 14) < 3)
-            return ring_renderSingleScaledCell(cell);
+            return ring_renderSingleScaledCell(cell, 0);
         return ring_stockRenderCell(cell);
     }
     if (offset > 511) return -1;

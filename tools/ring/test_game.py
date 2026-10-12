@@ -21,7 +21,7 @@ p.add_argument('--results', required=True, type=Path)
 p.add_argument('--players', nargs='+', type=int, default=list(range(2, 9)))
 p.add_argument('--host', type=int, default=0)
 p.add_argument('--arena', type=int, choices=range(4), default=0)
-p.add_argument('--modes', nargs='+', choices=['vs', 'battle'], default=['vs', 'battle'])
+p.add_argument('--modes', nargs='+', choices=['vs', 'battle', 'gp'], default=['vs', 'battle'])
 p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
 a = p.parse_args()
 if hashlib.sha1(a.bios.read_bytes()).hexdigest() != BIOS_SHA1:
@@ -46,11 +46,13 @@ for n in a.players:
     for mode in a.modes:
         events = []
         for frame, keys in base:
-            if mode == 'battle' and frame in (2350, 2365):
+            if mode in ('battle', 'gp') and frame in (2350, 2365):
                 continue
             shared = frame < 1500 or frame in (2000, 2015)
             for slot in range(n if shared else 1):
                 events.append((frame, slot if shared else a.host, keys))
+        if mode == 'gp':
+            events.extend([(1600, a.host, 64), (1615, a.host, 0)])
         if mode == 'battle':
             events.extend([(1600, a.host, 128), (1615, a.host, 0)])
             for step in range(a.arena):
@@ -85,18 +87,18 @@ for n in a.players:
             rounds.append(state[20])
             game = node['game']
             assert game['humanCount'] == n and game['localId'] == (node['slot'] + n - a.host) % n, (name, game)
-            assert game['raceFlags'] & (0x400 if mode == 'vs' else 0x800), (name, game)
+            assert game['raceFlags'] & {'vs':0x400,'battle':0x800,'gp':0x100}[mode], (name, game)
             assert node['menu']['heldKeys'] == HELD[:n] + [0] * (8 - n), (name, node['menu'])
-            racers = game['drivers'][:n]
+            racers = game['drivers'][:8 if mode == 'gp' else n]
             assert all(r['address'] for r in racers), name
             if 'id' in racers[0]:
-                assert [r['id'] for r in racers] == list(range(n)), (name, racers)
+                assert [r['id'] for r in racers] == list(range(8 if mode == 'gp' else n)), (name, racers)
                 if mode == 'battle':
                     assert all(r['balloons'] == 3 for r in racers), (name, racers)
             positions.append([r['position'] for r in racers])
         assert min(rounds) > 100 and len(set(rounds)) == 1, (name, rounds)
         assert all(s == positions[0] for s in positions), (name, positions)
-        assert len({tuple(pos) for pos in positions[0]}) == n, (name, positions[0])
+        assert len({tuple(pos) for pos in positions[0]}) == (8 if mode == 'gp' else n), (name, positions[0])
         print(f'PASS {name}: {rounds[0]} commits, distinct controls and synchronized positions', flush=True)
 (a.results / 'manifest.json').write_text(json.dumps({'rom_sha256': rom_hash, 'bios_sha1': BIOS_SHA1, 'bios_mode': 'hle' if a.hle else 'real',
                                                     'players': a.players, 'modes': a.modes}, indent=2))

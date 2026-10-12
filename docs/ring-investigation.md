@@ -1,3 +1,84 @@
+## Follow-up: host audio, Battle rendering, and Grand Prix (2026-10-12)
+
+Shared BGM now belongs only to software P1 (the clock owner), including direct
+MP2000 start, continue and fade-in calls. Other consoles retain effects and
+voices. A real-BIOS complete eight-player race hosted from physical window four
+verified silent peer music players, the leader's final-lap policy, synchronized
+physics, and 0.999 native updates/video frame. GP music considers the CPUs too.
+
+The cup/footer hint is white at x=78, to the right of the A/B text at x=6;
+published-pixel checks verify both screens and all four Retro course names.
+Back is consumed once per menu transition, game changes reset the course, and
+Battle clamps its index to 0–3. An eight-console Rainbow Road → pause/change
+track → Back → Battle-course-two regression passes with common positions.
+The title's native glyph crops remove neighboring E/L fragments rather than
+painting over them with reused texture edges.
+
+Moving Battle exposed course palette animation replacing balloon tint entries
+with gray shades after HUD rendering. Publication now restores reserved OBJ
+identity entries after queued DMA and before palette upload. Native highlight
+shading remains intact. Battle portraits and pips select the four highest
+remaining balloon counts, with stable player-order ties; the viewed-player
+highlight follows its new row. Minimap dots include the native artwork's inset
+in their anchor, leaving BG minimap tiles and course palettes untouched.
+
+Battle target/depth response was converted to optimized C, retaining the
+original Thumb implementation for ordinary play. A standalone BIOS-backed ROM
+compares both actual implementations on 4096 fixtures, including byte wrapping,
+checkpoint boundaries and effect order. Per-frame balloon offset caching avoids
+repeated exact divisions without changing sprite sorting or animation.
+
+Completed graphics can publish later in VBlank when the queued DMA byte budget
+fits, retaining eight scanlines for the callback/IRQ tail. This remains scoped
+to initialized physics; menus and countdown use their original barrier. READY
+senders stop replaying after their own word returns around the ring; the owner
+spaces idle polling by 1024 cycles at five or more racers, preserving 512-cycle
+active forwarding and the original protected-vector recovery/replay behavior.
+Moving normal-music Battle on the four arenas measured 0.996, 1.000, 0.956 and
+0.992 native updates/video frame on all peers, with no collisions, CRC errors,
+timeouts, invalid sprites or untinted balloon texels. These are simulation/video
+ratios, not host-machine FPS or a claim that every workload is exactly 60 Hz.
+Shared host-only music measured 0.997, 1.000, 0.993 and 0.999 on the same
+four arenas. The final scripted eight-window GUI launch passed independent
+persisted profiles, P1–P8 titles, Alt/menu behavior, BIOS overrides and two
+character-selection cycles; all peers measured 1.000 updates/video frame in
+its speed window. The stock build retained its original SHA-1 and all 35 CTest
+targets passed with Qt's offscreen backend.
+
+Grand Prix supports one through eight humans, filling the grid to eight with
+unique CPU characters. Select in the disconnected lobby starts solo GP.
+Native GP initialization assumes one human and initially gave linked humans
+duplicate ranks; its rank-pointer setup then wrote into adjacent score memory.
+The ring variant now establishes the CPU roster and unique grid ranks before
+native AI setup. Four races award 9/6/3/1 points, cumulative standings choose the
+next grid, and A advances to the next course or back to cups after the final
+race. Pause/restart keeps cup progress; choosing a new cup resets the scores.
+
+The runner adds result-screen A pulses and refreshes its route on each course,
+checking the header and checkpoint count as well as the data pointer.
+It does not steer during loading/countdown. Earlier long-cup attempts used a
+fixture that steered during initialization; those attempts are not passing
+validation evidence. A later eight-player attempt retained 31 cached route
+entries on Donut Plains even though its native course has 37 checkpoints;
+several scripted drivers then circled off-road. Checking the header and count
+restores all 37 entries and native lap progression on every peer. That failed
+attempt is also diagnostic evidence, not a completed cup. The permanent GP fixtures check first-race points,
+next-course loading, and all four courses with a 76-point cup total.
+
+Final real-BIOS entry/control coverage passes all 21 Vs./Battle/GP cases at
+2–8 humans. GP first-race points and next-course loading pass at 1/2/8 humans,
+with common positions for all eight racers. A complete two-human/six-CPU Retro
+cup passes all four races and common 76-point totals. Complete Vs. and Battle
+rounds pass at two and eight humans. Loss/reconnect, cancellation, pause/resume
+and restart pass at both counts. Rendering passes 2,400 unchanged menu frames,
+700 consecutive views with eight karts/seven markers, intact horizon/minimap,
+and 5,600 valid Battle sprite frames. The survivor regression eliminates players 1–4 and verifies players 5–8 occupy
+all four portrait rows on every console. The disconnected lobby clears its full
+1,584-byte PCM buffer, and solo engine-class Back returns to the title.
+The current normal ROM SHA-256 is
+`355579d823bfbf11708b0d668a173e39d8acbd7981c701c439799fcf757e91db`;
+older hashes below describe earlier builds.
+
 ## Follow-up: race deadlines and scripted sessions (2026-10-12)
 
 A short stationary FPS test did not cover the user's moving-race slowdown.
