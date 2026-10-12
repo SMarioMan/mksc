@@ -13,6 +13,7 @@
 #include "ringFont.h"
 #include "vcount.h"
 #include "transition.h"
+#include "mp2000/m4a.h"
 
 /* Serial transport owns timer 2 only. Audio owns timers 0/1; stock cable
  * transports keep timer 3. All software IDs travel through the cable. */
@@ -23,9 +24,10 @@
 #define RING_START 0x80
 #define RING_INTERNAL 1
 #define RING_INVALID 0xFF
-#define RING_TURNAROUND 4096
+#define RING_TURNAROUND 512
+#define RING_IRQ __attribute__((section(".ring_irq")))
 
-enum { DISCOVER = 1, ANNOUNCE, FRAME, INPUT, COMMIT, ABORT, READY };
+enum { DISCOVER = 1, ANNOUNCE = 2, COMMIT = 5, ABORT = 6, READY = 7 };
 typedef struct
 {
     u32 queue[16];
@@ -37,10 +39,14 @@ typedef struct
     u8 enabled, owner, inFlight, complete, requested, ownReturned;
     u8 commitSent, failed, inGame, readySeen, frameStarted;
     u32 rejectedWord, rejectionReason;
+    u16 committed[8];
+    u8 barrierWaiting, commitPending;
+    u32 commitPacket;
 } RingState;
 static volatile RingState sRing;
 u16 ring_sControlWords[8];
 u16 ring_sDriverInputs[8];
+u8 ring_balloonAffineIndex[8];
 u8 ring_selectedCharacters[8];
 extern u8 gSelectedCharacters[8];
 extern u16 sio2_sKeyBuf[8];
@@ -49,20 +55,113 @@ static u8 sSession, sResume, sCharacters[8], sPlaces[8];
 static u16 sWins[8];
 static u8 sBattlePlaces[8], sEliminated;
 static int sBattle, sEngine, sCourse, sRetro;
+u32 ring_frameTiming[5];
+static u32 sRenderStart;
+static u32 ring_cycles(void)
+{
+    u32 frame, line;
+    u16 ime = REG_IME;
+    REG_IME = 0;
+    frame = gSceneState.field14;
+    line = REG_VCOUNT;
+    REG_IME = ime;
+    return frame * 280896 + (line >= 160 ? line - 160 : line + 68) * 1232;
+}
+
+void ring_profileRender(void)
+{
+    ring_frameTiming[1] = ring_cycles() - sRenderStart;
+}
+
+static u32 sLastAudioFrame;
+static volatile bool32 sGraphicsReady;
+
+void ring_queueGraphics(void)
+{
+    sGraphicsReady = TRUE;
+}
+
+bool32 ring_canPublishGraphics(void)
+{
+    return !sRing.enabled || !sRing.inGame || (sGraphicsReady && !sRing.frameStarted);
+}
+
+void ring_graphicsPublished(void)
+{
+    sGraphicsReady = FALSE;
+}
+
+void ring_waitGraphics(void)
+{
+    while (sRing.enabled && sGraphicsReady)
+    {
+        VBlankIntrWait();
+        /* Start the input train before mixing the newly published frame.
+         * Timer 2 can then clock it while SoundMain runs in the main thread. */
+        if (sGraphicsReady) ring_serviceAudio();
+    }
+}
+
+void ring_serviceAudio(void)
+{
+    u32 frame = gSceneState.field14;
+    if (frame != sLastAudioFrame)
+    {
+        u32 started = ring_cycles();
+        sLastAudioFrame = frame;
+        m4aSoundMain();
+        ring_frameTiming[4] = ring_cycles() - started;
+    }
+}
+
 static bool32 results_main(void);
 static bool32 connectionError_main(void);
 
 
-static u8 checksum(u32 value)
+static const u8 sCrc8[256] = {
+    0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
+    0x70, 0x77, 0x7E, 0x79, 0x6C, 0x6B, 0x62, 0x65, 0x48, 0x4F, 0x46, 0x41, 0x54, 0x53, 0x5A, 0x5D,
+    0xE0, 0xE7, 0xEE, 0xE9, 0xFC, 0xFB, 0xF2, 0xF5, 0xD8, 0xDF, 0xD6, 0xD1, 0xC4, 0xC3, 0xCA, 0xCD,
+    0x90, 0x97, 0x9E, 0x99, 0x8C, 0x8B, 0x82, 0x85, 0xA8, 0xAF, 0xA6, 0xA1, 0xB4, 0xB3, 0xBA, 0xBD,
+    0xC7, 0xC0, 0xC9, 0xCE, 0xDB, 0xDC, 0xD5, 0xD2, 0xFF, 0xF8, 0xF1, 0xF6, 0xE3, 0xE4, 0xED, 0xEA,
+    0xB7, 0xB0, 0xB9, 0xBE, 0xAB, 0xAC, 0xA5, 0xA2, 0x8F, 0x88, 0x81, 0x86, 0x93, 0x94, 0x9D, 0x9A,
+    0x27, 0x20, 0x29, 0x2E, 0x3B, 0x3C, 0x35, 0x32, 0x1F, 0x18, 0x11, 0x16, 0x03, 0x04, 0x0D, 0x0A,
+    0x57, 0x50, 0x59, 0x5E, 0x4B, 0x4C, 0x45, 0x42, 0x6F, 0x68, 0x61, 0x66, 0x73, 0x74, 0x7D, 0x7A,
+    0x89, 0x8E, 0x87, 0x80, 0x95, 0x92, 0x9B, 0x9C, 0xB1, 0xB6, 0xBF, 0xB8, 0xAD, 0xAA, 0xA3, 0xA4,
+    0xF9, 0xFE, 0xF7, 0xF0, 0xE5, 0xE2, 0xEB, 0xEC, 0xC1, 0xC6, 0xCF, 0xC8, 0xDD, 0xDA, 0xD3, 0xD4,
+    0x69, 0x6E, 0x67, 0x60, 0x75, 0x72, 0x7B, 0x7C, 0x51, 0x56, 0x5F, 0x58, 0x4D, 0x4A, 0x43, 0x44,
+    0x19, 0x1E, 0x17, 0x10, 0x05, 0x02, 0x0B, 0x0C, 0x21, 0x26, 0x2F, 0x28, 0x3D, 0x3A, 0x33, 0x34,
+    0x4E, 0x49, 0x40, 0x47, 0x52, 0x55, 0x5C, 0x5B, 0x76, 0x71, 0x78, 0x7F, 0x6A, 0x6D, 0x64, 0x63,
+    0x3E, 0x39, 0x30, 0x37, 0x22, 0x25, 0x2C, 0x2B, 0x06, 0x01, 0x08, 0x0F, 0x1A, 0x1D, 0x14, 0x13,
+    0xAE, 0xA9, 0xA0, 0xA7, 0xB2, 0xB5, 0xBC, 0xBB, 0x96, 0x91, 0x98, 0x9F, 0x8A, 0x8D, 0x84, 0x83,
+    0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5, 0xCC, 0xCB, 0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3,
+};
+
+/* Scaled OAM coordinates use small numerators and positive scales. The
+ * reciprocal estimate is at most one below truncation toward zero; testing
+ * the remainder restores the exact BIOS quotient without invoking a SWI. */
+extern s32 __divsi3(s32 numerator, s32 denominator);
+static const u16 sSpriteReciprocal[] = {
+#include "ringReciprocal.inc"
+};
+
+s32 ring_spriteDivide(s32 numerator, s32 denominator)
 {
-    u32 byte, bit, c = 0;
-    for (byte = 3; byte > 0; byte--)
-    {
-        c ^= (value >> (byte * 8)) & 0xFF;
-        for (bit = 0; bit < 8; bit++)
-            c = ((c & 0x80) ? (c << 1) ^ 7 : c << 1) & 0xFF;
-    }
-    return c;
+    u32 magnitude, quotient;
+    if (denominator == 1) return numerator;
+    if (denominator < 2 || denominator > 4096 || numerator < -65536 || numerator > 65536)
+        return __divsi3(numerator, denominator);
+    magnitude = numerator < 0 ? -numerator : numerator;
+    quotient = (magnitude * sSpriteReciprocal[denominator - 2]) >> 16;
+    if (magnitude - quotient * denominator >= denominator) quotient++;
+    return numerator < 0 ? -quotient : quotient;
+}
+
+static inline u8 RING_IRQ checksum(u32 value)
+{
+    u32 c = sCrc8[value >> 24];
+    c = sCrc8[c ^ ((value >> 16) & 255)];
+    return sCrc8[c ^ ((value >> 8) & 255)];
 }
 
 static u32 packet(u32 type, u32 node, u32 sequence, u32 payload)
@@ -71,7 +170,7 @@ static u32 packet(u32 type, u32 node, u32 sequence, u32 payload)
     return word | checksum(word);
 }
 
-static void enqueue(u32 word)
+static void RING_IRQ enqueue(u32 word)
 {
     u16 previousIme = REG_IME;
     REG_IME = 0;
@@ -90,7 +189,7 @@ static void enqueue(u32 word)
     REG_IME = previousIme;
 }
 
-static u32 dequeue(void)
+static u32 RING_IRQ dequeue(void)
 {
     u32 word;
     if (!sRing.queued)
@@ -101,28 +200,25 @@ static u32 dequeue(void)
     return word;
 }
 
-static void insertInput(void)
+static void beginCommit(void)
 {
-    u32 id = sRing.id;
-    sRing.staged[id] = (~REG_KEYINPUT & 1023) | (*(vu16*)0x03004F50 & 0x1C00);
-    sRing.seen |= 1 << id;
-    enqueue(packet(INPUT, id, sRing.sequence, sRing.staged[id]));
-}
-
-static void beginFrame(void)
-{
-    sRing.seen = sRing.ownReturned = sRing.commitSent = sRing.complete = 0;
+    /* READY already carries each input. FIFO forwarding places COMMIT after
+     * every READY at the owner, so all inputs precede it at every receiver. */
+    sRing.ownReturned = sRing.complete = 0;
+    sRing.commitSent = TRUE;
     sRing.startVideoFrame = gSceneState.field14;
     sRing.frameStarted = TRUE;
-    enqueue(packet(FRAME, 0, sRing.sequence, 0));
-    insertInput();
+    sRing.commitPacket = sRing.packets;
+    enqueue(packet(COMMIT, 0, sRing.sequence, 0));
     sRing.requested = FALSE;
 }
 
-static void receive(u32 word)
+static void RING_IRQ receive(u32 word)
 {
     u32 type, node, seq, payload, i;
-    if (!word || (word == 0xFFFFFFFF && !sRing.frameStarted))
+    /* Unarmed/open neighbours shift their idle level. No valid packet uses
+     * either word; COMMIT replay recovers a transient missed shift. */
+    if (!word || word == 0xFFFFFFFF)
         return;
     if ((u8)word != checksum(word))
     {
@@ -165,61 +261,59 @@ static void receive(u32 word)
         sio2_sMPlayerId.field_16 = 0x8001;
         if (!sRing.owner)
             enqueue(word);
+        else
+            sRing.complete = TRUE;
         break;
     case READY:
-        /* READY packets may be lost while a console is still rendering.
-         * Repeat them until every participant has entered this frame barrier.
-         * Only then launch the input train. Old READY packets are harmless. */
+        /* Probes can be lost during graphics DMA; repeat the same sampled
+         * input until all participants have entered this barrier. */
+        if (sRing.rounds && seq == ((sRing.sequence + 15) & 15))
+        {
+            if (!sRing.owner && node != sRing.id) enqueue(word);
+            break;
+        }
         if (seq != sRing.sequence || !sRing.count || node >= sRing.count)
             break;
+        if ((sRing.seen & (1 << node)) && sRing.staged[node] != payload)
+            goto invalid;
+        sRing.staged[node] = payload;
+        sRing.seen |= 1 << node;
         if (sRing.owner)
+        {
             sRing.readySeen |= 1 << node;
-        if (node != sRing.id)
-            enqueue(word);
-        if (sRing.owner && sRing.requested && !sRing.frameStarted && sRing.readySeen == (1 << sRing.count) - 1)
-            beginFrame();
-        break;
-    case FRAME:
-        if (!sRing.count || seq != sRing.sequence)
-            goto invalid;
-        if (!sRing.owner)
-        {
-            sRing.seen = sRing.complete = 0;
-            sRing.frameStarted = TRUE;
-            sRing.startVideoFrame = gSceneState.field14;
-            enqueue(word);
-            insertInput();
+            if (!sRing.frameStarted && node == sRing.id) sRing.ownReturned = TRUE;
         }
-        break;
-    case INPUT:
-        if (!sRing.count || seq != sRing.sequence || node >= sRing.count)
-            goto invalid;
-        if (node == sRing.id)
+        if (node != sRing.id) enqueue(word);
+        if (sRing.owner && sRing.requested && !sRing.frameStarted && sRing.ownReturned && sRing.readySeen == (1 << sRing.count) - 1)
+            beginCommit();
+        if (!sRing.owner && sRing.commitPending && sRing.seen == (1 << sRing.count) - 1)
         {
-            if (sRing.staged[node] != payload)
-                goto invalid;
-            if (sRing.owner)
-                sRing.ownReturned = TRUE;
-        }
-        else
-        {
-            if (sRing.seen & (1 << node))
-                goto invalid;
-            sRing.staged[node] = payload;
-            sRing.seen |= 1 << node;
-            enqueue(word);
+            word = packet(COMMIT, 0, sRing.sequence, 0);
+            goto applyCommit;
         }
         break;
     case COMMIT:
-        if (!sRing.count || seq != sRing.sequence || sRing.seen != (1 << sRing.count) - 1)
-            goto invalid;
-        for (i = 0; i < 8; i++)
+        /* A completed peer forwards a replay without applying it twice.
+         * This lets the owner recover a word missed during an IRQ/DMA. */
+        if (sRing.rounds && seq == ((sRing.sequence + 15) & 15))
         {
-            ring_sControlWords[i] = i < sRing.count ? sRing.staged[i] ^ 1023 : 1023;
-            sio2_sKeyBuf[i] = ring_sControlWords[i] & 1023;
-            if (i < 4)
-                ((u16*)&sio2_sMPlayerId)[i + 1] = ring_sControlWords[i];
+            if (!sRing.owner) enqueue(word);
+            break;
         }
+        if (!sRing.count || seq != sRing.sequence || node || payload)
+            goto invalid;
+        /* A peer can miss an earlier READY during its last graphics DMA.
+         * Hold COMMIT until repeated READY packets fill that same vector;
+         * never apply a partial vector or disconnect an otherwise intact ring. */
+        if (sRing.seen != (1 << sRing.count) - 1)
+        {
+            sRing.commitPending = TRUE;
+            break;
+        }
+applyCommit:
+        sRing.commitPending = FALSE;
+        for (i = 0; i < 8; i++) sRing.committed[i] = sRing.staged[i];
+        sRing.seen = sRing.readySeen = 0;
         sRing.rounds++;
         sRing.sequence = (sRing.sequence + 1) & 15;
         sRing.complete = TRUE;
@@ -235,11 +329,6 @@ static void receive(u32 word)
     default:
         goto invalid;
     }
-    if (sRing.owner && sRing.ownReturned && !sRing.commitSent && sRing.seen == (1 << sRing.count) - 1)
-    {
-        enqueue(packet(COMMIT, 0, sRing.sequence, 0));
-        sRing.commitSent = TRUE;
-    }
     return;
 invalid:
     sRing.rejectedWord = word;
@@ -252,7 +341,7 @@ void irq_setHandler(int id, IrqHandler handler);
 
 /* Forward from serial completion IRQs, including while the main thread mixes
  * audio or draws a menu. An armed receiver must not depend on its polling rate. */
-static void ring_serialHandler(void)
+static void RING_IRQ ring_serialHandler(void)
 {
     u16 control = RING_CONTROL | (sRing.owner ? RING_INTERNAL : 0);
     u32 word;
@@ -263,7 +352,18 @@ static void ring_serialHandler(void)
     sRing.packets++;
     receive(word);
     if (sRing.count && sRing.requested && !sRing.frameStarted && !(sRing.packets & 15))
-        enqueue(packet(READY, sRing.id, sRing.sequence, 0));
+        enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
+    if (sRing.owner && sRing.frameStarted && !sRing.complete &&
+        sRing.packets - sRing.commitPacket > sRing.count + 1 &&
+        sRing.queued + sRing.count < 16 && !(sRing.packets & 15))
+    {
+        u32 i;
+        /* Replay the collected vector as well as COMMIT. Peers that already
+         * completed this round forward these words without applying them. */
+        for (i = 0; i < sRing.count; i++)
+            enqueue(packet(READY, i, sRing.sequence, sRing.staged[i]));
+        enqueue(packet(COMMIT, 0, sRing.sequence, 0));
+    }
     if (!sRing.owner && !sRing.failed)
     {
         REG_SIOCNT = control;
@@ -271,21 +371,37 @@ static void ring_serialHandler(void)
         sRing.inFlight = TRUE;
         REG_SIOCNT = control | RING_START;
     }
+    else if (sRing.owner && !sRing.failed && !sRing.complete)
+    {
+        REG_TM2CNT_H = 0;
+        REG_TM2CNT_L = 65536 - RING_TURNAROUND;
+        REG_TM2CNT_H = 0xC0;
+    }
 }
 
-static void poll(void)
+static void RING_IRQ poll(void)
 {
     u16 control = RING_CONTROL | (sRing.owner ? RING_INTERNAL : 0);
-    if (sRing.inFlight || sRing.failed) return;
+    u16 ime = REG_IME;
+    REG_IME = 0;
+    if (sRing.inFlight || sRing.failed) goto done;
     if (sRing.owner)
     {
-        if (sRing.complete) return;
-        if ((u16)(REG_TM2CNT_L - sRing.lastShift) < RING_TURNAROUND) return;
+        if (sRing.complete) goto done;
+        if (REG_TM2CNT_H & 0x80) goto done;
     }
     REG_SIOCNT = control;
     RING_DATA = dequeue();
     sRing.inFlight = TRUE;
     REG_SIOCNT = control | RING_START;
+done:
+    REG_IME = ime;
+}
+
+static void RING_IRQ ring_timerHandler(void)
+{
+    REG_TM2CNT_H = 0;
+    poll();
 }
 
 static void waitReceiver(void)
@@ -305,27 +421,24 @@ u16* ring_peerWords(Sio2State* nativeState)
     return sRing.enabled ? ring_sControlWords : (u16*)nativeState + 1;
 }
 
+/* Match the native action bit layout, including Up/Down and L's trigger. */
+static inline u16 ring_translateInput(u16 held, u16 trigger)
+{
+    if (!(held | trigger)) return 0;
+    return ((held & 0x30) << 4) | ((held & 0x40) << 5) | ((held & 0x80) << 3)
+         | ((held & 2) << 13) | ((held & 1) << 15)
+         | ((held & 256) >> 4) | ((held & 512) >> 3)
+         | ((trigger & 256) >> 6) | ((trigger & 512) >> 2)
+         | ((trigger & 4) << 11) | ((trigger & 8) << 9);
+}
+
 void ring_extendDriverInputs(void)
 {
     extern u16 gKeyBuf[8], gKeyTriggerBuf[8];
     u32 i;
-    static const u16 heldMasks[8] = {16,32,64,128,2,1,256,512};
-    static const u16 actionMasks[8] = {256,512,1024,2048,16384,32768,16,64};
-    for (i = 4; i < 8; i++)
-    {
-        u16 value = 0, held = gKeyBuf[i], trigger = gKeyTriggerBuf[i];
-        u32 bit;
-        if (sRing.enabled && i < sRing.count)
-        {
-            for (bit = 0; bit < 8; bit++)
-                if (held & heldMasks[bit]) value |= actionMasks[bit];
-            if (trigger & 256) value |= 4;
-            if (trigger & 512) value |= 2;
-            if (trigger & 4) value |= 8192;
-            if (trigger & 8) value |= 4096;
-        }
-        ring_sDriverInputs[i] = value;
-    }
+    for (i = sRing.enabled ? 0 : 4; i < 8; i++)
+        ring_sDriverInputs[i] = sRing.enabled && i < sRing.count
+            ? ring_translateInput(gKeyBuf[i], gKeyTriggerBuf[i]) : 0;
 }
 
 void sio2_stockVblank(void);
@@ -335,14 +448,16 @@ void sio2_vblank(void)
         sio2_stockVblank();
 }
 
-bool32 ring_transferring(void)
-{
-    return sRing.enabled && (sRing.requested || sRing.frameStarted);
-}
-
 bool32 ring_active(void)
 {
     return sRing.enabled;
+}
+
+u32 ring_renderFrame(void)
+{
+    /* Native remote texture budgets stay balanced when an input barrier
+     * consumes extra video frames. Preserve the GP update budget. */
+    return sRing.enabled ? sRing.rounds : gSceneState.field10;
 }
 
 void loadtrack_stockStartGrid(RaceState* state);
@@ -387,10 +502,11 @@ void ring_stop(void)
 {
     if (!sRing.enabled)
         return;
-    irq_updateMask(IRQ_UPDATE_MODE_AND, ~IRQ_MASK_SIO);
+    irq_updateMask(IRQ_UPDATE_MODE_AND, ~(IRQ_MASK_SIO | IRQ_MASK_TIMER2));
     REG_SIOCNT = 0;
     REG_IF = IRQ_MASK_SIO;
     irq_setHandler(IRQ_ID_SIO, main_dummyIrqHandler);
+    irq_setHandler(IRQ_ID_TIMER2, main_dummyIrqHandler);
     REG_TM2CNT_H = 0;
     sRing.enabled = FALSE;
     sio2_sMPlayerId.mPlayerId = -1;
@@ -398,14 +514,22 @@ void ring_stop(void)
     sio2_sMPlayerId.field_16 = 0;
 }
 
+void ring_initCode(void)
+{
+    extern u32 __ring_irq_start[], __ring_irq_end[], __ring_irq_load[];
+    CpuCopy32(__ring_irq_load, __ring_irq_start, (u8*)__ring_irq_end - (u8*)__ring_irq_start);
+}
+
 static void start(bool32 owner)
 {
     u32 i;
     u8* bytes = (u8*)&sRing;
+    ring_initCode();
     for (i = 0; i < sizeof(sRing); i++)
         bytes[i] = 0;
     irq_setHandler(IRQ_ID_SIO, ring_serialHandler);
-    REG_IF = IRQ_MASK_SIO;
+    irq_setHandler(IRQ_ID_TIMER2, ring_timerHandler);
+    REG_IF = IRQ_MASK_SIO | IRQ_MASK_TIMER2;
     sRing.enabled = TRUE;
     sRing.owner = owner;
     sRing.id = owner ? 0 : RING_INVALID;
@@ -413,41 +537,58 @@ static void start(bool32 owner)
     REG_RCNT = 0;
     REG_TM2CNT_H = 0;
     REG_TM2CNT_L = 0;
-    REG_TM2CNT_H = 0x80;
-    irq_updateMask(IRQ_UPDATE_MODE_OR, IRQ_MASK_SIO | IRQ_MASK_IME);
+    irq_updateMask(IRQ_UPDATE_MODE_OR, IRQ_MASK_SIO | IRQ_MASK_TIMER2 | IRQ_MASK_IME);
     if (owner)
         enqueue(packet(DISCOVER, 0, 0, 1));
 }
 
 bool32 ring_exchange(void)
 {
-    u32 lastAudioFrame = gSceneState.field14;
+    u32 started = ring_cycles();
     if (sRing.failed)
         return TRUE;
+    /* A reproducible snapshot may stop here without withholding an already
+     * sampled input or suspending an active clock train. */
+    sRing.barrierWaiting = TRUE;
     REG_IME = 0;
+    sRing.barrierWaiting = FALSE;
     sRing.complete = FALSE;
     sRing.requested = TRUE;
-    sRing.readySeen = 1 << sRing.id;
+    sRing.ownReturned = FALSE;
+    sRing.staged[sRing.id] = (~REG_KEYINPUT & 1023) | (*(vu16*)0x03004F50 & 0x1C00);
+    sRing.seen |= 1 << sRing.id;
+    sRing.readySeen |= 1 << sRing.id;
     sRing.frameStarted = FALSE;
     sRing.startVideoFrame = gSceneState.field14;
     if (sRing.count)
-        enqueue(packet(READY, sRing.id, sRing.sequence, 0));
+        enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
     REG_IME = 1;
     do
     {
         poll();
-        if (gSceneState.field14 != lastAudioFrame)
-        {
-            m4aSoundMain();
-            lastAudioFrame = gSceneState.field14;
-        }
-        if (gSceneState.field14 - sRing.startVideoFrame >= 30)
+        ring_serviceAudio();
+        if (gSceneState.field14 - sRing.startVideoFrame >= (sRing.frameStarted ? 30 : 180))
         {
             sRing.timeouts++;
             sRing.failed = TRUE;
         }
         waitReceiver();
     } while (!sRing.complete && !sRing.failed);
+    if (!sRing.failed)
+    {
+        u32 i;
+        /* Publish only in the main thread. The COMMIT IRQ must rearm the
+         * cable quickly; game input is consumed after this barrier anyway. */
+        for (i = 0; i < 8; i++)
+        {
+            ring_sControlWords[i] = i < sRing.count ? sRing.committed[i] ^ 1023 : 1023;
+            sio2_sKeyBuf[i] = ring_sControlWords[i] & 1023;
+            if (i < 4) ((u16*)&sio2_sMPlayerId)[i + 1] = ring_sControlWords[i];
+        }
+    }
+    sRenderStart = ring_cycles();
+    ring_frameTiming[0] = sRenderStart - started;
+    ring_frameTiming[2] = gSceneState.field14;
     return sRing.failed;
 }
 
@@ -467,140 +608,126 @@ const u16* ring_playerMarker(unsigned id)
     return sRing.enabled && id < sRing.count ? sKartMarkerCells[id] : 0;
 }
 
-/* Keep identity art in the unused BG HUD gap 2B00..2DFF. All eight
- * kart texture slots and both course-object banks remain untouched. */
-static void badgeTiles(void)
+static const u16 sBalloonCells[8][4] = {
+    {1, 0x00D7, 0x41F8, 0x849C}, {1, 0x00D7, 0x41F8, 0x949C},
+    {1, 0x00D7, 0x41F8, 0xA49C}, {1, 0x00D7, 0x41F8, 0xB49C},
+    {1, 0x00D7, 0x41F8, 0xC49C}, {1, 0x00D7, 0x41F8, 0xD49C},
+    {1, 0x00D7, 0x41F8, 0xE49C}, {1, 0x00D7, 0x41F8, 0xF49C}
+};
+static bool32 sBalloonArtReady;
+
+const u16* ring_balloonCell(Driver* driver)
 {
-    u16 tiles[256];
-    static const u16 marker[16] = {0x1000,0,0x1100,1,0x2110,0x12,0x2211,0x1122,
-                                  0x2110,0x12,0x1100,1,0x1000,0,0,0};
-    u32 i, row, col;
-    u16* palette = pltt_getBuffer(0);
-    for (i = 0; i < 256; i++) tiles[i] = 0;
-    for (i = 0; i < 8; i++)
+    extern const u16 _0807B534[];
+    u32 id = ((u8*)driver)[0xEC];
+    return sRing.enabled && id < 8 ? sBalloonCells[id] : _0807B534;
+}
+
+static const u16 sBalloonHudCells[8][4] = {
+    {1, 0x8000, 0, 0x80E8}, {1, 0x8000, 0, 0x90E8},
+    {1, 0x8000, 0, 0xA0E8}, {1, 0x8000, 0, 0xB0E8},
+    {1, 0x8000, 0, 0xC0E8}, {1, 0x8000, 0, 0xD0E8},
+    {1, 0x8000, 0, 0xE0E8}, {1, 0x8000, 0, 0xF0E8}
+};
+
+const u16* ring_balloonHudCell(unsigned id)
+{
+    extern const u16 _0807B9A8[];
+    return sRing.enabled && id < 8 ? sBalloonHudCells[id] : _0807B9A8;
+}
+
+static void tintBalloon(vu16* tiles, u32 words, const u16* palette)
+{
+    u32 used = 0, i, lightest = 0, brightness = 0;
+    for (i = 0; i < words; i++)
     {
-        palette[145 + i] = sPlayerColors[i];
-        for (row = 0; row < 7; row++)
-            for (col = 0; col < 5; col++)
-                if (sFont[27 + i][row] & (16 >> col))
-                    tiles[i * 16 + row * 2 + col / 4] |= (i + 1) << ((col % 4) * 4);
-        for (row = 1; row < 7; row++)
-            for (col = 1; col < 6; col++)
-                if ((row > 1 && row < 5) || (row == 1 && col > 1 && col < 5) || (row == 5 && col > 1 && col < 5) || (row == 6 && col == 3))
-                    tiles[128 + i * 16 + row * 2 + col / 4] |= (i + 1) << ((col % 4) * 4);
+        u32 bits = tiles[i], shift;
+        for (shift = 0; shift < 16; shift += 4) used |= 1 << ((bits >> shift) & 15);
     }
-    CpuCopy16(tiles, (void*)0x06002B00, sizeof(tiles));
-    CpuCopy16(marker, (void*)0x06012640, sizeof(marker));
-    pltt_setDirtyFlag(0);
-    /* Native kart/balloon palettes leave their first two entries reserved. */
-    palette = pltt_getBuffer(1);
-    for (i = 0; i < 8; i++)
+    for (i = 1; i < 16; i++)
+    {
+        u32 color = palette[i];
+        u32 value = (color & 31) + ((color >> 5) & 31) + ((color >> 10) & 31);
+        if ((used & (1 << i)) && value > brightness) { brightness = value; lightest = i; }
+    }
+    for (i = 0; i < words; i++)
+    {
+        u32 bits = tiles[i], output = 0, shift;
+        for (shift = 0; shift < 16; shift += 4)
+        {
+            u32 pixel = (bits >> shift) & 15;
+            if (pixel) output |= (pixel == lightest ? 2 : 1) << shift;
+        }
+        tiles[i] = output;
+    }
+}
+
+/* Recolor balloon art in its native slots and use the reserved identity OBJ
+ * palettes. BG palette 9 and every native minimap tile remain untouched. */
+static void markerTiles(void)
+{
+    static const u16 pixels[32] = {
+        0x1000,0,0x1100,1,0x2110,0x12,0x2211,0x1122,
+        0x2110,0x12,0x1100,1,0x1000,0,0,0,
+        0x11,0,0x11,0,0,0,0,0,0,0,0,0,0,0,0,0
+    };
+    u16* palette = pltt_getBuffer(PLTT_BUFFER_OBJ);
+    u32 i;
+    if (sBattle && !sBalloonArtReady)
+    {
+        tintBalloon((vu16*)0x06011380, 64, palette + 64);
+        tintBalloon((vu16*)0x06011D00, 32, palette + 16);
+        sBalloonArtReady = TRUE;
+    }
+    CpuCopy16(pixels, (void*)0x06012640, sizeof(pixels));
+    for (i = 0; i < sRing.count; i++)
     {
         palette[(8 + i) * 16 + 1] = sPlayerColors[i];
         palette[(8 + i) * 16 + 2] = (sPlayerColors[i] >> 1 & 0x3DEF) + 0x4210;
     }
-    pltt_setDirtyFlag(1);
-}
-
-static void badge(int id, int x, int y)
-{
-    if ((unsigned)id < 8)
-        *map_getBufferPtr2d(0, x, y) = 0x9158 + id;
-}
-
-int sub_8032D0C(RaceState* state);
-static u8 sMarkerX[8], sMarkerY[8], sMarkerCount;
-static void mapMarkers(RaceState* state)
-{
-    u16 tiles[128];
-    u32 i, j, row, col, count = 0;
-    int scale = sub_8032D0C(state) + 19;
-    for (i = 0; i < sMarkerCount; i++)
-        *map_getBufferPtr2d(0, sMarkerX[i], sMarkerY[i]) = 0x9170;
-    for (i = 0; i < 128; i++) tiles[i] = 0;
-    for (i = 0; i < sRing.count; i++)
-    {
-        s32* driver = (s32*)state->drivers[i];
-        int x = 168 + (driver[0] >> scale), y = 88 + (driver[1] >> scale);
-        if (x < 0 || y < 0 || x >= 240 || y >= 160) continue;
-        for (j = 0; j < count; j++)
-            if (sMarkerX[j] == x / 8 && sMarkerY[j] == y / 8) break;
-        if (j == count)
-        {
-            sMarkerX[count] = x / 8; sMarkerY[count] = y / 8;
-            *map_getBufferPtr2d(0, x / 8, y / 8) = 0x9168 + count++;
-        }
-        for (row = y & 7; row < 8 && row < (y & 7) + 2; row++)
-            for (col = x & 7; col < 8 && col < (x & 7) + 2; col++)
-            {
-                u32 shift = (col % 4) * 4, at = j * 16 + row * 2 + col / 4;
-                tiles[at] = (tiles[at] & ~(15 << shift)) | (i + 1) << shift;
-            }
-    }
-    sMarkerCount = count;
-    CpuCopy16(tiles, (void*)0x06002D00, sizeof(tiles));
+    pltt_setDirtyFlag(TRUE);
 }
 
 void ring_stockBattleHud(RaceState* state);
 void ring_stockVsHud(RaceState* state);
 void ring_stockMapMarker(Driver* driver, int local);
-extern const u8 _080EE6FA[];
 int sub_8032D0C(RaceState* state);
-
-static void playerHud(RaceState* state, int battle)
-{
-    u32 i, row, col;
-    badgeTiles();
-    for (i = 0; i < sRing.count; i++)
-    {
-        Driver* driver = battle ? state->drivers[i] : ((Driver**)((u8*)state + 0xC38))[i];
-        u8* bytes = (u8*)driver;
-        u32 character = bytes[0x4C] & 7;
-        u32 id = bytes[0xEC];
-        u32 tile = 0xD080 + _080EE6FA[character] * 4;
-        int x = 1 + (i & 1) * 3;
-        int y = 3 + (i / 2) * 3;
-        for (row = 0; row < 2; row++)
-            for (col = 0; col < 2; col++)
-                *map_getBufferPtr2d(0, x + col, y + row) = tile++;
-        if (!(state->raceOptions & 0x40))
-        {
-            badge(id, x - 1, y);
-            if (battle)
-            {
-                u32 balloons = bytes[0x17D];
-                /* Three small colored pips retain the stock balloon count. */
-                for (col = 0; col < 3; col++)
-                    *map_getBufferPtr2d(0, x + col, y + 2) = col < balloons ? 0x9160 + id : 0x9170;
-            }
-        }
-    }
-    mapMarkers(state);
-    map_setBufferDirty(1);
-}
 
 void sub_804DCB0(RaceState* state)
 {
-    if (sRing.enabled) playerHud(state, TRUE);
-    else ring_stockBattleHud(state);
+    if (sRing.enabled) markerTiles();
+    ring_stockBattleHud(state);
 }
 
 void sub_804F2C0(RaceState* state)
 {
-    if (sRing.enabled) playerHud(state, FALSE);
-    else ring_stockVsHud(state);
+    if (sRing.enabled) markerTiles();
+    /* The native GP path selects four portraits by current race position. */
+    ring_stockVsHud(state);
 }
 
 void sub_804E7EC(Driver* driver, int local)
 {
     if (!sRing.enabled)
-    {
         ring_stockMapMarker(driver, local);
-        return;
+    else
+    {
+        const u8* bytes = (const u8*)driver;
+        u16 cell[4];
+        Vec2s16 position;
+        int scale = sub_8032D0C(&gSceneState.raceState) + 19;
+        s32* xyz = (s32*)driver;
+        u32 id = bytes[0xEC];
+        if (id >= sRing.count) return;
+        position.x = 168 + (xyz[0] >> scale);
+        position.y = 88 + (xyz[1] >> scale);
+        cell[0] = 1;
+        cell[1] = cell[2] = 0;
+        cell[3] = 0x133 | (8 + id) << 12;
+        oam_renderCellData(cell, &position, 0, 0, 0, 0);
     }
-    /* All eight markers are composed together in playerHud. */
 }
-static const char* const sCharacterNames[8] = { "MARIO", "LUIGI", "PEACH", "TOAD", "DK", "YOSHI", "BOWSER", "WARIO" };
+static const char* const sCharacterNames[8] = { "MARIO", "LUIGI", "PEACH", "TOAD", "YOSHI", "DK", "WARIO", "BOWSER" };
 static const char* const sCupNames[5] = { "MUSHROOM CUP", "FLOWER CUP", "LIGHTNING CUP", "STAR CUP", "SPECIAL CUP" };
 static const char* const sTracks[20] = {
     "PEACH CIRCUIT", "SHY GUY BEACH", "RIVERSIDE PARK", "BOWSER CASTLE 1",
@@ -619,6 +746,7 @@ static const char* const sRetroTracks[20] = {
 };
 
 int spm_menuCharIdxToCharId(int menuIndex);
+extern const u8 _080EE6FA[];
 
 static unsigned glyph(char c)
 {
@@ -666,6 +794,7 @@ static void text(int x, int y, const char* string, u16 color)
             for (col = 0; col < 5; col++)
                 if (bitmap[row] & (16 >> col))
                     menuPixel(x + col, y + row, index);
+        ring_serviceAudio();
         x += 6;
     }
 }
@@ -685,6 +814,7 @@ static void portrait(int x, int y, int menuCharacter)
             u32 pixel = _08062834[tile * 32 + (row % 8) * 4 + (col % 8) / 2];
             pixel = (pixel >> ((col & 1) * 4)) & 15;
             if (pixel) menuPixel(x + col, y + row, 32 + pixel);
+            if (col == 15) ring_serviceAudio();
         }
 }
 
@@ -789,7 +919,7 @@ static void prepareRace(const u8* characters, int battle, int engine, int course
         sBattlePlaces[i] = 0xFF;
     }
     sEliminated = 0;
-    sMarkerCount = 0;
+    sBalloonArtReady = FALSE;
     sBattle = battle; sEngine = engine; sCourse = course; sRetro = retro;
     scene_setVBlankFunc(0);
     sub_8048C74(state);
@@ -822,8 +952,9 @@ bool32 ring_main(void)
     int cup = sResume ? sCourse / 4 : 0, course = sResume ? sCourse : 0;
     int retro = sResume ? sRetro : 0;
     u8 characters[8], ready = 0, ignoreStart = !sResume;
+    int drawnPhase = -1;
     u16 previous = 0, keys, trigger;
-    u32 i, lastAudioFrame;
+    u32 i;
     extern u16 gKeyTriggerBuf[8], gKeyBuf[8];
     resetMenuDisplay();
     if (sResume && ring_active()) goto connected;
@@ -837,15 +968,11 @@ bool32 ring_main(void)
     /* Discovery polls without the normal frame loop. Continue servicing
      * MP2000 every VBlank so the last title sample cannot loop indefinitely. */
     m4aMPlayAllStop();
-    lastAudioFrame = gSceneState.field14;
+    sLastAudioFrame = gSceneState.field14 - 1;
     start(FALSE);
     while (!sRing.count && !sRing.failed)
     {
-        if (gSceneState.field14 != lastAudioFrame)
-        {
-            m4aSoundMain();
-            lastAudioFrame = gSceneState.field14;
-        }
+        ring_serviceAudio();
         keys = ~REG_KEYINPUT & 1023;
         trigger = keys & ~previous;
         previous = keys;
@@ -855,6 +982,7 @@ bool32 ring_main(void)
             REG_SIOCNT = RING_CONTROL;
             sRing.inFlight = FALSE;
             sRing.owner = TRUE;
+            REG_TM2CNT_H = 0;
             sRing.id = 0;
             sRing.startVideoFrame = gSceneState.field14;
             sRing.lastShift = REG_TM2CNT_L;
@@ -875,6 +1003,12 @@ connected:
         main_frameProc();
         if (!ring_active()) goto lost;
         trigger = gKeyTriggerBuf[0];
+        if (drawnPhase == phase)
+        {
+            for (i = 0; i < sRing.count; i++) if (gKeyTriggerBuf[i]) break;
+            if (i == sRing.count) continue;
+        }
+        drawnPhase = phase;
         /* Starting discovery must not also confirm the first game choice. */
         if (ignoreStart)
         {
@@ -1082,7 +1216,7 @@ static void resetMenuDisplay(void)
     scene_setVBlankFunc(menuVblank);
     DmaStop(0);
     vcount_reset();
-    irq_updateMask(IRQ_UPDATE_MODE_SET, IRQ_MASK_VBLANK | IRQ_MASK_CARTRIDGE | IRQ_MASK_IME | (sRing.enabled ? IRQ_MASK_SIO : 0));
+    irq_updateMask(IRQ_UPDATE_MODE_SET, IRQ_MASK_VBLANK | IRQ_MASK_CARTRIDGE | IRQ_MASK_IME | (sRing.enabled ? IRQ_MASK_SIO | IRQ_MASK_TIMER2 : 0));
     oam_802FE4C(FALSE);
     trns_init();
     REG_DISPCNT = 0x404;

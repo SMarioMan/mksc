@@ -3,7 +3,7 @@
 
 Stationary Vs. preserves the eight-place grid so natural occlusion/movement
 cannot masquerade as flicker. A frozen character menu checks completed bitmap
-hashes on both pages. All interaction uses the hardware keypad.
+hashes while the menu is unchanged. All interaction uses the hardware keypad.
 """
 import argparse
 import csv
@@ -46,7 +46,7 @@ for case in ('menu', 'vs', 'battle'):
     proc = subprocess.run([str(a.runner), '--ring', '--rom', str(rom), '--bios', str(a.bios),
                            '--players', '8', '--frames', str(last), '--input', str(inputs),
                            '--video-log', str(video), '--video-from', str(first),
-                           '--dump', '0x03006B40', '--barrier-state', '0x03006B40',
+                           '--dump', '0x03006B40', '--barrier-before-input', '--barrier-state', '0x03006B40',
                            '--screens', str(a.results / case)],
                           capture_output=True, text=True, timeout=300)
     (a.results / (case + '.json')).write_text(proc.stdout)
@@ -62,16 +62,24 @@ for case in ('menu', 'vs', 'battle'):
     if case == 'menu':
         assert all(row['dispcnt'] & 7 == 4 for row in frames)
         assert len({row['bitmapHash'] for row in frames}) == 1, 'A frozen menu tore or lost content'
-        assert {row['dispcnt'] & 16 for row in frames} == {0, 16}, 'Both drawing pages must be exercised'
-        print(f'PASS menu: {len(frames)} complete, identical bitmap frames across both pages', flush=True)
+        assert len({row['dispcnt'] & 16 for row in frames}) == 1, 'An unchanged menu was unnecessarily redrawn'
+        print(f'PASS menu: {len(frames)} identical completed frames; no redundant redraws', flush=True)
     elif case == 'vs':
         rear = [row for row in frames if row['player'] == 7]
         assert all(all(row[f'kart{i}'] == 1 for i in range(8)) for row in rear), 'A kart disappeared from the stationary grid'
         assert all(row['markers'] == 7 for row in rear), 'An opponent lost its identity marker'
+        for node in state['nodes']:
+            hud = node['game']['hud']
+            assert hud['minimapTiles'] == list(range(0xB100, 0xB140)), 'Native minimap tiles were erased'
+            assert hud['skyPalette'] == [64484, 1057, 2114, 5251, 7332, 9445, 13672, 15753,
+                                         51794, 53908, 56022, 58136, 60250, 62364, 64478, 0], 'Peach Circuit sky palette changed'
+            assert all(row == list(range(0xD080 + [0, 1, 3, 2][i] * 4, 0xD084 + [0, 1, 3, 2][i] * 4))
+                       for i, row in enumerate(hud['portraits'])), 'Native four-portrait HUD changed'
         textures = state['nodes'][7]['game']['drivers']
         assert all(d['graphicsMatch'] for d in textures), 'A kart VRAM bank differs from its native texture'
         assert len({d['graphicsSource'] for d in textures}) == 8, 'Distinct characters share a texture slot'
         print(f'PASS Vs.: all eight karts and seven identity markers in each of {len(rear)} consecutive frames', flush=True)
     else:
         assert all(row[f"kart{row['player']}"] for row in frames), 'A stationary local Battle kart disappeared'
+        assert all(n["game"]["hud"]["balloonSprites"][n["slot"]] == 3 for n in state["nodes"]), 'A local balloon lost its player palette'
         print(f'PASS Battle: {len(frames)} valid sprite frames with all local karts present', flush=True)

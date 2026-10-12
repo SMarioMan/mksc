@@ -102,6 +102,9 @@ block_38:
     cam_r4->field_0x2c = (s32)(cam_r4->screenPos.y - var_r1);
 }
 
+#ifdef MKSC_RING
+asm_unified(".include \"nonmatching/ringCamera.s\"");
+#else
 void sub_SetHDMA(Camera* camera) {
     s32 pa;
     s32 pb;
@@ -157,6 +160,8 @@ void sub_SetHDMA(Camera* camera) {
     camera->field_0x50 = 1 - camera->field_0x50;
     return;
 }
+
+#endif
 
 #ifndef NONMATCHING
 asm_unified(".include \"nonmatching/camProjectActor.s\"");

@@ -18383,15 +18383,6 @@ sub_803CD50: @ 0x0803CD50
 	beq _0803CDD6
 	ldr r2, _0803CDFC @ =0x000007FE
 	adds r0, r5, r2
-	.ifdef MKSC_RING
-	/* Video frames can advance during a ring barrier. Do not use their
-	 * parity to starve particular remote kart texture slots forever. */
-	bl ring_active
-	cmp r0, #0
-	bne _0803CDD6
-	ldr r2, _0803CDFC @ =0x000007FE
-	adds r0, r5, r2
-	.endif
 	ldrh r1, [r0]
 	movs r0, #0x80
 	lsls r0, r0, #6
@@ -18407,7 +18398,13 @@ sub_803CD50: @ 0x0803CD50
 	ldr r3, [r0]
 	cmp r3, #0
 	bne _0803CDAE
+	.ifdef MKSC_RING
+	push {r1, r2, r3}
+	bl ring_renderFrame
+	pop {r1, r2, r3}
+	.else
 	ldr r0, [r5, #0x10]
+	.endif
 	movs r1, #7
 	ands r0, r1
 	ldrb r2, [r4]
@@ -18428,7 +18425,13 @@ _0803CDAE:
 	beq _0803CDC6
 	b _0803CF30
 _0803CDC6:
+	.ifdef MKSC_RING
+	push {r1, r2, r3}
+	bl ring_renderFrame
+	pop {r1, r2, r3}
+	.else
 	ldr r0, [r5, #0x10]
+	.endif
 	movs r1, #3
 	ands r0, r1
 	ldrb r2, [r4]
@@ -53817,6 +53820,13 @@ _0804DD26:
 	str r0, [sp]
 	str r0, [sp, #4]
 	ldr r0, _0804DD58 @ =_0807B9A8
+	.ifdef MKSC_RING
+	push {r1, r2, r3}
+	mov r0, sl
+	subs r0, #1
+	bl ring_balloonHudCell
+	pop {r1, r2, r3}
+	.endif
 	add r1, sp, #8
 	mov r2, sb
 	mov r3, sb

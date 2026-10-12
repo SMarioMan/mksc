@@ -68,6 +68,93 @@ inline void oam_renderAllCells(void)
 
 #ifndef NONMATCHING
 asm_unified(".include \"nonmatching/text0802F6BC.s\"");
+#ifdef MKSC_RING
+bool32 ring_stockRenderCell(OamCell* cell);
+s32 ring_spriteDivide(s32 numerator, s32 denominator);
+extern u8 ring_balloonAffineIndex[8];
+
+/* Most scaled game objects contain one sprite. Avoid the general renderer's
+ * repeated buffer/mask loads while retaining its native coordinate rounding. */
+static bool32 ring_renderSingleScaledCell(OamCell* cell)
+{
+    const u16* data = cell->cellData + 1;
+    u32 attr0 = data[0], attr1 = data[1], attr2 = data[2];
+    int offset = sBufferOffset, affine = sNextAffineId;
+    int shape = attr0 >> 14, size = attr1 >> 14;
+    int halfWidth = sObjHalfWidth[shape][size], halfHeight = sObjHalfHeight[shape][size];
+    int x = attr1 & 511, y = (s8)(attr0 & 255), flags, reused = 0, id = -1;
+    u32 packed;
+    if (offset > 511) return -1;
+    if (attr1 & 0x1000) { cell->affinePa = -cell->affinePa; cell->affinePb = -cell->affinePb; }
+    if (attr1 & 0x2000) { cell->affinePc = -cell->affinePc; cell->affinePd = -cell->affinePd; }
+    if ((attr2 & 1023) == 0x9C && (attr2 >> 12) >= 8)
+    {
+        int previous;
+        id = (attr2 >> 12) - 8;
+        previous = ring_balloonAffineIndex[id];
+        if (previous < sNextAffineId &&
+            sBuffer[3 + 16 * previous] == (u16)cell->affinePa &&
+            sBuffer[7 + 16 * previous] == (u16)cell->affinePb &&
+            sBuffer[11 + 16 * previous] == (u16)cell->affinePc &&
+            sBuffer[15 + 16 * previous] == (u16)cell->affinePd)
+        {
+            affine = previous;
+            reused = 1;
+        }
+    }
+    if (affine > 31) return -1;
+    if (!reused)
+    {
+        sBuffer[3 + 16 * affine] = cell->affinePa;
+        sBuffer[7 + 16 * affine] = cell->affinePb;
+        sBuffer[11 + 16 * affine] = cell->affinePc;
+        sBuffer[15 + 16 * affine] = cell->affinePd;
+        sNextAffineId = affine + 1;
+        if (id >= 0) ring_balloonAffineIndex[id] = affine;
+    }
+    flags = cell->scaleX < 256 || cell->scaleY < 256 ? 0x300 : 0x100;
+    if (x > 255) x = -(x ^ 511);
+    x += halfWidth;
+    y += halfHeight;
+    x = (attr1 & 511) + ring_spriteDivide(x * 256, cell->scaleX) - x;
+    y = (attr0 & 255) + ring_spriteDivide(y * 256, cell->scaleY) - y;
+    if (flags == 0x300) { x -= halfWidth; y -= halfHeight; }
+    attr0 = ((y + cell->offsetY) & 255) | (attr0 & 0xFF00);
+    attr1 = ((x + cell->offsetX) & 511) | (affine << 9) | (attr1 & 0xC000);
+    packed = attr0 | (attr1 << 16);
+    *(u32*)&sBuffer[offset] = (((packed & cell->attr01Mask) | cell->attr01Bits) & ~0x300) | flags;
+    sBuffer[offset + 2] = attr2;
+    *(u32*)&sBuffer[offset + 2] = (*(u32*)&sBuffer[offset + 2] & cell->attr2Mask) | cell->attr2Bits;
+    sBufferOffset = offset + 4;
+    return 0;
+}
+bool32 oam_renderCell(OamCell* cell)
+{
+    const u16* data = cell->cellData;
+    int count, offset = sBufferOffset;
+    if (cell->scaleX != 256 || cell->scaleY != 256 || cell->affinePa != 256 || cell->affinePb)
+    {
+        if (data[0] == 1 && (data[1] >> 14) < 3)
+            return ring_renderSingleScaledCell(cell);
+        return ring_stockRenderCell(cell);
+    }
+    if (offset > 511) return -1;
+    count = *data++;
+    while (count-- > 0 && offset <= 511)
+    {
+        u32 attr0 = *data++, attr1 = *data++, attr2 = *data++;
+        u32 packed = (((attr0 + cell->offsetY) & 255) | (attr0 & 0xFF00))
+                   | ((((attr1 + cell->offsetX) & 511) | (attr1 & 0xFE00)) << 16);
+        *(u32*)&sBuffer[offset] = ((packed & cell->attr01Mask) | cell->attr01Bits) & ~0x300;
+        sBuffer[offset + 2] = attr2;
+        *(u32*)&sBuffer[offset + 2] = (*(u32*)&sBuffer[offset + 2] & cell->attr2Mask) | cell->attr2Bits;
+        offset += 4;
+    }
+    sBufferOffset = offset;
+    return 0;
+}
+#endif
+
 #else
 bool32 oam_renderCell(OamCell* cell)
 {
@@ -248,12 +335,29 @@ bool32 oam_renderCell(OamCell* cell)
 
 void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int scaleY, int rotation, struc_6* a6)
 {
+
     OamCellListEntry* v12;
     OamCellListEntry* v13;
     OamCellListEntry* v14;
     struc_6* v16;
     OamCell* cell;
     OamCell v20;
+#ifdef MKSC_RING
+    if (!a6 && !rotation && ((!scaleX || !scaleY) || (scaleX == 256 && scaleY == 256)))
+    {
+        int count = *cellData++, offset = sBufferOffset;
+        while (count-- > 0 && offset <= 511)
+        {
+            u32 attr0 = *cellData++, attr1 = *cellData++;
+            *(u32*)&sBuffer[offset] = ((((attr0 + position->y) & 255) | (attr0 & 0xFF00))
+                | ((((attr1 + position->x) & 511) | (attr1 & 0xFE00)) << 16)) & ~0x300;
+            sBuffer[offset + 2] = *cellData++;
+            offset += 4;
+        }
+        sBufferOffset = offset;
+        return;
+    }
+#endif
 
     if (!a6)
     {
@@ -270,10 +374,22 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
             scaleY = 256;
             scaleX = 256;
         }
+#ifdef MKSC_RING
+        if (!rotation)
+        {
+            cell->affinePa = scaleX;
+            cell->affinePb = 0;
+            cell->affinePc = 0;
+            cell->affinePd = scaleY;
+        }
+        else
+#endif
+        {
         cell->affinePa = scaleX * math_cos(rotation) / 0x8000;
         cell->affinePb = scaleX * math_sin(rotation) / 0x8000;
         cell->affinePc = -scaleY * math_sin(rotation) / 0x8000;
         cell->affinePd = scaleY * math_cos(rotation) / 0x8000;
+        }
         cell->scaleX = scaleX;
         cell->scaleY = scaleY;
         oam_300218C = 1;
@@ -317,10 +433,22 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
             scaleY = 256;
             scaleX = 256;
         }
+#ifdef MKSC_RING
+        if (!rotation)
+        {
+            cell->affinePa = scaleX;
+            cell->affinePb = 0;
+            cell->affinePc = 0;
+            cell->affinePd = scaleY;
+        }
+        else
+#endif
+        {
         cell->affinePa = scaleX * math_cos(rotation) / 0x8000;
         cell->affinePb = scaleX * math_sin(rotation) / 0x8000;
         cell->affinePc = -scaleY * math_sin(rotation) / 0x8000;
         cell->affinePd = scaleY * math_cos(rotation) / 0x8000;
+        }
         cell->scaleX = scaleX;
         cell->scaleY = scaleY;
         sCellListEntryCount++;
@@ -398,6 +526,9 @@ void oam_init(void)
 
     CpuFastFill(0, (void*)OAM, OAM_SIZE);
     sBufferOffset = 0;
+#ifdef MKSC_RING
+    for (i = 0; i < 8; i++) ring_balloonAffineIndex[i] = 255;
+#endif
     sNextAffineId = 0;
     i = 0;
     while (i < sizeof(sBuffer) / 4)
@@ -440,6 +571,9 @@ void oam_reset(void)
         return;
 
     sBufferOffset = 0;
+#ifdef MKSC_RING
+    for (i = 0; i < 8; i++) ring_balloonAffineIndex[i] = 255;
+#endif
     sNextAffineId = 0;
     sCellListHead = 0;
     sCellListTail = 0;

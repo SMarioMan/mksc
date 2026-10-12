@@ -481,6 +481,22 @@ _08051A84: .4byte 0x000007D7
 _08051A88: .4byte 0x03002C80
 _08051A8C: .4byte 0x03005C50
 _08051A90:
+	.ifdef MKSC_RING
+	push {r0-r3}
+	bl ring_active
+	cmp r0, #0
+	beq .Lring_native_inputs
+	bl ring_extendDriverInputs
+	pop {r0-r3}
+	ldr r2, .Lring_input_triggers
+	mov r12, r2
+	movs r3, #8
+	b .Lring_inputs_converted
+	.align 2, 0
+.Lring_input_triggers: .4byte gKeyTriggerBuf
+.Lring_native_inputs:
+	pop {r0-r3}
+	.endif
 	movs r6, #0x00
 	ldr r2, _08051BB8 @ =0x03004EA0
 	mov r12, r2
@@ -634,6 +650,7 @@ _08051B88:
 	pop {r0}
 	mov r12, r0
 	pop {r0-r3}
+.Lring_inputs_converted:
 	.endif
 	ldr r4, [sp, #0x004]
 	ldrb r1, [r4, #0x00]

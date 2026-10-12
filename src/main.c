@@ -43,6 +43,9 @@ void AgbMain(void)
                   WAITCNT_WS2_N_4 | WAITCNT_WS2_S_1 | WAITCNT_PHI_OUT_NONE | WAITCNT_PREFETCH_ENABLE | WAITCNT_AGB;
     DMA_FILL(3, 0, EWRAM_START, EWRAM_END - EWRAM_START, 32);
     DMA_FILL(3, 0, IWRAM_START, 0x7E00, 32);
+#ifdef MKSC_RING
+    ring_initCode();
+#endif
     DMA_FILL(3, 0, VRAM, VRAM_SIZE, 16);
     DMA_FILL(3, 0, OAM, OAM_SIZE, 32);
     DMA_FILL(3, 0, PLTT, PLTT_SIZE, 16);
@@ -94,6 +97,9 @@ void AgbMain(void)
 
 void main_vblankHandler(void)
 {
+#ifdef MKSC_RING
+    u32 firstLine = REG_VCOUNT;
+#endif
     SceneState* sceneState = &gSceneState;
 
     SoundVSync_rev01();
@@ -102,7 +108,7 @@ void main_vblankHandler(void)
 #ifdef MKSC_RING
     /* Forwarding must not be interrupted by bulk graphics DMA. The frame's
      * normal VBlank publishes graphics before entering the input barrier. */
-    if (!ring_transferring())
+    if (ring_canPublishGraphics())
 #endif
     {
         oam_dmaCopyToHw();
@@ -110,12 +116,22 @@ void main_vblankHandler(void)
         dmaq_process(dmaq_getVBlankDmaQueue());
         pltt_copyBufferToHw();
         map_copyBuffersToHw();
+        if (sceneState->vBlankFunc)
+            sceneState->vBlankFunc();
+#ifdef MKSC_RING
+        ring_graphicsPublished();
+#endif
     }
-    if (sceneState->vBlankFunc)
-        sceneState->vBlankFunc();
     sio2_vblank();
     sceneState->field14++;
     main_setVBlankCheckFlag();
+#ifdef MKSC_RING
+    {
+        u32 lines = REG_VCOUNT;
+        if (lines < firstLine) lines += 228;
+        ring_frameTiming[3] = (lines - firstLine) * 1232;
+    }
+#endif
 }
 
 static void vcountHandler(void)
@@ -346,11 +362,11 @@ void main_frameProc(void)
 #ifdef MKSC_RING
     if (ring_active())
     {
-        sFrameCounter = 0;
-        VBlankIntrWait();
-        m4aSoundMain();
-        if (ring_exchange())
-            sio2_stop();
+        ring_profileRender();
+        ring_queueGraphics();
+        ring_waitGraphics();
+        if (ring_exchange()) sio2_stop();
+        ring_serviceAudio();
     }
     else
 #endif
