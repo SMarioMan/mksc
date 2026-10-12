@@ -70,6 +70,8 @@ SECTIONS
         src/text08001A84.o(.text);
         /* asm/text08001A84.o(.text); */
         asm/text08001B4C.o(.text);
+        src/menuQueries.o(.text);
+        asm/text08001B4C.o(.text.menuQueriesTail);
         src/characterMenuQueries.o(.text);
         asm/text08001B4C.o(.text.characterQueriesTail);
         src/nativeGameInfo.o(.text);
