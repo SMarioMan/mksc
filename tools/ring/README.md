@@ -16,9 +16,9 @@ converted driver input words have separate storage; unused slots stay released.
 The normal-32 transport uses the standard 2 MHz serial clock and assigns
 software IDs around the ring. External-clock receivers HALT between interrupts
 while preserving VBlank audio service. CRC-protected
-READY, FRAME, INPUT, and COMMIT packets form a deterministic input barrier;
-physics advances only after everyone receives the same input vector. Serial-completion IRQs keep receivers armed while rendering and mixing audio.
-Timer 2 supplies forwarding turnaround, preserving audio timers 0/1 and native serial timer 3.
+READY packets carry the sampled inputs; a following COMMIT forms a deterministic input barrier;
+physics advances only after everyone receives the same input vector. Serial-completion IRQs keep receivers armed while rendering and mixing audio. Critical transport code runs from IWRAM. A peer that missed an earlier READY holds COMMIT until a replay restores its complete input vector.
+Timer 2 supplies a 512-cycle forwarding turnaround, preserving audio timers 0/1 and native serial timer 3.
 Failures stop the game and show a connection error. Re-enter Ring Link to start
 a fresh session. The stock Multi-Pak/Single-Pak paths remain separate.
 
@@ -32,8 +32,8 @@ return safely. Each script needs `--runner`, `--rom`, `--bios`, and `--results`;
 the single-player script additionally needs the matching `--elf` and optionally
 `--nm`. Tests copy the ROM to an immutable content-addressed path.
 
-Player identity badges, map markers, and Battle balloon pips use red, green,
-yellow, pink, blue, orange, cyan, and purple. Portraits use native assets. Menus
+Player identity diamonds, sprite map markers, and both floating Battle balloons and HUD pips use red, green,
+yellow, pink, blue, orange, cyan, and purple. Portraits use native assets. The race HUD keeps the original four portrait rows and native rank selection. Course palettes and minimap background tiles remain owned by the original renderer. Menus
 currently use a simple bitmap layout; matching the stock Multi-Pak menu artwork
 is a later visual improvement. After the BIOS-backed matrix passed, optional
 HLE passed two- and eight-player entry and complete rounds in both modes, plus
@@ -54,10 +54,10 @@ in every window. See `mgba/tools/link/GUI.md` in the emulator repository.
 The title label uses native font glyphs cached after title asset loading;
 `test_title.py` checks visibility of all three labels and normal menu speed.
 
-`test_rendering.py` verifies a frozen eight-player menu on both Mode 4 pages,
+`test_rendering.py` verifies a cached, complete eight-player menu without redundant page redraws,
 all eight karts and seven colored opponent markers in 700 consecutive stationary
-Vs. frames, distinct native character textures matching their VRAM banks, and
-5,600 valid Battle sprite frames. It needs `--runner`, `--rom`, `--bios`, and
+Vs. frames, distinct native character textures matching their VRAM banks, intact minimap tiles and horizon palette, the native four-row HUD, and
+5,600 valid Battle sprite frames with local balloons using each player’s palette. It needs `--runner`, `--rom`, `--bios`, and
 `--results`, using a runner built with the video-log diagnostics. Its stationary
 grid keeps all eight racers visible so ordinary movement cannot hide flicker.
 
@@ -66,3 +66,18 @@ rankings/wins with actual driving and item inputs. `test_flows.py` checks native
 pause/restart, cancellation, and wire-loss reconnect. `test_repeat.py` needs the
 matching round-test directory as `--baseline`, and verifies cumulative results
 for a second Battle round. All symbol-based scripts accept `--nm`.
+
+`test_timing.py` checks actual committed game updates per completed video frame
+at five through eight players in both modes. It reads the native simulation counter as well as committed input rounds and requires at least 0.95 updates
+per video frame on every console, rather than relying on emulator FPS. Native
+sprite rendering has exact shortcuts for unrotated/unit sprites and single
+scaled sprites. `test_divide.py` exhaustively checks the actual quotient helper
+against signed division, including fallback boundaries. Hidden balloons retain
+animation and elimination updates while avoiding unused projection work.
+
+`test_inputs.py` compares all keypad/trigger combinations against the native
+controller bit layout. The ARM HDMA kernel uses native truncation and 32-bit
+product wrapping; `test_camera.py` builds a separate homebrew and compares
+393,216 scanlines against the native arithmetic using the supplied BIOS.
+Balloons sharing the same transform reuse an affine matrix, preserving space
+in the GBA's 32-matrix OAM budget for karts and course objects.

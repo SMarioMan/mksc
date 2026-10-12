@@ -57,7 +57,7 @@ def run(n,mode):
     command = [str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),
                '--players',str(n),'--frames',str(50000 if mode == 'vs' else 30000),
                '--input',str(inputs),'--dump',hex(symbols['sPlaces']),
-               '--barrier-state',hex(symbols['sRing']),
+               '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                '--until-scene',hex(symbols['results_main'] | 1),
                '--screens',str(a.results/name)]
     if mode == 'vs':

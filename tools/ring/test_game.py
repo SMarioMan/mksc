@@ -63,7 +63,7 @@ for n in a.players:
                                '--bios', str(a.bios), '--players', str(n),
                                '--frames', '3750', '--input', str(inputs),
                                '--keys-address', '0x03006B00', '--key-slots', '8',
-                               '--dump', '0x03006B40', '--barrier-state', '0x03006B40',
+                               '--dump', '0x03006B40', '--barrier-before-input', '--barrier-state', '0x03006B40',
                                '--screens', str(a.results / name)]
         if a.hle:
             bios_index = command.index('--bios')

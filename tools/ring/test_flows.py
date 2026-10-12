@@ -63,7 +63,7 @@ for n in a.players:
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
         command=[str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),
                  '--players',str(n),'--frames',str(frames),'--input',str(inputs),
-                 '--barrier-state',hex(symbols['sRing']),'--dump',hex(symbols['sRing']),
+                 '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),'--dump',hex(symbols['sRing']),
                  '--keys-address','0x03006B00','--key-slots','8','--screens',str(a.results/name)]+extra
         proc=subprocess.run(command,capture_output=True,text=True,timeout=300)
         (a.results/(name+'.json')).write_text(proc.stdout)

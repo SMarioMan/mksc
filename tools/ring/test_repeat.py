@@ -41,7 +41,7 @@ for n in a.players:
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
     proc=subprocess.run([str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),
                          '--players',str(n),'--frames',str(min(100000,frame*2+6000)),
-                         '--input',str(inputs),'--barrier-state',hex(symbols['sRing']),
+                         '--input',str(inputs),'--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                          '--until-scene',hex(symbols['results_main']|1),
                          '--watch',hex(symbols['sWins']),'--until-watch-value','2',
                          '--dump',hex(symbols['sPlaces']),'--screens',str(a.results/name)],

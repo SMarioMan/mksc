@@ -14,6 +14,19 @@ link = link.replace('        src/vcount.o(COMMON);', '''        src/vcount.o(COM
 link = link.replace('        data/characterTiles.o(.rodata*);', '''        data/characterTiles.o(.rodata*);
         src/ringLink.o(.text);
         src/ringLink.o(.rodata);''')
+link = link.replace('    /* Discard everything not specifically mentioned above. */', '''    .ring_irq ALIGN(ADDR(.bss) + SIZEOF(.bss), 4) : AT(ALIGN(LOADADDR(.text) + SIZEOF(.text), 4))
+    {
+        __ring_irq_start = .;
+        src/ringLink.o(.ring_irq);
+        src/camera.o(.ring_irq);
+        . = ALIGN(4);
+        __ring_irq_end = .;
+
+    }
+    __ring_irq_load = LOADADDR(.ring_irq);
+    ASSERT(__ring_irq_end <= 0x03007500, "Ring IRQ code overlaps the system stack reserve")
+
+    /* Discard everything not specifically mentioned above. */''')
 (out / 'ld_script.ld').write_text(link)
 symbols = (root / 'symbols.txt').read_text()
 for name, address in [('gKeyBuf', '0x03006B00'), ('gKeyTriggerBuf', '0x03006B10'),

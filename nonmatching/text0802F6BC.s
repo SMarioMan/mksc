@@ -3,8 +3,13 @@
 .syntax unified
 .text
     
+    .ifdef MKSC_RING
+    thumb_func_start ring_stockRenderCell
+ring_stockRenderCell:
+    .else
     thumb_func_start oam_renderCell
-oam_renderCell: @ 0802F6BC
+oam_renderCell:
+    .endif
     push {r4, r5, r6, r7, lr}
     mov r7, r10
     mov r6, r9
@@ -271,7 +276,11 @@ _0802F898:
     ldr r1, [sp, #0x010]
     str r2, [sp, #0x020]
     str r3, [sp, #0x024]
+    .ifdef MKSC_RING
+    bl ring_spriteDivide
+    .else
     bl Div
+    .endif
     adds r6, r0, #0x0
     subs r0, r6, r7
     ldr r2, [sp, #0x020]
@@ -333,7 +342,11 @@ _0802F92E:
     adds r0, r6, #0x0
     ldr r1, [sp, #0x00C]
     str r2, [sp, #0x020]
+    .ifdef MKSC_RING
+    bl ring_spriteDivide
+    .else
     bl Div
+    .endif
     adds r6, r0, #0x0
     subs r0, r6, r7
     ldr r2, [sp, #0x020]

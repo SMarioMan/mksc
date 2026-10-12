@@ -167,3 +167,8 @@ $(ROM): $(ELF)
 	$(FIX) $@ -p -t"$(TITLE)" -c$(GAME_CODE) -m$(MAKER_CODE) -r$(REVISION) --silent
 
 -include $(C_DEPS)
+
+# The OAM renderer embeds this assembly through asm_unified.
+$(C_BUILDDIR)/oam.O3.o: nonmatching/text0802F6BC.s
+
+$(C_BUILDDIR)/camera.o: nonmatching/ringCamera.s

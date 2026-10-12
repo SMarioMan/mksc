@@ -119,19 +119,19 @@ build supplies one valid diamond cell per human ID, with eight identity colors,
 and reuses the stock marker tile region at `06012640`. Native kart texture banks
 and course-object banks remain available. The native remote texture throttle
 also uses video-frame parity, which can permanently skip slots when a ring
-barrier consumes multiple video frames; ring races update these descriptors
-each simulation frame. Both assembly hooks are conditional on `MKSC_RING`.
+barrier consumes multiple video frames; ring races use the committed simulation
+round for that parity while retaining the native texture update budget. Both assembly hooks are conditional on `MKSC_RING`.
 The ordinary build still matches SHA-1 `9d327c030c3e2d9007990518594f70c3340ac56f`.
 
 The lobby/results/error bitmap renderer draws to the inactive Mode 4 page and
 flips at VBlank only after the complete menu is ready. Palette uploads and
 native audio service remain active. `test_rendering.py` checks every completed
-frame: 2,400 identical frozen-menu frames across both pages, all eight karts and
+frame: 2,400 identical cached-menu frames without redundant redraws, all eight karts and
 seven identity markers in 700 consecutive rear-view frames, distinct texture
 sources matching native VRAM banks, and 5,600 valid Battle sprite frames.
 
 The transport now uses standard 2 MHz normal-32 serial with the existing
-4,096-cycle forwarding turnaround. External-clock consoles sleep in HALT
+512-cycle forwarding turnaround driven by timer 2. External-clock consoles sleep in HALT
 between serial/VBlank interrupts. The GUI adapter batches bounded timestamp-
 ordered slices on sleeping peers rather than handing off an OS thread for each
 small serial slice. Only a core's owning thread waits on its audio/video output;
@@ -149,6 +149,79 @@ Vs. lifecycle run. The emulator's 34 default CTest targets also passed.
 Cancellation, wire-loss reconnect, pause/resume, and restart passed at two and
 eight players. After BIOS validation, optional HLE entry/control checks also
 passed in both modes at two and eight players.
+
+## 2026-10-12 corrections and revalidation
+
+Current ROM SHA-256:
+`86b490a49bc735fefd9277cac377607c32e6fc4c080e622f6c1c98536f497a62`.
+The earlier `23a83a...` build's tests did not measure native game updates per
+video frame. Its apparent emulator FPS concealed roughly half-speed gameplay.
+
+The menu now services native audio once per video frame and caches unchanged
+pages. Character names use menu indices, separately from native character IDs;
+Yoshi/DK and Wario/Bowser match their portraits. The native four-row race HUD
+selects portraits by current position, using the original GP renderer. Ring
+markers no longer write sky palette bank 9 or erase minimap background tiles.
+Both floating balloons and HUD pips use the owning player's color. Identical
+balloon transforms share affine matrices, leaving capacity for other objects.
+
+The owner clocks normal-32 transfers from timer 2 while the main thread mixes
+audio. Critical IRQ code and the exact ARM HDMA kernel run from IWRAM, with a
+linker assertion protecting the system stack reserve. Sprite division, default
+unrotated sprites, and single scaled cells have exact arithmetic shortcuts.
+The extended controller mapping now matches native Up/Down and L-trigger bits.
+Native texture budgeting uses simulation rounds rather than video-frame parity.
+
+An intact link can miss an earlier READY during graphics DMA. A peer now holds
+COMMIT until it has the complete vector. The owner replays the collected inputs
+and COMMIT after an overdue return; completed peers forward replays without
+applying them again. The emulator applies every receiver's wire-completion
+event before raising the owner's IRQ, preventing scheduler-induced overlap.
+Core shutdown and GUI interruption also wait until a borrowed callback finishes,
+including callbacks that crash or request shutdown. The user's Windows
+`_ring_write()` fix remains included.
+
+Real-BIOS validation of this ROM passed:
+
+- All fourteen 2–8-player Vs./Battle entry and independent-control cases.
+- Complete Vs. and Battle rounds at two and eight players, with common rankings,
+  positions, and wins; two consecutive Battle rounds at both counts.
+- Cancellation, pause/resume, restart, and wire-loss reconnect at both counts.
+- 2,400 cached-menu frames, 700 consecutive frames with all eight Vs. karts and
+  seven markers, intact horizon palette/minimap/four-row HUD, distinct textures
+  matching VRAM, and 5,600 valid Battle frames. Every local player retained all
+  three correctly paletted floating balloons.
+- Original title labels and 200 menu updates per 200 video frames; complete
+  1,584-byte lobby PCM clearing; ordinary GP with ten character-voice callbacks.
+- 393,216 homebrew scanlines comparing the actual ARM kernel against native
+  projection arithmetic, including 32-bit wrapping and both HDMA buffers.
+- Original four-player stock-ROM Vs./Battle and the 2–8-player homebrew transport,
+  including a nonzero host and bounded wire-loss recovery.
+
+The speed test now checks the native simulation counter as well as protocol
+commits, using 600 video frames on each console. All cases had zero collisions,
+CRC errors, or timeouts:
+
+| Players | Vs. updates/video frame | Battle updates/video frame |
+| --- | --- | --- |
+| 5 | 1.000 | 1.000 |
+| 6 | 1.000 | 1.000 |
+| 7 | 1.000 | 1.000 |
+| 8 | 1.000 | 0.992 |
+
+The emulator passed 35 CTest targets, all 12 private GUI test results without
+skips, and synchronized eight-window Vs. entry/lifecycle. GUI coverage includes
+standard four-window Vs./Battle, ring two/eight-window Vs./Battle, a start-time
+wire loss, staggered startup, pause/reset/removal/reopen, and borrowed-core
+crash/shutdown. These tests use the supplied BIOS. Pure arithmetic checks also
+passed 536 million sprite quotients plus fallback boundaries, and all
+1,048,576 keypad/trigger combinations against the native mapping.
+
+After the real-BIOS checks, HLE passed two/eight-player entry and complete rounds
+in both modes, plus ordinary GP character-voice callbacks. It remains an explicit
+optional runner mode; real BIOS stays the primary validation fixture. The
+unmodified build still matches SHA-1
+`9d327c030c3e2d9007990518594f70c3340ac56f`.
 
 ## Research sources and hardware limits
 

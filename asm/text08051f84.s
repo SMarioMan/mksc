@@ -19293,6 +19293,12 @@ _0805BAA8:
 	ldr r0, _0805BAC8 @ =sub_805BAD0
 	str r0, [r1]
 	ldr r0, _0805BACC @ =_0807B534
+	.ifdef MKSC_RING
+	push {r1, r2, r3}
+	adds r0, r5, #0
+	bl ring_balloonCell
+	pop {r1, r2, r3}
+	.endif
 	str r0, [r1, #4]
 	adds r4, r3, #0
 	cmp r4, #2
@@ -19319,11 +19325,41 @@ sub_805BAD0: @ 0x0805BAD0
 	ldr r1, _0805BB14 @ =0x00000848
 	adds r0, r2, r1
 	ldr r3, [r6, #0x28]
+	.ifdef MKSC_RING
+	@ Driver IDs are assigned after balloon creation; choose the live owner.
+	push {r0, r1, r2, r3}
+	adds r0, r3, #0
+	bl ring_balloonCell
+	str r0, [r6, #4]
+	pop {r0, r1, r2, r3}
+	.endif
 	mov r8, r3
 	ldr r1, _0805BB18 @ =0x0000017D
 	add r1, r8
 	ldrb r1, [r1]
 	str r1, [sp]
+	.ifdef MKSC_RING
+	@ Hidden owners cannot draw balloons. Keep animation and elimination work,
+	@ but postpone their trigonometry and projection until they become visible.
+	mov r3, r8
+	movs r1, #0xc9
+	lsls r1, r1, #1
+	ldrb r1, [r3, r1]
+	movs r2, #0x10
+	tst r1, r2
+	bne .Lring_balloon_visible
+	ldrh r1, [r6, #0x2c]
+	adds r1, #2
+	strh r1, [r6, #0x2c]
+	adds r1, r6, #0
+	adds r1, #0x2e
+	mov sl, r1
+	ldrb r1, [r6, #0x10]
+	movs r0, #0xfe
+	ands r0, r1
+	b _0805BD06
+.Lring_balloon_visible:
+	.endif
 	movs r3, #0x14
 	ldrsh r1, [r0, r3]
 	mov r0, r8
@@ -19405,7 +19441,11 @@ _0805BB82:
 	ldrsh r1, [r3, r0]
 	movs r0, #0x80
 	lsls r0, r0, #9
+	.ifdef MKSC_RING
+	bl ring_spriteDivide
+	.else
 	bl __divsi3
+	.endif
 	adds r1, r0, #0
 	adds r0, r7, #0
 	muls r0, r1, r0
@@ -19438,6 +19478,31 @@ _0805BBAC:
 	movs r3, #0x24
 	ldrsh r0, [r1, r3]
 	str r0, [r6, #0x20]
+	.ifdef MKSC_RING
+	@ Exact native depth bands, folded into a 16-step triangle wave.
+	adds r0, r4, #0
+	movs r1, #0x80
+	lsls r1, r1, #4
+	adds r0, r0, r1
+	lsrs r0, r0, #12
+	movs r1, #15
+	ands r0, r1
+	cmp r0, #8
+	bhi .Lring_balloon_depth_far
+	subs r0, #4
+	b _0805BCBE
+.Lring_balloon_depth_far:
+	movs r1, #12
+	subs r0, r1, r0
+	b _0805BCBE
+	.align 2, 0
+_0805BBFC: .4byte 0xFFFFE800
+_0805BC00: .4byte 0x0000FFFF
+_0805BC04: .4byte gSinTable
+_0805BC08: .4byte 0x000003FF
+_0805BC0C: .4byte 0xFFFA0000
+_0805BC10: .4byte 0x00FFFFFF
+	.else
 	ldr r0, _0805BC14 @ =0x000087FF
 	cmp r4, r0
 	bgt _0805BC40
@@ -19561,6 +19626,7 @@ _0805BCB8:
 	b _0805BCBE
 _0805BCBC:
 	movs r0, #0
+	.endif
 _0805BCBE:
 	mov r2, r8
 	movs r3, #0x24
