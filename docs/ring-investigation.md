@@ -1,3 +1,58 @@
+## Follow-up: opening music and native menu/results foundations (2026-10-12)
+
+The opening regression reproduced the host's native song 4 being replaced by
+course song 25 only four frames after it started. Physics starts while the
+opening song is still playing. Shared BGM now waits for native songs 3/4 to
+complete, including their native stopped/paused state, before starting the
+course track. `test_start_music.py` checks the entire transition for eight-player
+Vs., Battle and GP, hosted from physical window four, and checks that every
+peer remains muted. The complete shared Vs. race still passes host-only BGM,
+leader final-lap music and 1.000 native updates/video frame.
+
+Matching-C commit `ae9e26d` converts nine native functions: three loaded-track
+queries, both character-order conversions, and four accessors for the shared
+race/result records. Named structures describe the eight finish banners and
+eight result rows that reuse this memory. `make` still verifies stock SHA-1
+`9d327c030c3e2d9007990518594f70c3340ac56f`. No stock behavior was changed by
+these conversions. Native menu page/state-machine code remains assembly.
+
+Ring GP now uses the original points table and original eight-racer cumulative
+standings builder (`sub_801E0B8`), including native ties and human/CPU rules.
+Native racer point fields persist into the next grid. Result presentation still
+uses the ring bitmap page. Because native result rows reuse the finish-banner
+memory, the next race initializes all banners once at their first consumer,
+after stock menu setup, then lets the native finish updater populate them.
+The stronger cup fixture verifies native racer totals, all eight native
+standings rows and equal-point ranks, as well as lap counts and peer scores.
+Final real-BIOS Retro cups pass at one, two and eight humans: four five-lap
+races, eight valid native standings rows and common 76-point cup totals.
+Final complete Vs./Battle rounds also pass at two/eight humans. The heaviest
+Battle arena measures 0.992 normal / 0.997 shared updates per video frame;
+shared five-lap GP with two humans and six CPUs measures 1.000.
+After these real-BIOS checks, final optional HLE passes complete Vs./Battle
+rounds at two/eight players and the ordinary DK-to-Wario GP voice callback.
+
+`build.py --code-padding 0x400` deliberately moves ROM game code, including
+new code and audio callbacks, by another 1024 bytes. `audit_relocation.py`
+checks uniform function movement and all matching aligned callback words,
+including incbin script data. The controlled-shift check examines 1838 ROM
+functions and 1031 callback words. Six numerical coincidences were identified
+inside PCM/course assets; their complete opaque blobs must instead remain
+byte-identical after the shift. No callback-bearing script/menu tables are
+excluded. Shifted native DK-to-Wario GP and voice callbacks pass with the real
+BIOS; the shifted boot-shared build also passes opening music in all three
+modes. This demonstrates tested ROM relocation, not arbitrary IWRAM layout
+changes or every possible course/item combination. Timing-critical IWRAM
+transport and reserved eight-input storage still have explicit RAM placement.
+
+The stock menu investigation identifies `spm_main` as the shared solo/Multi-Pak
+page coordinator, calling `sub_8004860` (mode/engine), `spm_chooseCharacter`, and
+`sub_800AF94` (cup/course). Its embedded four-character records and four-slot
+stack packets must be extended before using it for eight controllers. Routing
+all eight players through it without that work would reintroduce overwrites.
+Full stock page/presentation migration remains pending; the matching queries,
+typed records and native GP standings are concrete steps toward reuse.
+
 ## Follow-up: host audio, Battle rendering, and Grand Prix (2026-10-12)
 
 Shared BGM now belongs only to software P1 (the clock owner), including direct
@@ -50,8 +105,10 @@ unique CPU characters. Select in the disconnected lobby starts solo GP.
 Native GP initialization assumes one human and initially gave linked humans
 duplicate ranks; its rank-pointer setup then wrote into adjacent score memory.
 The ring variant now establishes the CPU roster and unique grid ranks before
-native AI setup. Four races award 9/6/3/1 points, cumulative standings choose the
-next grid, and A advances to the next course or back to cups after the final
+native AI setup. Four races award 9/6/3/1 points. GP reads the native initialized finish-lap
+byte, retaining three Super laps and five Retro laps; the earlier Vs. constant
+incorrectly shortened Retro GP to three laps. The cup fixture now requires
+seven racers to finish all five laps. Cumulative standings choose the next grid, and A advances to the next course or back to cups after the final
 race. Pause/restart keeps cup progress; choosing a new cup resets the scores.
 
 The runner adds result-screen A pulses and refreshes its route on each course,
@@ -65,19 +122,49 @@ restores all 37 entries and native lap progression on every peer. That failed
 attempt is also diagnostic evidence, not a completed cup. The permanent GP fixtures check first-race points,
 next-course loading, and all four courses with a 76-point cup total.
 
+The eight-human five-lap replay additionally exposed a native finish-banner
+record problem. At frame 20767, the character-name renderer sub_801D3D0 used
+character 8 to index the eight-entry _080DB234 name table. Its next entry was
+compressed course art (header 0x0005C010), interpreted by sub_804F6F4 as a
+49168-column tilemap. A traced halfword write at PC 0x0804FD92 overwrote
+scene state; this was a game defect, not a wire error. Resetting records during
+grid setup was too early because stock menu setup rewrote them. The ring GP
+banner hook now restores the native -1 sentinel for invalid records immediately
+before rendering and lets sub_801D2A4 add actual finishers with native timing.
+The repaired scene remains valid beyond the previously failing point and
+through the next course transition. An experimental AI-input bypass did not
+change the stalled drivers and was removed; the snapshot confirmed ordinary
+GP flags 0x100 and valid independent human controls.
+
+The remaining stalled cars were fixture drivers cutting corners into obstacles
+on Donut Plains: one at (858,478) aimed straight at (856,624), another at
+(472,471) aimed at (368,488). Both still had human controls and race flags
+0x100. The test controller now revisits the current route point after 120
+frames without meaningful movement, then resumes its next-point target using
+only keypad inputs. It does not edit vehicle coordinates or progress. Sparse,
+flushed progress CSVs make long-cup transitions observable. Tracing can stop
+at the first write after a specified frame, and illegal opcodes fail the runner
+rather than producing unbounded diagnostics.
+
 Final real-BIOS entry/control coverage passes all 21 Vs./Battle/GP cases at
 2–8 humans. GP first-race points and next-course loading pass at 1/2/8 humans,
-with common positions for all eight racers. A complete two-human/six-CPU Retro
-cup passes all four races and common 76-point totals. Complete Vs. and Battle
+with common positions for all eight racers. The first two-human/six-CPU Retro cup completed with common 76-point totals,
+but that fixture did not require native five-lap races. It is superseded by the
+stronger native-lap cup checks: two humans/six CPUs pass all four five-lap races
+with a common 76-point total. Shared GP music remains host-only, tracks the
+native lap-five flag, and measures 1.000 updates/video frame through a complete
+five-lap race. Its end-of-race BGM guard now uses that native finish target too. Complete Vs. and Battle
 rounds pass at two and eight humans. Loss/reconnect, cancellation, pause/resume
 and restart pass at both counts. Rendering passes 2,400 unchanged menu frames,
 700 consecutive views with eight karts/seven markers, intact horizon/minimap,
 and 5,600 valid Battle sprite frames. The survivor regression eliminates players 1–4 and verifies players 5–8 occupy
 all four portrait rows on every console. The disconnected lobby clears its full
 1,584-byte PCM buffer, and solo engine-class Back returns to the title.
-The current normal ROM SHA-256 is
-`355579d823bfbf11708b0d668a173e39d8acbd7981c701c439799fcf757e91db`;
-older hashes below describe earlier builds.
+The GP lap-target/finish-banner checkpoint normal ROM had SHA-256
+`9c67a324177ef72277522c2b1dbbb1e64b07bc3214101bb09eb31c716c251b79`.
+The newer native-standings/music checkpoint normal ROM is
+`1d31e289b7090ff232a45522607d6989b85a09ebc47888b7cf62745f0d8e1fe3`.
+Older hashes below describe earlier builds.
 
 ## Follow-up: race deadlines and scripted sessions (2026-10-12)
 
@@ -374,7 +461,8 @@ the next cable's middle socket, closing SO-to-SI with shared SC/GND. No custom
 cable is assumed. Software tests cannot establish cable loading, oscillator
 phase/drift tolerance, or signal integrity on real hardware.
 
-Stock-menu visual parity remains a stretch goal. After the BIOS-backed core
+The requested stock-menu and result-presentation migration remains unfinished;
+it is part of the current work, not a completed acceptance criterion. After the BIOS-backed core
 checks passed, explicit HLE validation passed entry and complete Vs./Battle
 rounds at two and eight players, and ordinary GP character-voice callbacks.
 The runner rejects unsupported BIOS calls and confirms that no external BIOS

@@ -14,6 +14,7 @@
 #include "vcount.h"
 #include "transition.h"
 #include "mp2000/m4a.h"
+#include "nativeGameInfo.h"
 
 /* Serial transport owns timer 2 only. Audio owns timers 0/1; stock cable
  * transports keep timer 3. All software IDs travel through the cable. */
@@ -62,6 +63,7 @@ static int sGame, sBattle, sEngine, sCourse, sRetro;
 static u16 sGPPoints[8];
 static u8 sGPRace;
 static u32 sGPCupComplete;
+static bool8 sGpBannersInitialized;
 u32 ring_frameTiming[5];
 static u32 sRenderStart;
 static u32 ring_cycles(void)
@@ -98,7 +100,6 @@ u16 ring_sharedMusicSong(u16 song)
  * final-lap flag is bit 3; finished drivers keep it set, so tempo never drops. */
 static void ring_updateSharedMusic(void)
 {
-    extern u8 track_getRaceMusic(RaceState*);
     extern void m4aMPlayTempoControl(struct MusicPlayerInfo*, u16);
     RaceState* state = &gSceneState.raceState;
     u32 i, fast = 0, music, finished = 0, alive = 0;
@@ -110,11 +111,19 @@ static void ring_updateSharedMusic(void)
         return;
     }
     if (!ring_sharedMusicActive()) { sSharedSong = 0; sSharedFinalLap = 0; return; }
+    /* Physics begins during the native opening fanfare. Do not treat its
+     * first tick as permission to replace a still-playing start song. Both
+     * GP and linked races use player zero for this finite introductory cue. */
+    if (!sSharedSong &&
+        (gMPlayTable[0].info->songHeader == gSongTable[3].header ||
+         gMPlayTable[0].info->songHeader == gSongTable[4].header) &&
+        (gMPlayTable[0].info->status & MUSICPLAYER_STATUS_TRACK) &&
+        !(gMPlayTable[0].info->status & MUSICPLAYER_STATUS_PAUSE)) return;
     for (i = 0; i < state->driverCount; i++)
     {
         u8* driver = (u8*)state->drivers[i];
         if (*(u32*)(driver + 0x48) & 8) fast = 1;
-        if (driver[0xC7] >= 0x83) finished++;
+        if (driver[0xC7] >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
         if (driver[0x17D]) alive++;
     }
     /* Preserve the common result jingle during native end-of-race cleanup. */
@@ -170,8 +179,32 @@ void ring_prepareGpGrid(RaceState* state)
         }
         else rank = i < sRing.count ? 8 - sRing.count + i : i - sRing.count;
         *(u16*)((u8*)state->drivers[i] + 0xBA) = rank * 2;
+        ((u8*)state->drivers[i])[0xC4] = sGPPoints[i];
         order[rank] = state->drivers[i];
     }
+}
+
+void ring_updateGpFinishBanners(void)
+{
+    NativeFinishBanner* banners = sub_800EDDC()->rows.banners;
+    extern void sub_801D2A4(int stagger);
+    u32 i;
+    if (!sRing.enabled || sGame != GP_MODE) return;
+    /* Stock multiplayer initialization leaves character 8 in these shared
+     * records. GP expects -1 until each racer finishes; 8 reads past its
+     * eight-name table into compressed course art and corrupts the tilemap.
+     * Initialize once at rendering time, after native menu setup. Result
+     * rows reuse the same memory between races, so even an in-range character
+     * cannot identify a valid banner on the next race's first frame. Let the
+     * original updater add newly finished racers with normal timing. */
+    for (i = 0; i < 8; i++)
+        if (!sGpBannersInitialized || banners[i].character < -1 || banners[i].character >= 8)
+        {
+            banners[i].column = banners[i].slideTick = banners[i].delay = 0;
+            banners[i].character = -1;
+        }
+    sGpBannersInitialized = TRUE;
+    sub_801D2A4(1);
 }
 
 static u32 sLastAudioFrame;
@@ -1136,6 +1169,7 @@ static void prepareRace(const u8* characters, int mode, int engine, int course, 
     }
     sEliminated = 0;
     sBalloonArtReady = FALSE;
+    sGpBannersInitialized = FALSE;
 #ifdef MKSC_RING_MUSIC_SHARED
     sMusicRacing = FALSE;
 #endif
@@ -1405,7 +1439,9 @@ bool32 ring_checkRoundEnd(void)
             else if (sBattlePlaces[i] == 0xFF)
                 sBattlePlaces[i] = sRing.count - 1 - sEliminated++;
         }
-        else if (driver[0xC7] >= 0x83) finished++;
+        /* Native GP uses five laps on Retro tracks, three on Super tracks.
+         * Keep its initialized finish-lap byte instead of the Vs. constant. */
+        else if (driver[0xC7] >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
     }
     if ((sBattle && alive <= 1) || (!sBattle && finished >= state->driverCount - 1))
     {
@@ -1459,8 +1495,9 @@ bool32 ring_finishRace(void)
         }
         if (sGame == GP_MODE)
         {
-            static const u8 points[8] = {9, 6, 3, 1, 0, 0, 0, 0};
-            for (i = 0; i < 8; i++) if (sPlaces[i] < 8) sGPPoints[sPlaces[i]] += points[i];
+            extern const u8 _080DB0A8[];
+            /* Share the native GP awards, including the zero-point places. */
+            for (i = 0; i < 8; i++) if (sPlaces[i] < 8) sGPPoints[sPlaces[i]] += _080DB0A8[i + 1];
             if (sGPRace == 3) sGPCupComplete = 1;
         }
         else if (sPlaces[0] < sRing.count) sWins[sPlaces[0]]++;
@@ -1538,14 +1575,18 @@ static bool32 results_main(void)
     screen(sBattle ? "BATTLE RESULTS" : sGame == GP_MODE ? "GRAND PRIX POINTS" : "VS RESULTS");
     if (sGame == GP_MODE)
     {
-        /* Cup standings: points descending; the latest finish breaks ties. */
-        for (i = 1; i < 8; i++)
+        extern void sub_801E0B8(void);
+        NativeResultRow* standings = sub_800EDDC()->rows.results;
+        u32 id;
+        /* Populate native racer totals and use the original eight-racer
+         * standings builder, including its own tie and human/CPU rules. */
+        for (i = 0; i < 8; i++)
+            ((u8*)gSceneState.raceState.drivers[i])[0xC4] = sGPPoints[i];
+        sub_801E0B8();
+        for (i = 0; i < 8; i++)
         {
-            u8 id = sPlaces[i];
-            u32 j = i;
-            while (j && sGPPoints[sPlaces[j - 1]] < sGPPoints[id])
-            { sPlaces[j] = sPlaces[j - 1]; j--; }
-            sPlaces[j] = id;
+            for (id = 0; id < 8 && sCharacters[id] != standings[i].menuCharacter; id++);
+            sPlaces[i] = id;
         }
         text(12, 136, sGPRace == 3 ? "CUP COMPLETE  A CHOOSE CUP" : "A NEXT RACE", 0x7FFF);
     }

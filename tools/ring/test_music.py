@@ -7,7 +7,11 @@ for key in ('runner','rom','elf','bios','results'):p.add_argument('--'+key,requi
 p.add_argument('--policy',choices=['off','shared'],required=True)
 p.add_argument('--boot-ring',action='store_true')
 p.add_argument('--host',type=int,choices=range(8),default=0)
+p.add_argument('--players',type=int,choices=range(2,9),default=8)
+p.add_argument('--gp',action='store_true')
+p.add_argument('--retro',action='store_true')
 a=p.parse_args();a.results.mkdir(parents=True,exist_ok=True)
+if a.host>=a.players:p.error('The host must exist in the session')
 symbols={}
 for line in subprocess.check_output(['arm-none-eabi-nm','-n',str(a.elf)],text=True).splitlines():
  f=line.split()
@@ -16,13 +20,15 @@ assert symbols['sRing']==0x03006B40,'Protocol diagnostic ABI moved'
 base=[]
 for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=line.split(',');f=int(f)
- if int(i)==0 and f<3500 and (not a.boot_ring or f>=1500):base.append((f,int(k,16)))
+ if int(i)==0 and f<3500 and (not a.boot_ring or f>=1500) and (not a.gp or f not in (2350,2365)):base.append((f,int(k,16)))
 rows=[]
 for f,k in base:
- rows.extend((f,i if f<1500 or f in (2000,2015) else a.host,k) for i in range(8 if f<1500 or f in (2000,2015) else 1))
+ rows.extend((f,i if f<1500 or f in (2000,2015) else a.host,k) for i in range(a.players if f<1500 or f in (2000,2015) else 1))
+if a.gp:rows.extend([(1600,a.host,64),(1615,a.host,0)])
+if a.retro:rows.extend([(2100,a.host,4),(2115,a.host,0)])
 inputs=a.results/'inputs.csv';inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
 video=a.results/'video.csv'
-command=[str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players','8',
+command=[str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(a.players),
  '--frames',str(50000 if a.policy=='shared' else 3900),'--input',str(inputs),
  '--video-from','3300','--video-log',str(video),'--barrier-before-input','--barrier-state','0x03006B40']
 if a.policy=='shared':command+=['--until-scene',hex(symbols['results_main']|1),'--autodrive-frame','3500','--autofire']
@@ -38,22 +44,29 @@ if a.policy=='off':
  print('PASS no-music: player zero remains stopped on all eight consoles; effects use other players',flush=True)
 else:
  rom=a.rom.read_bytes();table=symbols['gSongTable']-0x08000000
- course=struct.unpack_from('<I',rom,table+25*8)[0];jingle=struct.unpack_from('<I',rom,table+19*8)[0];winner=struct.unpack_from('<I',rom,table+5*8)[0]
+ cups=symbols['gRetroCups' if a.retro else 'gMkscCups']-0x08000000
+ header=struct.unpack_from('<I',rom,cups)[0]
+ track=struct.unpack_from('<I',rom,symbols['gTrackDefTable']-0x08000000+header*4)[0]-0x08000000
+ song=struct.unpack_from('<I',rom,track+24)[0]
+ if song==36:song=28
+ course=struct.unpack_from('<I',rom,table+song*8)[0];jingle=struct.unpack_from('<I',rom,table+19*8)[0];winner=struct.unpack_from('<I',rom,table+5*8)[0]
+ finalLap=5 if a.gp and a.retro else 3
  game=[r for r in frames if r['dispcnt']&7==1 and r['simulationFrames']>=80 and r['sceneMain']==symbols['race_main']|1]
  peers=[r for r in game if r['player']!=a.host]
  assert peers and all(not r['musicStatus']&65535 or r['musicStatus']&0x80000000 for r in peers),'Peer BGM player is audible'
  owner=[r for r in game if r['player']==a.host]
- assert owner and all(r['musicHeader'] in (course,jingle) or (r['musicHeader']==winner and r['leadLap']>=4) for r in owner),'Individual power-up or wrong course BGM played'
+ assert owner and all(r['musicHeader'] in (course,jingle) or (r['musicHeader']==winner and r['leadLap']>finalLap) for r in owner),'Individual power-up or wrong course BGM played'
  assert all(r['musicTempo'] in (256,320) for r in owner)
+ assert all(r['musicHeader']!=jingle and r['musicTempo']==256 for r in owner if r['leadLap']<finalLap),'Music accelerated before the native final lap'
  assert any(r['musicHeader']==jingle for r in game),'Shared final-lap jingle was never played'
- firstFinal=min(r['frame'] for r in game if r['leadLap']>=3)
+ firstFinal=min(r['frame'] for r in game if r['leadLap']>=finalLap)
  for i in (a.host,):
-  final=[r for r in game if r['player']==i and r['leadLap']>=3 and r['frame']>firstFinal+1 and r['musicHeader']==course]
+  final=[r for r in game if r['player']==i and r['leadLap']>=finalLap and r['frame']>firstFinal+1 and r['musicHeader']==course]
   assert len(final)>100 and all(r['musicTempo']==320 for r in final),'Leader final-lap tempo not applied'
  rates=[]
- for i in range(8):
+ for i in range(a.players):
   peer=[r for r in game if r['player']==i]
   rates.append((peer[-1]['simulationFrames']-peer[0]['simulationFrames'])/(peer[-1]['frame']-peer[0]['frame']))
  (a.results/'rates.json').write_text(json.dumps(rates,indent=2))
  assert min(rates)>=.95,('Full moving race runs below 95% speed',rates)
- print(f'PASS shared-music: course/final-lap BGM only, host-only BGM and leader tempo; complete moving eight-player race at {min(rates):.3f} updates/video frame',flush=True)
+ print(f'PASS shared-music: course/final-lap BGM only, host-only BGM and leader tempo on lap {finalLap}; complete moving {a.players}-player race at {min(rates):.3f} updates/video frame',flush=True)

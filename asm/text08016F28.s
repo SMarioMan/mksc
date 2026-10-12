@@ -11951,6 +11951,9 @@ sub_801D3D0: @ 0x0801D3D0
 	mov r5, r8
 	push {r5, r6, r7}
 	sub sp, #4
+	.ifdef MKSC_RING
+	bl ring_updateGpFinishBanners
+	.endif
 	bl sub_800EDDC
 	mov sl, r0
 	movs r7, #0
