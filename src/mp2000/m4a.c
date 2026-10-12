@@ -1,5 +1,9 @@
 #include <string.h>
 #include "gba/m4a_internal.h"
+#ifdef MKSC_RING_MUSIC_SHARED
+extern int ring_sharedMusicActive(void);
+extern u16 ring_sharedMusicSong(u16 song);
+#endif
 
 extern const u8 gCgb3Vol[];
 
@@ -88,8 +92,19 @@ void m4aSongNumStart(u16 n)
 {
     const struct MusicPlayer* mplayTable = gMPlayTable;
     const struct Song* songTable = gSongTable;
+#ifdef MKSC_RING_MUSIC_SHARED
+    const struct Song* song = &songTable[ring_sharedMusicSong(n)];
+#else
     const struct Song* song = &songTable[n];
+#endif
     const struct MusicPlayer* mplay = &mplayTable[song->ms];
+#ifdef MKSC_RING_MUSIC_OFF
+    /* All BGM and jingles share player zero; effects/voices use other players. */
+    if (song->ms == 0) return;
+#endif
+#ifdef MKSC_RING_MUSIC_SHARED
+    if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
+#endif
 
     MPlayStart(mplay->info, song->header);
 }
@@ -98,8 +113,19 @@ void m4aSongNumStartOrChange(u16 n)
 {
     const struct MusicPlayer* mplayTable = gMPlayTable;
     const struct Song* songTable = gSongTable;
+#ifdef MKSC_RING_MUSIC_SHARED
+    const struct Song* song = &songTable[ring_sharedMusicSong(n)];
+#else
     const struct Song* song = &songTable[n];
+#endif
     const struct MusicPlayer* mplay = &mplayTable[song->ms];
+#ifdef MKSC_RING_MUSIC_OFF
+    /* All BGM and jingles share player zero; effects/voices use other players. */
+    if (song->ms == 0) return;
+#endif
+#ifdef MKSC_RING_MUSIC_SHARED
+    if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
+#endif
 
     if (mplay->info->songHeader != song->header)
     {
@@ -118,8 +144,19 @@ void m4aSongNumStartOrContinue(u16 n)
 {
     const struct MusicPlayer* mplayTable = gMPlayTable;
     const struct Song* songTable = gSongTable;
+#ifdef MKSC_RING_MUSIC_SHARED
+    const struct Song* song = &songTable[ring_sharedMusicSong(n)];
+#else
     const struct Song* song = &songTable[n];
+#endif
     const struct MusicPlayer* mplay = &mplayTable[song->ms];
+#ifdef MKSC_RING_MUSIC_OFF
+    /* All BGM and jingles share player zero; effects/voices use other players. */
+    if (song->ms == 0) return;
+#endif
+#ifdef MKSC_RING_MUSIC_SHARED
+    if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
+#endif
 
     if (mplay->info->songHeader != song->header)
         MPlayStart(mplay->info, song->header);

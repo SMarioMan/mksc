@@ -75,6 +75,9 @@ for case in ('menu', 'vs', 'battle'):
                                          51794, 53908, 56022, 58136, 60250, 62364, 64478, 0], 'Peach Circuit sky palette changed'
             assert all(row == list(range(0xD080 + [0, 1, 3, 2][i] * 4, 0xD084 + [0, 1, 3, 2][i] * 4))
                        for i, row in enumerate(hud['portraits'])), 'Native four-portrait HUD changed'
+        for player in range(8):
+            road = [row['skyRoadPixels'] for row in frames if row['player'] == player]
+            assert max(road) < 100, ('Road covers the Peach Circuit sky', player, max(road))
         textures = state['nodes'][7]['game']['drivers']
         assert all(d['graphicsMatch'] for d in textures), 'A kart VRAM bank differs from its native texture'
         assert len({d['graphicsSource'] for d in textures}) == 8, 'Distinct characters share a texture slot'

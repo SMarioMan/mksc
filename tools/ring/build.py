@@ -2,12 +2,28 @@
 """Build the separate ring variant without replacing the matching stock ROM."""
 from pathlib import Path
 import subprocess
+import argparse
+p = argparse.ArgumentParser(description=__doc__)
+p.add_argument("--boot-ring", action="store_true", help="Boot directly into the ring connection menu")
+music = p.add_mutually_exclusive_group()
+music.add_argument("--music", choices=("normal", "off", "shared"), default="normal", help="Music policy; effects remain enabled")
+music.add_argument("--no-music", dest="music", action="store_const", const="off")
+music.add_argument("--shared-music", dest="music", action="store_const", const="shared")
+a = p.parse_args()
 root = Path(__file__).resolve().parents[2]
 out = root / 'build-ring'
 out.mkdir(exist_ok=True)
+# Compiler defines are not make dependencies. Rebuild when policy changes.
+configuration = f"{int(a.boot_ring)}:{a.music}"
+stamp = out / 'ring-options.txt'
+if not stamp.exists() or stamp.read_text() != configuration:
+    for obj in out.rglob('*.o'):
+        obj.unlink()
+    stamp.write_text(configuration)
 link = (root / 'ld_script.ld').read_text()
 link = link.replace('        src/vcount.o(COMMON);', '''        src/vcount.o(COMMON);
         . = 0x6B40;
+        src/ringLink.o(.ring_state);
         src/ringLink.o(.bss);
         src/ringLink.o(COMMON);
         ASSERT(. < 0x7500, "Ring state overlaps the system stack reserve");''')
@@ -36,4 +52,4 @@ for name, address in [('gKeyBuf', '0x03006B00'), ('gKeyTriggerBuf', '0x03006B10'
 symbols = symbols.replace('gSelectedCharacters = 0x0300002C;', 'gSelectedCharacters = ring_selectedCharacters;')
 (out / 'symbols.txt').write_text(symbols)
 subprocess.run(['make', 'tools', 'libraries'], cwd=root, check=True)
-subprocess.run(['make', 'RING=1', '-j5', 'mksc-ring.gba', 'mksc-ring.sym'], cwd=root, check=True)
+subprocess.run(['make', 'RING=1', f'RING_BOOT={int(a.boot_ring)}', f'RING_MUSIC={a.music}', '-j5', 'mksc-ring.gba', 'mksc-ring.sym'], cwd=root, check=True)

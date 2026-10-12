@@ -132,6 +132,7 @@ bool32 oam_renderCell(OamCell* cell)
 {
     const u16* data = cell->cellData;
     int count, offset = sBufferOffset;
+    if (!ring_active()) return ring_stockRenderCell(cell);
     if (cell->scaleX != 256 || cell->scaleY != 256 || cell->affinePa != 256 || cell->affinePb)
     {
         if (data[0] == 1 && (data[1] >> 14) < 3)
@@ -343,7 +344,7 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
     OamCell* cell;
     OamCell v20;
 #ifdef MKSC_RING
-    if (!a6 && !rotation && ((!scaleX || !scaleY) || (scaleX == 256 && scaleY == 256)))
+    if (ring_active() && !a6 && !rotation && ((!scaleX || !scaleY) || (scaleX == 256 && scaleY == 256)))
     {
         int count = *cellData++, offset = sBufferOffset;
         while (count-- > 0 && offset <= 511)

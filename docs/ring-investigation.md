@@ -1,3 +1,60 @@
+## Follow-up: race deadlines and scripted sessions (2026-10-12)
+
+A short stationary FPS test did not cover the user's moving-race slowdown.
+A busy eight-player section measured 0.766 native updates/video frame; the
+complete shared-music race measured about 0.935. Completed drawing just after
+VBlank was waiting an extra frame. The variant now publishes finished buffers
+through VCOUNT 190, only after the native physics loop begins. An elapsed-video
+tick budget allows catch-up without overclocking or advancing the whole race
+faster than video. The busy section improved to 0.983; the final full moving
+race, including item use and the leader's final lap, measured 0.992435 on all
+peers. The sky callback rearms every video IRQ even when bulk publication waits.
+
+Applying early publication to menus/loading caused a frozen-menu discrepancy
+and a two-player Battle start failure. Restricting the path to initialized
+physics restored all 14 2–8-player entry/control tests and frozen-menu/rendering
+checks. The protocol's fixed diagnostic ABI now uses a dedicated .ring_state
+section at 0x03006B40, independent of music-option local/static variables.
+
+The native cell renderer is retained outside ring sessions. The stock 3×3
+DK-to-Wario selector was driven into Wario GP with item/voice callbacks, and
+its image matches the unmodified ROM byte-for-byte. Qt keyboard events also
+cycle through the ring selector twice before starting an eight-player match.
+
+The builder adds --boot-ring and mutually exclusive --no-music/--shared-music
+policies. Shared music ignores individual power-ups and follows the leading
+racer's final-lap flag, with the normal next-video-frame audio latency. A common
+victory jingle preserves a session-wide result theme. Effects/voices remain
+available when music is disabled. Retro names and the Select hint are checked
+from published menu pixels on both cup and track screens.
+
+Battle additions use symmetric offsets perpendicular to each marker's facing:
+original slots move left and new slots move right. Both candidate tiles are
+checked against void/lava; the distance shrinks symmetrically if needed. All
+four arena grids pass midpoint, heading, separation, and eight-peer equality
+checks against native four-player grids.
+
+The Qt emulator adds --ring-players N ROM, --instance-settings DIR, --hide-menu,
+and P1–P8 window suffixes. BIOS/configuration overrides propagate to independent
+profiles; settings directories remain unique when a middle window is replaced.
+SDL preference loading updates only its player's device slot. LCD reset epochs
+align to a shared frame boundary. Audio fallback startup now starts its timer;
+otherwise additional consoles could stall waiting on undrained audio buffers.
+
+Final normal ROM SHA-256 is
+`5b0105543a750026bfb303563899fc57ec5efbae15f84cc59d8bd832d917e72f`.
+Complete real-BIOS Vs./Battle rounds pass at two and eight players. The full Qt
+suite passes 12 results without skips, including original four-player modes,
+ring modes, staggered startup, wire loss, and core lifecycle failures. A separate
+scripted eight-window launch passes BIOS-argument propagation, two character
+selection cycles, independent persisted bindings, hidden menus/Alt, and profile
+reuse after closing a middle window. Both GUI race modes and the scripted race
+measure 1.000 native updates/video frame in their 600-frame windows. All 35
+CTest targets pass, and the unmodified build still matches its original hash.
+After these real-BIOS checks, optional HLE passes complete Vs./Battle rounds at
+two and eight players and the DK-to-Wario single-player GP regression. The
+runner confirms HLE was selected and that no external BIOS was loaded.
+
 # Ring multiplayer implementation and validation
 
 The separate `mksc-ring.gba` build adds Ring Link to the title's link submenu.
