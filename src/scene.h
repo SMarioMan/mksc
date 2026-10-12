@@ -43,6 +43,10 @@ typedef struct
     //...
 } RaceState;
 
+u8 track_getRaceMaterial(RaceState* state);
+u8 track_getRaceMusic(RaceState* state);
+int* track_getRaceTargetTable(RaceState* state);
+
 typedef bool32 (*SceneMain_fn)(void);
 typedef void (*SceneVblank_fn)(void);
 

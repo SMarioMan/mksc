@@ -45,3 +45,5 @@ EraseFlashSector = 0x03006A94;
 gNumMusicPlayers = 11;
 gMaxLines = 64;
 gSelectedCharacters = 0x0300002C;
+
+gNativeGameInfo = 0x03000048;

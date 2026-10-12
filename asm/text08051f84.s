@@ -509,7 +509,7 @@ _080523B0:
 	b _080523C6
 _080523B8:
 	adds r0, r2, #0
-	bl sub_8032C38
+	bl track_getRaceMusic
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	bl m4aSongNumStart
@@ -607,7 +607,7 @@ _08052456:
 	b _080524BC
 _08052466:
 	adds r0, r4, #0
-	bl sub_8032C38
+	bl track_getRaceMusic
 	lsls r0, r0, #0x18
 	lsrs r0, r0, #0x18
 	cmp r0, #0x24

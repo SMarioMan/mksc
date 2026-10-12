@@ -26262,28 +26262,7 @@ _0800ED82:
 _0800ED98: .4byte _080D9D28
 _0800ED9C: .4byte _080D9D68
 
-	thumb_func_start spm_menuCharIdxToCharId
-spm_menuCharIdxToCharId: @ 0x0800EDA0
-	ldr r1, _0800EDAC @ =_080D9790
-	lsls r0, r0, #2
-	adds r0, r0, r1
-	ldr r0, [r0]
-	bx lr
-	.align 2, 0
-_0800EDAC: .4byte _080D9790
-
-	thumb_func_start sub_800EDB0
-sub_800EDB0: @ 0x0800EDB0
-	ldr r2, _0800EDC0 @ =_080D97B0
-	movs r1, #7
-	ands r1, r0
-	lsls r1, r1, #2
-	adds r1, r1, r2
-	ldr r0, [r1]
-	bx lr
-	.align 2, 0
-_0800EDC0: .4byte _080D97B0
-
+	.section .text.characterQueriesTail, "ax", %progbits
 	thumb_func_start sub_800EDC4
 sub_800EDC4: @ 0x0800EDC4
 	ldr r3, _0800EDD8 @ =0x03000048
@@ -26299,34 +26278,7 @@ _0800EDCA:
 	.align 2, 0
 _0800EDD8: .4byte 0x03000048
 
-	thumb_func_start sub_800EDDC
-sub_800EDDC: @ 0x0800EDDC
-	ldr r0, _0800EDE0 @ =0x03000048
-	bx lr
-	.align 2, 0
-_0800EDE0: .4byte 0x03000048
-
-	thumb_func_start sub_800EDE4
-sub_800EDE4: @ 0x0800EDE4
-	ldr r0, _0800EDE8 @ =0x03000048
-	bx lr
-	.align 2, 0
-_0800EDE8: .4byte 0x03000048
-
-	thumb_func_start sub_800EDEC
-sub_800EDEC: @ 0x0800EDEC
-	ldr r0, _0800EDF0 @ =0x03000048
-	bx lr
-	.align 2, 0
-_0800EDF0: .4byte 0x03000048
-
-	thumb_func_start sub_800EDF4
-sub_800EDF4: @ 0x0800EDF4
-	ldr r0, _0800EDF8 @ =0x03000048
-	bx lr
-	.align 2, 0
-_0800EDF8: .4byte 0x03000048
-
+	.section .text.gameInfoQueriesTail, "ax", %progbits
 	thumb_func_start sub_800EDFC
 sub_800EDFC: @ 0x0800EDFC
 	push {r4, r5, r6, r7, lr}

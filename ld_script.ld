@@ -70,6 +70,10 @@ SECTIONS
         src/text08001A84.o(.text);
         /* asm/text08001A84.o(.text); */
         asm/text08001B4C.o(.text);
+        src/characterMenuQueries.o(.text);
+        asm/text08001B4C.o(.text.characterQueriesTail);
+        src/nativeGameInfo.o(.text);
+        asm/text08001B4C.o(.text.gameInfoQueriesTail);
         src/error.o(.text);
         asm/text08016F28.o(.text);
         src/main.o(.text);
@@ -94,6 +98,8 @@ SECTIONS
         asm/text08030774.o(.text);
         src/camera.o(.text);
         asm/text08031468.o(.text);
+        src/trackQueries.o(.text);
+        asm/text08031468.o(.text.trackQueriesTail);
         src/track.o(.text);
         asm/text08033f14.o(.text);
         asm/play.o(.text);
