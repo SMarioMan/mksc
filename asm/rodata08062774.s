@@ -4150,6 +4150,8 @@ _0808994C:
 	.global _08089A04
 _08089A04:
 	.incbin "baserom.gba", 0x00089A04, 0x00000D08
+	.global _08089A04_end
+_08089A04_end:
 
 	.global _0808A70C
 _0808A70C:

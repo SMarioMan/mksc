@@ -5,3 +5,5 @@
 	.global wave0819A554
 wave0819A554:
 	.incbin "baserom.gba", 0x0019A554, 0x00001004
+	.global wave0819A554_end
+wave0819A554_end:
