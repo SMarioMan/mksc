@@ -41,6 +41,10 @@ if a.resume and (a.results/'summary.json').exists():
  previous=json.loads((a.results/'summary.json').read_text())
  assert previous['rom_sha256']==hashlib.sha256(rom.read_bytes()).hexdigest(),'Resume requires the same ROM'
  completed={k:v for k,v in previous['passed'].items() if v.get('audio_policy')==a.audio_policy}
+ if a.profile_frames:
+  # Legacy instruction stepping changed the scheduler's yield points. Only
+  # reuse captures made with observation inside the normal run-loop quantum.
+  completed={k:v for k,v in completed.items() if json.loads((a.results/(k+'.json')).read_text()).get('profileScheduling')=='quantum'}
 def run(case):
  kind,idx=case.split('-');idx=int(idx);assert 0<=idx<(4 if kind=='battle' else 20)
  events=[]
@@ -71,6 +75,7 @@ def run(case):
  (a.results/(case+'.json')).write_text(proc.stdout);(a.results/(case+'.stderr')).write_text(proc.stderr)
  assert proc.returncode==0 and not proc.stderr,(case,proc.returncode,proc.stderr[:1000])
  data=json.loads(proc.stdout);assert data['bios']=='real' and data['collisions']==0
+ if a.profile_frames:assert data.get('profileScheduling')=='quantum',(case,'Legacy profiling changed link scheduling; recapture with the current runner')
  assert all([n['dump'][(symbols['sCourse']-courseBase)//4],n['dump'][(symbols['sRetro']-courseBase)//4]]==[idx,int(kind=='retro')] for n in data['nodes']),(case,'Wrong course selected',data['nodes'][0]['dump'][:2])
  assert all(n['barrier']['errors']==n['barrier']['timeouts']==0 for n in data['nodes']),(case,'Transport failed')
  assert all(n['game']['humanCount']==8 for n in data['nodes'])
@@ -95,7 +100,7 @@ def run(case):
  for row in csv.DictReader(profile.open()):
   pc=int(row['pc'],16);at=bisect.bisect_right(addresses,pc)-1;name=functions[at][1] if at>=0 else f'{pc:08x}'
   costs[name]=costs.get(name,0)+int(row['cycles'])
- summary={'course':case,'audio_policy':a.audio_policy,'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,
+ summary={'course':case,'audio_policy':a.audio_policy,'profile_scheduling':data.get('profileScheduling','legacy'),'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,
  'profile_cycles':sorted(costs.items(),key=lambda x:-x[1])[:30],
  'timing':{k:{'median':statistics.median(r[k] for r in peers[0]),'p99':sorted(r[k] for r in peers[0])[int(len(peers[0])*.99)],'max':max(r[k] for r in peers[0])} for k in ('exchangeCycles','renderCycles','publishCycles','mixCycles')}}
  (a.results/(case+'-summary.json')).write_text(json.dumps(summary,indent=2))
