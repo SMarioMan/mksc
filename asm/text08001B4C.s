@@ -1576,7 +1576,7 @@ _08002768: @ jump table
 _08002780:
 	adds r0, r6, #0
 	adds r1, r4, #0
-	bl sub_8004860
+	bl spm_chooseModeAndClass
 	cmp r0, #0
 	beq _080027F4
 	ldr r0, [r6, #0x10]
@@ -1612,7 +1612,7 @@ _080027C0: .4byte 0x000011E4
 _080027C4:
 	adds r0, r6, #0
 	adds r1, r4, #0
-	bl sub_800AF94
+	bl spm_chooseCourse
 	cmp r0, #0
 	bne _080027EE
 	movs r0, #1
@@ -5593,8 +5593,8 @@ _08004840:
 _08004858: .4byte 0x00001216
 _0800485C: .4byte 0x0000121A
 
-	thumb_func_start sub_8004860
-sub_8004860: @ 0x08004860
+	thumb_func_start spm_chooseModeAndClass
+spm_chooseModeAndClass: @ 0x08004860
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
@@ -18477,8 +18477,8 @@ _0800AF88: .4byte 0x000011F8
 _0800AF8C: .4byte 0x0000FF60
 _0800AF90: .4byte 0x00001202
 
-	thumb_func_start sub_800AF94
-sub_800AF94: @ 0x0800AF94
+	thumb_func_start spm_chooseCourse
+spm_chooseCourse: @ 0x0800AF94
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
