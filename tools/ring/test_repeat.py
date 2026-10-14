@@ -37,8 +37,10 @@ for n in a.players:
     for line in (a.baseline/f'battle-{n}.csv').read_text().splitlines():
         f,i,k=line.split(',');rows.append((int(f),int(i),int(k,16)))
     rows.extend((frame,i,0) for i in range(n))
-    rows.extend([(frame+100,0,1),(frame+115,0,0),(frame+500,0,1),(frame+515,0,0)])
-    rows.extend((frame+1700,i,0 if i==0 else 17) for i in range(n))
+    # A fresh native course page includes its original preview confirmation.
+    for offset in (100,500,900,1300):
+        rows.extend([(frame+offset,0,1),(frame+offset+15,0,0)])
+    rows.extend((frame+2000,i,0 if i==0 else 17) for i in range(n))
     name=f'battle-repeat-{n}';inputs=a.results/(name+'.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
     proc=subprocess.run([str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),

@@ -2,6 +2,10 @@
 """Record an extended shared-audio race; check ownership and PCM deadlines."""
 import argparse, csv, hashlib, json, struct, subprocess, wave
 from pathlib import Path
+try:
+ import numpy as np
+except ImportError:
+ np=None
 p=argparse.ArgumentParser(description=__doc__)
 for k in ('runner','rom','elf','bios','results'):p.add_argument('--'+k,required=True,type=Path)
 p.add_argument('--frames',type=int,default=36000)
@@ -66,8 +70,12 @@ for i,rs in enumerate(rows):
   frames=w.getnframes();assert frames>(max(r['frame'] for r in rs)-1502)/60*65000
   peak=0;nonzero=0;clipped=0
   while b:=w.readframes(65536):
-   samples=struct.unpack('<'+'h'*(len(b)//2),b)
-   peak=max(peak,max(abs(x) for x in samples));nonzero+=sum(x!=0 for x in samples);clipped+=sum(abs(x)>=32767 for x in samples)
+   if np is not None:
+    samples=np.frombuffer(b,dtype='<i2');magnitudes=np.abs(samples.astype(np.int32))
+    peak=max(peak,int(magnitudes.max()));nonzero+=int(np.count_nonzero(samples));clipped+=int(np.count_nonzero(magnitudes>=32767))
+   else:
+    samples=struct.unpack('<'+'h'*(len(b)//2),b)
+    peak=max(peak,max(abs(x) for x in samples));nonzero+=sum(x!=0 for x in samples);clipped+=sum(abs(x)>=32767 for x in samples)
   assert nonzero>65536,(i,'PCM is silent')
  report['nodes'].append({'player':i+1,'character':char,'audio_frames':frames,'peak':peak,'nonzero_samples':nonzero,'clipped_samples':clipped,
   'missed_services':rs[-1]['audioMissedFrames'],'recovered_segments':rs[-1]['audioRecoveredFrames'],'late_segments':rs[-1]['audioLateSegments']})
