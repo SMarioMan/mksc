@@ -11,7 +11,7 @@ s=s.replace('\t.else\n\tthumb_func_start driver_requestLookAsideAnimation\ndrive
 source=r'''
 #include "common.h"
 #include "scene.h"
-static u32 nativeDriver[104], optimizedDriver[104], randomState=0x8dff34a1;
+static u32 nativeDriver[104], optimizedDriver[104], randomState;
 const u8 _080F2C14[2]={8,17};
 void ring_stockLookAsideAnimation(Driver*,int);
 void driver_requestLookAsideAnimation(Driver*,int);
@@ -27,6 +27,7 @@ int main(void) {
  const u16 scales[6]={0,255,256,511,512,65535};
  const u8 facing[4]={0,1,126,127};
  int test,i,right;
+ randomState=0x8dff34a1;
  for(test=0;test<16384;test++) {
   for(i=0;i<104;i++)nativeDriver[i]=next();
   ((u8*)nativeDriver)[0x6e]=(((u8*)nativeDriver)[0x6e]&0xf0)|(test&15);
