@@ -4506,7 +4506,7 @@ _080542CA:
 _080542D6:
 	adds r0, r3, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x18
@@ -4939,7 +4939,7 @@ _0805470A:
 _08054716:
 	adds r0, r4, #0
 	adds r1, r3, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x18
@@ -5417,7 +5417,7 @@ _08054BD2:
 _08054BDE:
 	adds r0, r4, #0
 	adds r1, r3, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x18
@@ -5877,7 +5877,7 @@ _08055052:
 _0805505E:
 	adds r0, r4, #0
 	adds r1, r3, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x18
@@ -6324,7 +6324,7 @@ _080554BE:
 _080554CA:
 	adds r0, r3, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x18
@@ -6784,7 +6784,7 @@ _0805596A:
 _08055976:
 	adds r0, r3, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x18
@@ -8270,7 +8270,7 @@ _080564B4:
 	bne _08056568
 	adds r0, r3, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -8374,7 +8374,7 @@ _080565CC:
 	bne _0805664E
 	adds r0, r2, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -15154,7 +15154,7 @@ _08059A84:
 	bne _08059B36
 	adds r0, r3, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -15247,7 +15247,7 @@ _08059B90:
 	bne _08059C06
 	adds r0, r2, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -15341,7 +15341,7 @@ _08059C60:
 	bne _08059CD2
 	adds r0, r2, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -15422,7 +15422,7 @@ _08059D0C:
 	bne _08059D7C
 	adds r0, r2, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
