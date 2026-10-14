@@ -25,7 +25,7 @@ tables='\n'.join('const u8 '+name+'[15]={'+','.join(str(v) for v in data[offset:
 source=r'''
 #include "common.h"
 #include "scene.h"
-static u32 nativeDrivers[8][104], optimizedDrivers[8][104], randomState=0x729edc42;
+static u32 nativeDrivers[8][104], optimizedDrivers[8][104], randomState;
 const u8 _080F2C14[2]={8,17};
 void ring_stockTargetResponse(Driver*);
 void race_updateNearbyTargets(Driver*);
@@ -44,6 +44,7 @@ int main(void) {
  const u16 scales[6]={0,255,256,511,512,65535};
  const u8 facing[4]={0,1,126,127};
  int test,i,j,k,n;
+ randomState=0x729edc42;
  for(test=0;test<16384;test++) {
   result[5]=test;
   n=1+(test&7);

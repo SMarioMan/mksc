@@ -14,7 +14,7 @@ SceneState gSceneState;
 u8 col_sCpoiStartIndicesActive[128],col_sCpoiStartIndicesPassive[128];
 static Actor nativeActors[88], optimizedActors[88];
 static CollisionList nativeList, optimizedList;
-static u32 nativeLog[16384],optimizedLog[16384],logCount,randomState=0x6124379b;
+static u32 nativeLog[16384],optimizedLog[16384],logCount,randomState;
 static int variant;
 void native_col_collide(CollisionList*);
 void* memcpy(void* dst,const void* src,unsigned n) {u8*d=dst;const u8*s=src;while(n--)*d++=*s++;return dst;}
@@ -31,6 +31,7 @@ static void onCollision(Actor* a,Actor* b) {
 int main(void) {
  volatile u32* result=(volatile u32*)0x02000000;
  int test,i,j,nA,nP;u32 nativeCount;
+ randomState=0x6124379b;
  for(test=0;test<4096;test++) {
   result[5]=test;
   nA=test%25;nP=(test/25)%65;
