@@ -8295,7 +8295,7 @@ _080380A8:
 	lsrs r5, r5, #0x10
 	adds r0, r4, #0
 	adds r1, r7, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	adds r6, r0, #0
 	lsls r6, r6, #0x10
 	lsrs r6, r6, #0x10
@@ -11988,7 +11988,7 @@ _08039C9E:
 	beq _08039CD4
 	adds r0, r7, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r3, r0, #0x10
 	cmp r3, #0x3f
@@ -21231,7 +21231,7 @@ sub_0803E2B4: @ 0x0803E2B4
 	beq _0803E2F0
 	adds r0, r3, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -21325,7 +21325,7 @@ sub_0803E36C: @ 0x0803E36C
 	beq _0803E3A8
 	adds r0, r3, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -21939,7 +21939,7 @@ sub_803E7F0: @ 0x0803E7F0
 	bne _0803E854
 	adds r0, r7, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r5, r0, #0x10
 	cmp r5, #0
@@ -22394,7 +22394,7 @@ _0803EB54:
 	beq _0803EBC4
 	mov r0, sb
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -22626,7 +22626,7 @@ _0803ED2A:
 	beq _0803ED98
 	mov r0, sb
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -23887,7 +23887,7 @@ _0803F728:
 	beq _0803F760
 	adds r0, r4, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -24040,7 +24040,7 @@ _0803F840:
 	bne _0803F8B2
 	adds r0, r7, #0
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r6, r0, #0x10
 	cmp r6, #0
@@ -24143,7 +24143,7 @@ _0803F91A:
 	bne _0803FA24
 	adds r0, r7, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r6, r0, #0x10
 	cmp r6, #0
@@ -24622,7 +24622,7 @@ sub_803FCB4: @ 0x0803FCB4
 	beq _0803FD00
 	adds r0, r7, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -24777,7 +24777,7 @@ _0803FDB8:
 	beq _0803FE3C
 	adds r0, r3, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -24878,7 +24878,7 @@ sub_803FEB8: @ 0x0803FEB8
 	beq _0803FF04
 	adds r0, r7, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -24993,7 +24993,7 @@ _0803FFAC:
 	beq _0803FFE4
 	adds r0, r6, #0
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -25093,7 +25093,7 @@ sub_8040060: @ 0x08040060
 	beq _080400AC
 	adds r0, r6, #0
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -34283,7 +34283,7 @@ _0804465C:
 	bne _080446DC
 	mov r0, ip
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r6, r0, #0x10
 	cmp r6, #0
@@ -34413,7 +34413,7 @@ _08044752:
 	bne _080447EA
 	mov r0, r8
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r6, r0, #0x10
 	cmp r6, #0
@@ -34547,7 +34547,7 @@ _080448AA:
 	bne _08044906
 	mov r0, r8
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r6, r0, #0x10
 	cmp r6, #0
@@ -34850,7 +34850,7 @@ _08044B02:
 	bne _08044B5E
 	adds r0, r5, #0
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r7, r0, #0x10
 	cmp r7, #0
@@ -37124,7 +37124,7 @@ _08045B7A:
 	bne _08045BE2
 	adds r0, r7, #0
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -38009,7 +38009,7 @@ _08046200:
 	lsrs r4, r4, #0x10
 	ldr r0, _080462B4 @ =0x03002E44
 	adds r1, r7, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	adds r6, r0, #0
 	lsls r6, r6, #0x10
 	lsrs r6, r6, #0x10
@@ -38287,7 +38287,7 @@ _080463FA:
 _0804644A:
 	mov r0, sb
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -38388,7 +38388,7 @@ _080464F8:
 	bne _08046564
 	mov r0, sb
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -38910,7 +38910,7 @@ _080468DE:
 _08046906:
 	adds r0, r2, #0
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -39025,7 +39025,7 @@ _080469CC:
 _080469F6:
 	ldr r0, _08046A40 @ =0x03002E44
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -39181,7 +39181,7 @@ _08046B10:
 _08046B32:
 	ldr r0, _08046B7C @ =0x03002E44
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -39315,7 +39315,7 @@ _08046C1A:
 _08046C46:
 	ldr r0, _08046C98 @ =0x03002E44
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -39454,7 +39454,7 @@ _08046D42:
 	bne _08046DAE
 	ldr r0, _08046DD4 @ =0x03002E44
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -41050,7 +41050,7 @@ _08047956:
 	bne _080479C4
 	adds r0, r7, #0
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r6, r0, #0x10
 	cmp r6, #0
@@ -41148,7 +41148,7 @@ _08047A1A:
 	bne _08047A92
 	adds r0, r7, #0
 	adds r1, r5, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r6, r0, #0x10
 	cmp r6, #0
@@ -41251,7 +41251,7 @@ _08047ADC:
 	bne _08047B72
 	mov r0, sb
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -41543,7 +41543,7 @@ _08047D40:
 	bne _08047DC0
 	mov r0, sl
 	adds r1, r6, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -41698,7 +41698,7 @@ _08047E94:
 	bne _08047F00
 	mov r0, r8
 	adds r1, r4, #0
-	bl sub_804CD28
+	bl sound_getDistanceVolume
 	lsls r0, r0, #0x10
 	lsrs r2, r0, #0x10
 	cmp r2, #0x3f
@@ -51759,66 +51759,7 @@ _0804CD12:
 _0804CD20: .4byte gMPlayTable
 _0804CD24: .4byte gSongTable
 
-	thumb_func_start sub_804CD28
-sub_804CD28: @ 0x0804CD28
-	push {r4, lr}
-	adds r4, r1, #0
-	ldr r1, _0804CD68 @ =0x00000824
-	adds r0, r0, r1
-	adds r3, r0, #0
-	ldr r1, [r4]
-	ldr r0, [r3, #0x18]
-	subs r1, r1, r0
-	cmp r1, #0
-	bge _0804CD40
-	ldr r2, _0804CD6C @ =0x0000FFFF
-	adds r1, r1, r2
-_0804CD40:
-	asrs r2, r1, #0x10
-	ldr r1, [r4, #4]
-	ldr r0, [r3, #0x1c]
-	subs r0, r1, r0
-	cmp r0, #0
-	bge _0804CD50
-	ldr r1, _0804CD6C @ =0x0000FFFF
-	adds r0, r0, r1
-_0804CD50:
-	asrs r0, r0, #0x10
-	adds r1, r2, #0
-	muls r1, r2, r1
-	adds r2, r0, #0
-	muls r2, r0, r2
-	adds r0, r2, #0
-	adds r1, r1, r0
-	ldr r0, _0804CD70 @ =0x0003FFFF
-	cmp r1, r0
-	ble _0804CD74
-	movs r0, #0
-	b _0804CD8C
-	.align 2, 0
-_0804CD68: .4byte 0x00000824
-_0804CD6C: .4byte 0x0000FFFF
-_0804CD70: .4byte 0x0003FFFF
-_0804CD74:
-	adds r0, r1, #0
-	cmp r0, #0
-	bge _0804CD7E
-	ldr r1, _0804CD94 @ =0x000003FF
-	adds r0, r0, r1
-_0804CD7E:
-	asrs r1, r0, #0xa
-	movs r2, #0x80
-	lsls r2, r2, #1
-	adds r0, r2, #0
-	subs r0, r0, r1
-	lsls r0, r0, #0x10
-	lsrs r0, r0, #0x10
-_0804CD8C:
-	pop {r4}
-	pop {r1}
-	bx r1
-	.align 2, 0
-_0804CD94: .4byte 0x000003FF
+	.section .text.soundQueriesTail, "ax"
 
 	thumb_func_start sub_804CD98
 sub_804CD98: @ 0x0804CD98
