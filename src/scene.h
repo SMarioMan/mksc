@@ -12,8 +12,39 @@ typedef struct
     Actor actor;
     u32 field_44;
     u32 field_48;
-    //...
+    u32 characterFlags;          /* 0x4C: character in bits 0..2, ghost in bit 3. */
+    u8 gap50[6];
+    u16 viewYaw;                 /* 0x56: orientation used by the sprite camera. */
+    u8 gap58[0x15];
+    u8 animationFlags;           /* 0x6D: bit 0 selects look-aside direction. */
+    u8 animationCode;            /* 0x6E: low nibble is the active animation. */
+    u8 animationPhase;           /* 0x6F: native frame/phase bits. */
+    u32 poseFlags;               /* 0x70 */
+    u8 gap74[8];
+    u16 headingYaw;              /* 0x7C: steering heading. */
+    u8 gap7E[4];
+    s16 driftYaw;                /* 0x82 */
+    u8 gap84[4];
+    s16 lateralMotion;           /* 0x88 */
+    u8 gap8A[6];
+    u8 checkpoint;              /* 0x90: low seven bits are the route zone. */
+    u8 gap91[0x29];
+    u16 gridPosition;            /* 0xBA */
+    s32 driftVelocity;           /* 0xBC */
+    u8 gapC0[4];
+    u8 points;                  /* 0xC4: native GP cumulative points. */
+    u8 gapC5[2];
+    u8 lap;                     /* 0xC7: high bit encodes the finish target. */
+    u8 gapC8[0x24];
+    u8 playerId;                /* 0xEC: software player ID. */
+    u8 gapED[0x90];
+    u8 balloonsRemaining;       /* 0x17D */
+    u8 gap17E[0x14];
+    u8 drawFlags;               /* 0x192 */
+    u8 gap193[0xD];
 } Driver;
+
+typedef char DriverSizeCheck[sizeof(Driver) == 0x1A0 ? 1 : -1];
 
 typedef struct
 {
