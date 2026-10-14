@@ -2,8 +2,8 @@
 """Check consecutive BIOS-backed frames, including eight karts in one view.
 
 Stationary Vs. preserves the eight-place grid so natural occlusion/movement
-cannot masquerade as flicker. A frozen character menu checks completed bitmap
-hashes while the menu is unchanged. All interaction uses the hardware keypad.
+cannot masquerade as flicker. The native character menu checks eight persistent cursor sprites
+while its background animates. All interaction uses the hardware keypad.
 """
 import argparse
 import csv
@@ -33,7 +33,7 @@ for case in ('menu', 'vs', 'battle'):
     for frame, keys in base:
         if case == 'menu' and frame >= 1950:
             continue
-        if case == 'battle' and frame in (2350, 2365):
+        if case == 'battle' and frame in (2200, 2215):
             continue
         shared = frame < 1500 or frame in (2000, 2015)
         rows.extend((frame, slot, keys) for slot in range(8 if shared else 1))
@@ -42,7 +42,7 @@ for case in ('menu', 'vs', 'battle'):
     inputs = a.results / (case + '.csv')
     inputs.write_text(''.join(f'{f},{s},{k:x}\n' for f, s, k in sorted(rows)))
     video = a.results / (case + '-video.csv')
-    first, last = (2100, 2400) if case == 'menu' else (3300, 4000)
+    first, last = (2100, 2400) if case == 'menu' else (4000, 4700)
     proc = subprocess.run([str(a.runner), '--ring', '--rom', str(rom), '--bios', str(a.bios),
                            '--players', '8', '--frames', str(last), '--input', str(inputs),
                            '--video-log', str(video), '--video-from', str(first),
@@ -60,10 +60,9 @@ for case in ('menu', 'vs', 'battle'):
     assert len(frames) == (last - first) * 8, len(frames)
     assert all(not row['invalidObjects'] for row in frames)
     if case == 'menu':
-        assert all(row['dispcnt'] & 7 == 4 for row in frames)
-        assert len({row['bitmapHash'] for row in frames}) == 1, 'A frozen menu tore or lost content'
-        assert len({row['dispcnt'] & 16 for row in frames}) == 1, 'An unchanged menu was unnecessarily redrawn'
-        print(f'PASS menu: {len(frames)} identical completed frames; no redundant redraws', flush=True)
+        assert all(row['dispcnt'] & 7 in (0,1) for row in frames)
+        assert all(row['menuCursors'] == 255 for row in frames), 'A ring character cursor flickered or disappeared'
+        print(f'PASS native menu: eight cursor sprites in each of {len(frames)} completed frames', flush=True)
     elif case == 'vs':
         rear = [row for row in frames if row['player'] == 7]
         assert all(all(row[f'kart{i}'] == 1 for i in range(8)) for row in rear), 'A kart disappeared from the stationary grid'

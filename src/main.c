@@ -424,6 +424,9 @@ void main_frameProc(void)
     if (ring_active())
     {
         ring_profileRender();
+        /* Keep urgent PCM rescue during rendering; routine mixing can
+         * overlap serial forwarding after the graphics are published. */
+        ring_serviceRenderAudio();
         ring_queueGraphics();
         ring_waitGraphics();
         if (ring_exchange()) sio2_stop();
@@ -439,7 +442,14 @@ void main_frameProc(void)
             m4aSoundMain();
         } while (sio2_update());
     }
+
+#ifdef MKSC_RING
+    ring_restoreNativeMenuKeys();
+#endif
     updateKeys();
+#ifdef MKSC_RING
+    ring_nativeMenuFrame();
+#endif
     trns_update();
 }
 

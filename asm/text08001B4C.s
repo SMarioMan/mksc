@@ -577,6 +577,16 @@ _08001FBC: .4byte 0x000011FE
 
 	thumb_func_start sub_8001FC0
 sub_8001FC0: @ 0x08001FC0
+.ifdef MKSC_RING
+    push {r0, lr}
+    bl ring_unlockNativeMenu
+    cmp r0, #0
+    pop {r0, r1}
+    mov lr, r1
+    beq 991f
+    bx lr
+991:
+.endif
 	push {r4, r5, r6, r7, lr}
 	mov r7, sb
 	mov r6, r8
@@ -2490,6 +2500,9 @@ sub_8002EA4: @ 0x08002EA4
 	lsls r0, r0, #3
 	adds r0, r0, r5
 	ldr r0, [r0]
+.ifdef MKSC_RING
+	bl ring_nativePlayerLabel
+.endif
 	movs r2, #0x80
 	lsls r2, r2, #1
 	adds r1, r4, r2
@@ -2506,6 +2519,11 @@ sub_8002EA4: @ 0x08002EA4
 	lsls r0, r0, #2
 	adds r0, r0, r5
 	ldr r4, [r0]
+.ifdef MKSC_RING
+	adds r0, r4, #0
+	bl ring_nativePlayerPalette
+	adds r4, r0, #0
+.endif
 	movs r0, #1
 	bl pltt_getBuffer
 	adds r1, r0, #0
@@ -2529,6 +2547,9 @@ _08002F2A:
 	lsls r0, r0, #3
 	adds r0, r0, r5
 	ldr r0, [r0]
+.ifdef MKSC_RING
+	bl ring_nativeCountLabel
+.endif
 	adds r1, r4, #0
 	adds r1, #0x80
 	bl LZ77UnCompWram
@@ -2544,6 +2565,11 @@ _08002F2A:
 	lsls r0, r0, #2
 	adds r0, r0, r5
 	ldr r4, [r0]
+.ifdef MKSC_RING
+	adds r0, r4, #0
+	bl ring_nativeCountPalette
+	adds r4, r0, #0
+.endif
 	movs r0, #1
 	bl pltt_getBuffer
 	adds r1, r0, #0
@@ -2791,6 +2817,9 @@ _080031A0:
 	lsls r0, r0, #3
 	adds r0, r0, r5
 	ldr r0, [r0]
+.ifdef MKSC_RING
+	bl ring_nativePlayerLabel
+.endif
 	movs r2, #0x80
 	lsls r2, r2, #1
 	adds r1, r4, r2
@@ -2809,6 +2838,11 @@ _080031A0:
 	lsls r0, r0, #2
 	adds r0, r0, r5
 	ldr r4, [r0]
+.ifdef MKSC_RING
+	adds r0, r4, #0
+	bl ring_nativePlayerPalette
+	adds r4, r0, #0
+.endif
 	movs r0, #1
 	bl pltt_getBuffer
 	adds r1, r0, #0
@@ -2879,6 +2913,9 @@ _0800325E:
 	lsls r0, r0, #3
 	adds r0, r0, r5
 	ldr r0, [r0]
+.ifdef MKSC_RING
+	bl ring_nativeCountLabel
+.endif
 	adds r1, r4, #0
 	adds r1, #0x80
 	bl LZ77UnCompWram
@@ -2896,6 +2933,11 @@ _0800325E:
 	lsls r0, r0, #2
 	adds r0, r0, r5
 	ldr r4, [r0]
+.ifdef MKSC_RING
+	adds r0, r4, #0
+	bl ring_nativeCountPalette
+	adds r4, r0, #0
+.endif
 	movs r0, #1
 	bl pltt_getBuffer
 	adds r1, r0, #0

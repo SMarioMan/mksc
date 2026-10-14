@@ -25,6 +25,9 @@ if not stamp.exists() or stamp.read_text() != configuration:
         obj.unlink()
     stamp.write_text(configuration)
 link = (root / 'ld_script.ld').read_text()
+# Native decompression scratch extends beyond the frame heap. Put counters
+# above the last native global (0x0203EC8C), outside all graphics scratch.
+link = link.replace('        gMenuState = .; . += 4;', '        gMenuState = .; . += 4;\n        . = 0x3ED00;\n        ring_audioTiming = .; . += 64;\n        ring_audioDmaOverride = .; . += 4;\n        . = 0x3ED80;\n        src/ringSessionState.o(.bss);\n        src/ringSessionState.o(COMMON);\n        ASSERT(. <= 0x40000, "Audio counters exceed external RAM");')
 if a.code_padding:
     link = link.replace('        asm/crt0.o(.text);',
                         '        asm/crt0.o(.text);\n        . += %d;' % a.code_padding)
@@ -43,6 +46,7 @@ link = link.replace('    /* Discard everything not specifically mentioned above.
         __ring_irq_start = .;
         src/ringLink.o(.ring_irq);
         src/camera.o(.ring_irq);
+        src/oam.O3.o(.ring_irq);
         . = ALIGN(4);
         __ring_irq_end = .;
 

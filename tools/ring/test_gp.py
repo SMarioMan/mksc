@@ -10,7 +10,7 @@ sym={f[2]:int(f[0],16) for l in subprocess.check_output(['arm-none-eabi-nm','-n'
 base=[]
 for l in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=l.split(',');f=int(f)
- if int(i)==0 and f<3500 and f not in (2350,2365):base.append((f,int(k,16)))
+ if int(i)==0 and f<3500 and f not in (2500,2515):base.append((f,int(k,16)))
 for n in a.players:
  rows=[]
  for f,k in base:

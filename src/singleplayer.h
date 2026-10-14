@@ -221,12 +221,12 @@ typedef struct __attribute__((packed))
     u8 field58_0x53c[192];
 } TrackSelectState;
 
-typedef struct __attribute__((packed))
+typedef struct __attribute__((packed)) SpmState
 {
     enum SpmPage menuPage;
-    s32 unk_multiplayerMirror;
-    s32 playerIndex;
-    s32 gamemodeMirror;
+    s32 selectedPlayerLimit;
+    s32 lastPlayer; /* Controller count minus one in the native page. */
+    s32 localPlayerId;
     enum Gamemode gamemode;
     enum RaceSpeed raceSpeed;
     enum Character character;
@@ -300,11 +300,8 @@ typedef struct __attribute__((packed))
     s32 field70_0x38c;
     u32 field71_0x390;
     u8 field72_0x394[344];
-    s32 charcterSelectedTile;
-    u8 field74_0x4f0[12];
-    s32* unk_menuPageRelated;
-    u8 field76_0x500[8];
-    s32 unk_ccRelatedPos32er;
+    s32 characterCells[4];
+    s32 characterPhases[4];
     u8 field78_0x50c[36];
     s32 field79_0x530;
     s32 field80_0x534;
@@ -324,11 +321,11 @@ typedef struct __attribute__((packed))
     s32 field94_0x6ec;
     s32 field95_0x6f0;
     s32 field96_0x6f4;
-    s32 field97_0x6f8;
+    s32 portraitChangeState;
     s32 field98_0x6fc;
     s32 field99_0x700;
     s32 field100_0x704;
-    s32 field101_0x708;
+    s32 portraitPaletteChangeState;
     s32 field102_0x70c;
     u16 field103_0x710;
     u16 field104_0x712;
@@ -340,7 +337,7 @@ typedef struct __attribute__((packed))
     s32 field110_0x728;
     s32 field111_0x72c;
     s32 field112_0x730;
-    s32 field113_0x734;
+    s32 nameTilesDirty;
     TrackSelectState trackSelectState;
     s32 field173_0xd34;
     u32 field174_0xd38;
@@ -364,7 +361,7 @@ typedef struct __attribute__((packed))
     s32 field192_0xd78;
     u32 field193_0xd7c;
     s32 field194_0xd80;
-    u32 field195_0xd84;
+    u32 reenteringLinkMenu;
     SpmUnk2 spmUnk2;
     u8 field197_0xda0[744];
     u32 playerCount;
@@ -374,9 +371,9 @@ typedef struct __attribute__((packed))
     s16 field202_0x1098;
     s16 field203_0x109a;
     s32 field204_0x109c;
-    u32 field205_0x10a0;
+    u32 suppressConnectionCheck;
     s32 unlockedTracksTable[34];
-    s32 unk_hasSpecialUnlocked;
+    s32 canSelectRetro;
     UnkTrackDataTable unkTrackDataTable;
     u8 field209_0x11bc[4];
     UnkStruct1 field210_0x11c0;
@@ -385,8 +382,8 @@ typedef struct __attribute__((packed))
     s32 field213_0x11e8;
     s32 field214_0x11ec;
     u32 field215_0x11f0;
-    u8* field216_0x11f4;
-    u32 field217_0x11f8;
+    u8* animationFrame;
+    u32 backgroundScrollPhase;
     MenuBgData bgState;
 } SpmState;
 

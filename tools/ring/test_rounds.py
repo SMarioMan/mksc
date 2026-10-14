@@ -31,6 +31,8 @@ for line in subprocess.check_output([a.nm,'-n',str(a.elf)], text=True).splitline
     if len(fields) == 3:
         symbols[fields[2]] = int(fields[0],16)
 a.results.mkdir(parents=True, exist_ok=True)
+dumpBase=min(symbols['sPlaces'],symbols['sWins'])
+assert max(symbols['sPlaces']+8,symbols['sWins']+16)<=dumpBase+128
 rom_data = a.rom.read_bytes()
 rom = a.results / (hashlib.sha256(rom_data).hexdigest()+'.gba')
 if not rom.exists():
@@ -44,19 +46,19 @@ def run(n,mode):
     name = f'{mode}-{n}'
     rows = []
     for f,k in base:
-        if mode == 'battle' and f in (2350,2365):
+        if mode == 'battle' and f in (2200,2215):
             continue
         rows.extend((f,i,k) for i in range(n if f < 1500 or f in (2000,2015) else 1))
     if mode == 'battle':
         rows.extend([(1600,0,128),(1615,0,0)])
         for step in range(3):
-            rows.extend([(2070+step*40,0,128),(2090+step*40,0,0)])
+            rows.extend([(2300+step*40,0,128),(2320+step*40,0,0)])
         rows.extend((3500,i,0 if i == 0 else 17) for i in range(n))
     inputs = a.results/(name+'.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
     command = [str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),
                '--players',str(n),'--frames',str(50000 if mode == 'vs' else 30000),
-               '--input',str(inputs),'--dump',hex(symbols['sPlaces']),
+               '--input',str(inputs),'--dump',hex(dumpBase),
                '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                '--until-scene',hex(symbols['results_main'] | 1),
                '--screens',str(a.results/name)]
@@ -82,8 +84,8 @@ def run(n,mode):
         assert barrier['count'] == n and barrier['id'] == node['slot'], (name,barrier)
         rounds.append(barrier['round'])
         raw = struct.pack('<32I',*node['dump'])
-        places = list(raw[:n])
-        wins = list(struct.unpack_from('<8H',raw,symbols['sWins']-symbols['sPlaces']))[:n]
+        places = list(raw[symbols['sPlaces']-dumpBase:symbols['sPlaces']-dumpBase+n])
+        wins = list(struct.unpack_from('<8H',raw,symbols['sWins']-dumpBase))[:n]
         assert sorted(places) == list(range(n)), (name,places)
         assert sum(wins) == 1 and wins[places[0]] == 1, (name,places,wins)
         if mode == 'battle':

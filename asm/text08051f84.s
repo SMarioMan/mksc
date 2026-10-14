@@ -17131,8 +17131,13 @@ _0805AA62:
 _0805AA64: .4byte _080F2BF4
 _0805AA68: .4byte 0xFFFFFE0F
 
-	thumb_func_start sub_805AA6C
-sub_805AA6C: @ 0x0805AA6C
+	.ifdef MKSC_RING
+	thumb_func_start ring_stockLookAsideAnimation
+ring_stockLookAsideAnimation:
+	.else
+	thumb_func_start driver_requestLookAsideAnimation
+driver_requestLookAsideAnimation: @ 0x0805AA6C
+	.endif
 	push {r4, r5, r6, lr}
 	adds r4, r0, #0
 	adds r6, r1, #0

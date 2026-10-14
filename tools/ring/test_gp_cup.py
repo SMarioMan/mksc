@@ -23,7 +23,7 @@ for line in subprocess.check_output(['arm-none-eabi-nm', '-n', str(a.elf)], text
 base = []
 for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitlines():
     frame, slot, keys = line.split(',')
-    if int(slot) == 0 and int(frame) < 3500 and int(frame) not in (2350, 2365):
+    if int(slot) == 0 and int(frame) < 3500 and int(frame) not in (2200, 2215, 2500, 2515, 3000, 3015, 3200, 3215):
         base.append((int(frame), int(keys, 16)))
 for count in a.players:
     events = []
@@ -35,14 +35,14 @@ for count in a.players:
         events.extend((frame, i, keys) for i in range(count if frame < 1500 or frame in (2000, 2015) else 1))
     if count > 1:
         events.extend([(1600, 0, 64), (1615, 0, 0)])
-    events.extend([(2100, 0, 4), (2115, 0, 0)])
+    events.extend([(2800, 0, 4), (2815, 0, 0), (3200, 0, 1), (3215, 0, 0), (3500, 0, 1), (3515, 0, 0)])
     name = f'gp-cup-{count}'
     inputs = a.results / (name + '.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))
     command = [
         str(a.runner), '--ring', '--rom', str(a.rom), '--bios', str(a.bios),
         '--players', str(count), '--frames', '90000', '--input', str(inputs),
-        '--autodrive-frame', '3500', '--barrier-before-input',
+        '--autodrive-frame', '4500', '--barrier-before-input',
         '--barrier-state', '0x03006B40', '--until-scene', hex(symbols['results_main'] | 1),
         '--auto-confirm-scene', hex(symbols['results_main'] | 1),
         '--watch', hex(symbols['sGPCupComplete']), '--until-watch-value', '1',

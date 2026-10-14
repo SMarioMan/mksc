@@ -17542,7 +17542,7 @@ _0803C74E:
 	cmp r0, #0
 	bne _0803C768
 	adds r0, r5, #0
-	bl sub_803D00C
+	bl race_updateNearbyTargets
 _0803C768:
 	ldr r0, _0803C784 @ =0x03002E20
 	ldr r0, [r0, #0x10]
@@ -18715,8 +18715,8 @@ _0803D008: .4byte 0x030022E8
 	thumb_func_start ring_stockTargetResponse
 ring_stockTargetResponse:
 	.else
-	thumb_func_start sub_803D00C
-sub_803D00C: @ 0x0803D00C
+	thumb_func_start race_updateNearbyTargets
+race_updateNearbyTargets: @ 0x0803D00C
 	.endif
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
@@ -19009,12 +19009,12 @@ _0803D246:
 _0803D24E:
 	adds r0, r4, #0
 	movs r1, #0
-	bl sub_805AA6C
+	bl driver_requestLookAsideAnimation
 	b _0803D260
 _0803D258:
 	adds r0, r4, #0
 	movs r1, #1
-	bl sub_805AA6C
+	bl driver_requestLookAsideAnimation
 _0803D260:
 	subs r0, r5, #1
 	cmp r0, #6

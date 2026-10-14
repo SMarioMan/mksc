@@ -1,0 +1,18 @@
+[
+  {
+    "name": "MARIO CIRCUIT 1",
+    "ink_sha256": "4e25dcf8b86c807f6fcdd3face1ce1ba858011fd72e43d70f190d362bae48884"
+  },
+  {
+    "name": "DONUT PLAINS 1",
+    "ink_sha256": "7c46b5d2087eac5802e5943e178095996dd46e59f887e6eb83e26682cf0c6dab"
+  },
+  {
+    "name": "GHOST VALLEY 1",
+    "ink_sha256": "7ac032475711b726472d01a74187094609575c0dea6edbb2e2ab2d13af7cab57"
+  },
+  {
+    "name": "BOWSER CASTLE 1",
+    "ink_sha256": "b2888c672e153a395db9aacc3c628b0c225553afac4ddab06d782be80b45aa79"
+  }
+]

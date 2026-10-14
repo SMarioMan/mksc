@@ -14,7 +14,15 @@ void ring_publishIdentityPalette(void);
 void ring_waitGraphics(void);
 void ring_stop(void);
 void ring_serviceAudio(void);
+#ifdef MKSC_RING_MUSIC_SHARED
+#define ring_serviceRenderAudio ring_serviceAudio
+#else
+void ring_serviceRenderAudio(void);
+#endif
 void ring_profileRender(void);
+void ring_nativeMenuFrame(void);
+void ring_restoreNativeMenuKeys(void);
+void ring_drawNativeMenuCursors(void);
 extern u32 ring_frameTiming[5];
 bool32 ring_exchange(void);
 bool32 ring_checkRoundEnd(void);

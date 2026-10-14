@@ -1,8 +1,12 @@
 #include <string.h>
 #include "gba/m4a_internal.h"
+#ifdef MKSC_RING
+extern void ring_noteAudioStart(struct MusicPlayerInfo*);
+#endif
 #ifdef MKSC_RING_MUSIC_SHARED
 extern int ring_sharedMusicActive(void);
 extern int ring_sharedMusicMuted(void);
+extern int ring_sharedAudioMuted(struct MusicPlayerInfo*, struct SongHeader*);
 extern u16 ring_sharedMusicSong(u16 song);
 #endif
 
@@ -610,8 +614,9 @@ void MPlayStart(struct MusicPlayerInfo* mplayInfo, struct SongHeader* songHeader
     struct MusicPlayerTrack* track;
 
 #ifdef MKSC_RING_MUSIC_SHARED
-    /* Keep effects/voices on every console; BGM is owned by software P1. */
+    /* BGM belongs to P1; racer voices and engines belong to their console. */
     if (mplayInfo == gMPlayTable[0].info && ring_sharedMusicMuted()) return;
+    if (ring_sharedAudioMuted(mplayInfo, songHeader)) return;
 #endif
 
     if (mplayInfo->ident != ID_NUMBER)
@@ -624,6 +629,9 @@ void MPlayStart(struct MusicPlayerInfo* mplayInfo, struct SongHeader* songHeader
          ((mplayInfo->status & MUSICPLAYER_STATUS_TRACK) == 0 || (mplayInfo->status & MUSICPLAYER_STATUS_PAUSE))) ||
         (mplayInfo->priority <= songHeader->priority))
     {
+#ifdef MKSC_RING
+        ring_noteAudioStart(mplayInfo);
+#endif
         mplayInfo->ident++;
         mplayInfo->status = 0;
         mplayInfo->songHeader = songHeader;
