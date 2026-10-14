@@ -3,8 +3,13 @@
 .syntax unified
 .text
     
+.ifdef MKSC_RING
+    thumb_func_start ring_stockProjectActor
+ring_stockProjectActor:
+.else
     thumb_func_start cam_CalcProjectActor
 cam_CalcProjectActor:
+.endif
     push {r4, r5, r6, r7, lr}
     mov r7, r10
     mov r6, r9

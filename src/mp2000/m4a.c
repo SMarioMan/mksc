@@ -1245,6 +1245,7 @@ void m4aMPlayTempoControl(struct MusicPlayerInfo* mplayInfo, u16 tempo)
     }
 }
 
+#ifndef MKSC_RING
 void m4aMPlayVolumeControl(struct MusicPlayerInfo* mplayInfo, u16 trackBits, u16 volume)
 {
     s32 i;
@@ -1313,6 +1314,7 @@ void m4aMPlayPitchControl(struct MusicPlayerInfo* mplayInfo, u16 trackBits, s16 
 
     mplayInfo->ident = ID_NUMBER;
 }
+#endif
 
 void m4aMPlayPanpotControl(struct MusicPlayerInfo* mplayInfo, u16 trackBits, s8 pan)
 {

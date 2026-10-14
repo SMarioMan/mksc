@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""Compare full OAM buffers and affine state with the original renderer."""
+import argparse, json, subprocess
+from pathlib import Path
+p = argparse.ArgumentParser(description=__doc__)
+for key in ('runner', 'bios', 'results'): p.add_argument('--'+key, required=True, type=Path)
+a = p.parse_args(); root = Path(__file__).resolve().parents[2]
+a.results.mkdir(parents=True, exist_ok=True)
+source = r'''
+#include "oam.O3.c"
+u8 ring_balloonAffineIndex[8];
+bool32 ring_active(void) { return TRUE; }
+void ring_serviceAudio(void) {}
+void ring_serviceRenderAudio(void) {}
+void ring_drawNativeMenuCursors(void) {}
+s32 ring_spriteDivide(s32 n, s32 d) { return Div(n,d); }
+static u32 state;
+static u32 random32(void) { state^=state<<13;state^=state>>17;state^=state<<5;return state; }
+static u16 before[512], expected[512];
+int main(void) {
+ volatile u32* result=(volatile u32*)0x02000000;
+ int test,i,offset,affine,nextOffset,nextAffine,nativeResult,actualResult;
+ state=0x852974b3;
+ for(test=0;test<16384;test++) {
+  u16 data[4]; OamCell original, actual;
+  result[5]=test;
+  data[0]=1; data[1]=(random32()&0x3fff)|((test%3)<<14);
+  data[2]=random32();data[3]=random32();
+  if(!(test&3)) { data[1]=248;data[2]=0x41f8; }
+  original.cellData=data;original.offsetX=random32();original.offsetY=random32();
+  original.attr01Bits=0;original.attr01Mask=-1;original.attr2Bits=0;original.attr2Mask=-1;
+  if(test&1) {
+   original.attr01Bits=random32();original.attr01Mask=random32();
+   original.attr2Bits=random32();original.attr2Mask=random32();
+  }
+  original.affinePa=random32();original.affinePb=random32();original.affinePc=random32();original.affinePd=random32();
+  original.scaleX=32+random32()%4065;original.scaleY=32+random32()%4065;
+  actual=original;
+  offset=(test%129)*4;affine=(test/129)%33;
+  for(i=0;i<512;i++)before[i]=random32();
+  for(i=0;i<512;i++)sBuffer[i]=before[i];
+  sBufferOffset=offset;sNextAffineId=affine;oam_300218C=1;
+  nativeResult=ring_stockRenderCell(&original);
+  for(i=0;i<512;i++)expected[i]=sBuffer[i];
+  nextOffset=sBufferOffset;nextAffine=sNextAffineId;
+  for(i=0;i<512;i++)sBuffer[i]=before[i];
+  for(i=0;i<8;i++)ring_balloonAffineIndex[i]=255;
+  sBufferOffset=offset;sNextAffineId=affine;oam_300218C=1;
+  actualResult=ring_renderSingleScaledCell(&actual,0,!(test&1));
+  if(sBufferOffset!=nextOffset||sNextAffineId!=nextAffine||actualResult!=nativeResult)goto bad;
+  for(i=0;i<512;i++)if(sBuffer[i]!=expected[i])goto bad;
+  for(i=0;i<sizeof(OamCell)/4;i++)if(((u32*)&original)[i]!=((u32*)&actual)[i])goto bad;
+ }
+ result[0]=0x600dc0de;result[1]=16384;for(;;){}
+ bad:result[0]=0xbad00001;result[1]=test;result[2]=i;result[3]=sBufferOffset;result[4]=nextOffset;for(;;){}
+}
+'''
+(a.results/'main.c').write_text(source)
+(a.results/'div.s').write_text('.include "asm/macros.inc"\n.syntax unified\n.text\nthumb_func_start Div\nDiv:\n swi 6\n bx lr\n')
+(a.results/'link.ld').write_text((root/'tools/ring-poc/link.ld').read_text().replace('*(.text*)', '*(.text*) *(.ring_irq*)'))
+lib = subprocess.check_output(['arm-none-eabi-gcc','-print-libgcc-file-name'],text=True).strip().rsplit('/',1)[0]
+commands = [
+ ['arm-none-eabi-as','-mcpu=arm7tdmi','-o',str(a.results/'start.o'),str(root/'tools/ring-poc/start.s')],
+ ['arm-none-eabi-as','-mcpu=arm7tdmi','-I',str(root),'-o',str(a.results/'div.o'),str(a.results/'div.s')],
+ ['arm-none-eabi-gcc','-mcpu=arm7tdmi','-mthumb','-mthumb-interwork','-O3','-std=gnu89','-fwrapv','-fno-strict-aliasing','-ffunction-sections','-fdata-sections','-ffreestanding','-fno-builtin','-DMKSC_RING=1','-Wa,--defsym,MKSC_RING=1','-I'+str(root/'src'),'-I'+str(root/'include'),'-I'+str(root/'lib'),'-I'+str(root),'-c',str(a.results/'main.c'),'-o',str(a.results/'main.o')],
+ ['arm-none-eabi-ld','--gc-sections','-T',str(a.results/'link.ld'),'-o',str(a.results/'oam.elf'),*[str(a.results/k) for k in ('start.o','main.o','div.o')],'-L'+lib,'-lgcc'],
+ ['arm-none-eabi-objcopy','-O','binary',str(a.results/'oam.elf'),str(a.results/'oam.gba')],
+ [str(root/'tools/gbafix/gbafix'),str(a.results/'oam.gba'),'-p','-tOAMCOMPARE','--silent'],
+]
+for cmd in commands: subprocess.run(cmd,cwd=root,check=True,capture_output=True)
+proc=subprocess.run([str(a.runner),'--rom',str(a.results/'oam.gba'),'--bios',str(a.bios),'--players','1','--frames','8000','--dump','0x02000000','--dump-words','6'],capture_output=True,text=True,timeout=600)
+(a.results/'result.json').write_text(proc.stdout)
+assert proc.returncode==0,proc.stderr
+data=json.loads(proc.stdout);assert data['nodes'][0]['dump'][:2]==[0x600dc0de,16384],data
+print('PASS OAM cells: all 1024 OAM bytes, cell mutations, affine allocation and return values match original assembly across 16384 varied cells and default/custom masks',flush=True)

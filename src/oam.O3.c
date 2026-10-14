@@ -91,7 +91,7 @@ typedef struct
 
 /* Most scaled game objects contain one sprite. Avoid the general renderer's
  * repeated buffer/mask loads while retaining its native coordinate rounding. */
-static bool32 ring_renderSingleScaledCell(OamCell* cell, BalloonOffsetCache* cache)
+static bool32 ring_renderSingleScaledCell(OamCell* cell, BalloonOffsetCache* cache, bool32 defaultMasks)
 {
     const u16* data = cell->cellData + 1;
     u32 attr0 = data[0], attr1 = data[1], attr2 = data[2];
@@ -150,9 +150,17 @@ static bool32 ring_renderSingleScaledCell(OamCell* cell, BalloonOffsetCache* cac
     attr0 = ((y + cell->offsetY) & 255) | (attr0 & 0xFF00);
     attr1 = ((x + cell->offsetX) & 511) | (affine << 9) | (attr1 & 0xC000);
     packed = attr0 | (attr1 << 16);
-    *(u32*)&sBuffer[offset] = (((packed & cell->attr01Mask) | cell->attr01Bits) & ~0x300) | flags;
-    sBuffer[offset + 2] = attr2;
-    *(u32*)&sBuffer[offset + 2] = (*(u32*)&sBuffer[offset + 2] & cell->attr2Mask) | cell->attr2Bits;
+    if (defaultMasks)
+    {
+        *(u32*)&sBuffer[offset] = (packed & ~0x300) | flags;
+        sBuffer[offset + 2] = attr2;
+    }
+    else
+    {
+        *(u32*)&sBuffer[offset] = (((packed & cell->attr01Mask) | cell->attr01Bits) & ~0x300) | flags;
+        sBuffer[offset + 2] = attr2;
+        *(u32*)&sBuffer[offset + 2] = (*(u32*)&sBuffer[offset + 2] & cell->attr2Mask) | cell->attr2Bits;
+    }
     sBufferOffset = offset + 4;
     return 0;
 }
@@ -170,7 +178,10 @@ static void ring_renderAllCells(void)
         const u16* data = cell->cellData;
         if ((cell->scaleX != 256 || cell->scaleY != 256 || cell->affinePa != 256 || cell->affinePb) &&
             data[0] == 1 && (data[1] >> 14) < 3)
-            ring_renderSingleScaledCell(cell, cache);
+            /* Queued cells are created only by oam_renderCellData, which
+             * initializes their masks to all ones and their bits to zero.
+             * Sorting changes links and priority, never these masks. */
+            ring_renderSingleScaledCell(cell, cache, TRUE);
         else oam_renderCell(cell);
         entry = entry->next;
     }
@@ -183,7 +194,7 @@ bool32 oam_renderCell(OamCell* cell)
     if (cell->scaleX != 256 || cell->scaleY != 256 || cell->affinePa != 256 || cell->affinePb)
     {
         if (data[0] == 1 && (data[1] >> 14) < 3)
-            return ring_renderSingleScaledCell(cell, 0);
+            return ring_renderSingleScaledCell(cell, 0, FALSE);
         return ring_stockRenderCell(cell);
     }
     if (offset > 511) return -1;

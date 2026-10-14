@@ -12,7 +12,7 @@ survivors by remaining balloons, with player-order ties.
 All 44 courses pass eight-player shared-audio profiling, including full race
 completion with items on all 40 race courses. The minimum measured average is
 0.994 updates per video frame, and the lowest 300-frame window is 0.953.
-Normal audio passes 42 of 44 courses; Snow Land and Ribbon Road still have
+Normal audio passes 42 of 44 courses; Snow Land and Yoshi Desert still have
 short windows below the required 0.95 rate. Those remaining performance dips
 are under investigation; emulator video FPS alone is not a passing result.
 

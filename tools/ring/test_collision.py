@@ -15,6 +15,7 @@ u8 col_sCpoiStartIndicesActive[128],col_sCpoiStartIndicesPassive[128];
 static Actor nativeActors[88], optimizedActors[88];
 static CollisionList nativeList, optimizedList;
 static u32 nativeLog[16384],optimizedLog[16384],logCount,randomState;
+static u8 nativeStarts[2][128];
 static int variant;
 void native_col_collide(CollisionList*);
 void* memcpy(void* dst,const void* src,unsigned n) {u8*d=dst;const u8*s=src;while(n--)*d++=*s++;return dst;}
@@ -52,7 +53,9 @@ int main(void) {
    else {nativeList.passiveList[i-nA]=a;optimizedList.passiveList[i-nA]=&optimizedActors[i];}
   }
   variant=0;logCount=0;native_col_collide(&nativeList);nativeCount=logCount;
+  for(i=0;i<128;i++) {nativeStarts[0][i]=col_sCpoiStartIndicesActive[i];nativeStarts[1][i]=col_sCpoiStartIndicesPassive[i];}
   variant=1;logCount=0;col_collide(&optimizedList);
+  for(i=0;i<128;i++)if(nativeStarts[0][i]!=col_sCpoiStartIndicesActive[i]||nativeStarts[1][i]!=col_sCpoiStartIndicesPassive[i])goto bad;
   if(logCount!=nativeCount)goto bad;
   for(i=0;i<logCount;i++)if(nativeLog[i]!=optimizedLog[i])goto bad;
   for(i=0;i<nA+nP;i++)for(j=0;j<sizeof(Actor)/4;j++)if(((u32*)&nativeActors[i])[j]!=((u32*)&optimizedActors[i])[j])goto bad;

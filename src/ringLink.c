@@ -629,6 +629,16 @@ invalid:
 
 void irq_setHandler(int id, IrqHandler handler);
 
+/* Recovery is rare; keep packet reconstruction outside the hot IWRAM
+ * interrupt body while preserving the complete immutable replay vector. */
+static void replayCommit(void)
+{
+    u32 i;
+    for (i = 0; i < sRing.count; i++)
+        enqueue(packet(READY, i, sRing.sequence, sRing.staged[i]));
+    enqueue(packet(COMMIT, 0, sRing.sequence, 0));
+}
+
 /* Forward from serial completion IRQs, including while the main thread mixes
  * audio or draws a menu. An armed receiver must not depend on its polling rate. */
 static void RING_IRQ ring_serialHandler(void)
@@ -640,19 +650,18 @@ static void RING_IRQ ring_serialHandler(void)
     sRing.inFlight = FALSE;
     sRing.lastShift = REG_TM2CNT_L;
     sRing.packets++;
-    receive(word);
+    /* Idle polling clocks have no packet to decode. Avoid the decoder's
+     * register saves while peers are still rendering or mixing audio. */
+    if (word) receive(word);
     if (sRing.count && sRing.requested && !sRing.frameStarted && !sRing.ownReturned && !(sRing.packets & 15))
         enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
     if (sRing.owner && sRing.frameStarted && !sRing.complete &&
         sRing.packets - sRing.commitPacket > sRing.count + 1 &&
         sRing.queued + sRing.count < 16 && !(sRing.packets & 15))
     {
-        u32 i;
         /* Replay the collected vector as well as COMMIT. Peers that already
          * completed this round forward these words without applying them. */
-        for (i = 0; i < sRing.count; i++)
-            enqueue(packet(READY, i, sRing.sequence, sRing.staged[i]));
-        enqueue(packet(COMMIT, 0, sRing.sequence, 0));
+        replayCommit();
     }
     if (!sRing.owner && !sRing.failed)
     {

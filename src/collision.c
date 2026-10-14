@@ -5,6 +5,23 @@
 extern u8 col_sCpoiStartIndicesActive[128];
 extern u8 col_sCpoiStartIndicesPassive[128];
 
+#ifdef MKSC_RING
+static int firstMinimumCheckpoint(Actor** list, int first, int count) __attribute__((section(".ring_irq"), noinline));
+static int firstMinimumCheckpoint(Actor** list, int first, int count)
+{
+    Actor** selected = list + first;
+    Actor** cursor = selected + 1;
+    int lowest = (*selected)->checkpointId, remaining = count - first - 1;
+    for (; remaining > 0; remaining--, cursor++)
+        if ((*cursor)->checkpointId < lowest)
+        {
+            lowest = (*cursor)->checkpointId;
+            selected = cursor;
+        }
+    return selected - list;
+}
+#endif
+
 static void sortByCheckpoint(Actor** actorList, int actorCount, u8* cpoiStartIndices, int nrCheckpoints)
 {
     int i, j;
@@ -12,6 +29,9 @@ static void sortByCheckpoint(Actor** actorList, int actorCount, u8* cpoiStartInd
     for (i = 0; i < actorCount - 1; i++)
     {
         Actor* tempActor;
+#ifdef MKSC_RING
+        idx = firstMinimumCheckpoint(actorList, i, actorCount);
+#else
         int checkpointId = actorList[i]->checkpointId;
         idx = i;
         for (j = i + 1; j < actorCount; j++)
@@ -22,6 +42,7 @@ static void sortByCheckpoint(Actor** actorList, int actorCount, u8* cpoiStartInd
                 idx = j;
             }
         }
+#endif
         tempActor = actorList[idx];
         actorList[idx] = actorList[i];
         actorList[i] = tempActor;
@@ -31,7 +52,14 @@ static void sortByCheckpoint(Actor** actorList, int actorCount, u8* cpoiStartInd
     idx = 0;
     for (; j < actorCount; j++)
     {
+#ifdef MKSC_RING
+        /* The IWRAM checkpoint-index arrays are separate from the actors.
+         * Their writes cannot change this actor's checkpoint. */
+        int checkpoint = actorList[j]->checkpointId;
+        while (i <= checkpoint)
+#else
         while (i <= actorList[j]->checkpointId)
+#endif
             cpoiStartIndices[i++] = idx;
         idx++;
     }
