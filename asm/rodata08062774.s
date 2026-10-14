@@ -4215,11 +4215,9 @@ _080906F8:
 
 	.global _080907B0
 _080907B0:
-	.incbin "baserom.gba", 0x000907B0, 1371
-
-	.global _08090D0B
-_08090D0B:
-	.incbin "baserom.gba", 0x00090D0B, 2389
+	.incbin "baserom.gba", 0x000907B0, 0x00000EB0
+	.global _080907B0_end
+_080907B0_end:
 
 	.global _08091660
 _08091660:
@@ -14657,7 +14655,12 @@ _080DC908:
 _080DC90C: .4byte _080DC924
 
 	.global _080DC910
-_080DC910: .4byte _08090D0B
+	.global gCreditsRareLine
+gCreditsRareLine:
+_080DC910:
+	@ Text record: tile x, tile y, character count, frames per character.
+	@ The packed value resembles a ROM pointer but is not an address.
+	.byte 11, 13, 9, 8
 
 	.global _080DC914
 _080DC914: .4byte _080DC918
