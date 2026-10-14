@@ -1702,7 +1702,7 @@ static int ring_chooseNativeCharacters(u8* characters, int mode, int engine)
  * logic. Its local presentation context never contains ring player arrays. */
 static int ring_chooseNativeMode(int* mode, int* engine, bool32 chooseMode)
 {
-    extern bool32 sub_8004860(SpmState*, int resume);
+    extern bool32 spm_chooseModeAndClass(SpmState*, int resume);
     extern void sub_8001DDC(void);
     extern void sub_800C680(void);
     SpmState* menu;
@@ -1740,7 +1740,7 @@ static int ring_chooseNativeMode(int* mode, int* engine, bool32 chooseMode)
     /* A solo session reaches the class page without first visiting mode
      * selection. The native resume path requires that earlier page's
      * initialization, so enter normally for a newly allocated context. */
-    if (!sub_8004860(menu, chooseMode || fresh ? 0 : 1))
+    if (!spm_chooseModeAndClass(menu, chooseMode || fresh ? 0 : 1))
     {
             return FALSE;
     }
@@ -1763,7 +1763,7 @@ bool32 ring_unlockNativeMenu(SpmState* menu)
 static int ring_chooseNativeCourse(int mode, int engine, int character,
                                   int* course, int* retro)
 {
-    extern bool32 sub_800AF94(SpmState*, int resume);
+    extern bool32 spm_chooseCourse(SpmState*, int resume);
     extern void sub_8001DDC(void);
     extern void sub_800C680(void);
     extern void sub_8002E08(SpmState*, int cup);
@@ -1796,7 +1796,7 @@ static int ring_chooseNativeCourse(int mode, int engine, int character,
     trns_init();
     main_setKeyRepeat(20, 5);
     if (fresh) sub_8006E08(menu, 1);
-    accepted = sub_800AF94(menu, fresh ? 1 : 0);
+    accepted = spm_chooseCourse(menu, fresh ? 1 : 0);
     if (accepted)
     {
         *course = mode == BATTLE_MODE ? menu->track : menu->cup * 4 + menu->track;
