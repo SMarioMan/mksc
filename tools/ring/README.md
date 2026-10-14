@@ -218,6 +218,10 @@ Use `--audio-policy normal` or `--audio-policy off` when checking those builds;
 only shared audio requires remote engine/voice channels to remain silent. Performance
 checks require both a mean and every measured 300-frame window to reach 95%
 of the video rate; emulator FPS alone is insufficient.
+`--resume` rechecks already passing captures from the same ROM and runs the
+remaining cases; `--analyze-only` rechecks captures without running emulation.
+Audio recordings also accept `--audio-policy` and `--boot-ring` for testing
+each variant with the appropriate inputs and sound ownership checks.
 
 Ring builds compile the pure target calculations for ARM, and the collision code/
 renderer for Thumb, with explicit wrapping arithmetic and interworking. The
