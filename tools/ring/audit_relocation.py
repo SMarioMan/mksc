@@ -55,13 +55,15 @@ original, shifted = a.rom.read_bytes(), a.shifted_rom.read_bytes()
 # or audio as pointers. Script and menu tables are deliberately not excluded.
 opaque = []
 for name, start in symbols.items():
-    if not (re.fullmatch(r'wave_\d+', name) or name == 'courseData_bin'):
+    if not (re.fullmatch(r'wave(?:_\d+|[0-9A-Fa-f]{8})', name) or name in ('courseData_bin', '_08089A04')):
         continue
     end = symbols.get(name + '_end')
     if end is None or not 0x08000000 <= start < end:
         continue
     start -= 0x08000000
     end -= 0x08000000
+    if name == '_08089A04':
+        assert original[start] == 0x10 and int.from_bytes(original[start+1:start+4], 'little') == 0x1440, 'Expected LZ image asset'
     assert original[start:end] == shifted[start + a.padding:end + a.padding], (name, 'Opaque asset changed')
     opaque.append((start, end))
 checked = 0
@@ -81,4 +83,4 @@ for offset in range(0, len(original) - 3, 4):
         failures.append((hex(0x08000000 + offset), addresses[value], hex(actual)))
 assert not failures, ('Unrelocated function-pointer words', failures)
 assert checked, 'No function pointers were examined'
-print(f'PASS relocation: {len(addresses)} ROM functions shift by {a.padding} bytes; {checked} callback words relocate; {sample_matches} coincidences in byte-identical PCM/course assets')
+print(f'PASS relocation: {len(addresses)} ROM functions shift by {a.padding} bytes; {checked} callback words relocate; {sample_matches} coincidences in byte-identical PCM/course/LZ image assets')

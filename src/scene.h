@@ -12,7 +12,8 @@ typedef struct
     Actor actor;
     u32 field_44;
     u32 field_48;
-    u32 characterFlags;          /* 0x4C: character in bits 0..2, ghost in bit 3. */
+    u8 characterFlags;           /* 0x4C: character in bits 0..2, ghost in bit 3. */
+    u8 gap4D[3];
     u8 gap50[6];
     u16 viewYaw;                 /* 0x56: orientation used by the sprite camera. */
     u8 gap58[0x15];
