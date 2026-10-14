@@ -1,3 +1,36 @@
+## Current validation: native pages, scoring, audio and course profiling (2026-10-14)
+
+The ring coordinator now shares `spm_chooseModeAndClass`,
+`spm_chooseCharacter` and `spm_chooseCourse` with the stock game. Eight independent
+character choices are coordinated outside the native four-controller widgets.
+The original eight-row result presentation and GP standings builder are reused.
+Real-BIOS tests pass complete Vs./Battle rounds at every count from two through
+eight, four-race Retro GP cups at one, two and eight humans, repeated Battle
+rounds, and Vs.-to-Battle transitions. The Battle portrait selection orders
+survivors by remaining balloons, with player-order ties.
+
+All 44 courses pass eight-player shared-audio profiling, including full race
+completion with items on all 40 race courses. The minimum measured average is
+0.994 updates per video frame, and the lowest 300-frame window is 0.953.
+Normal audio passes 42 of 44 courses; Snow Land and Ribbon Road still have
+short windows below the required 0.95 rate. Those remaining performance dips
+are under investigation; emulator video FPS alone is not a passing result.
+
+Extended recordings cover 650 seconds per console in eight-player shared GP
+and 377 seconds per console on Luigi Circuit with normal audio. Every console
+reports zero unfilled PCM segments, late mixer deadlines and clipped samples.
+Shared audio permits only the local character's engine and voice requests;
+software P1 owns music even when hosted from physical window four. Native
+opening jingles finish before course music starts.
+
+The clean build retains SHA-1
+`9d327c030c3e2d9007990518594f70c3340ac56f`. The controlled 1024-byte code shift
+checks 1885 ROM functions and 1052 callback words, with real-BIOS single-player
+and two/eight-player gameplay regressions. Matching C includes menu accessors,
+positional sound queries and typed driver records. The final optional HLE
+check follows the remaining BIOS performance work. Physical cables and GBAs
+have not been tested. Sections below describe earlier checkpoints.
+
 ## Follow-up: opening music and native menu/results foundations (2026-10-12)
 
 The opening regression reproduced the host's native song 4 being replaced by

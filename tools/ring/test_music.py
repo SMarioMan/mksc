@@ -58,7 +58,14 @@ else:
  peers=[r for r in game if r['player']!=a.host]
  assert peers and all(not r['musicStatus']&65535 or r['musicStatus']&0x80000000 for r in peers),'Peer BGM player is audible'
  owner=[r for r in game if r['player']==a.host]
- assert owner and all(r['musicHeader'] in (course,jingle) or (r['musicHeader']==winner and r['leadLap']>finalLap) for r in owner),'Individual power-up or wrong course BGM played'
+ # A stopped player can retain a different song header. Physics also starts
+ # while the finite native opening fanfare is still audible; this must finish
+ # before the shared course track replaces it.
+ opening={struct.unpack_from('<I',rom,table+i*8)[0] for i in (3,4)}
+ audible=[r for r in owner if r['musicStatus']&65535 and not r['musicStatus']&0x80000000]
+ assert audible and all(r['musicHeader'] in (course,jingle) or
+  (r['musicHeader'] in opening and r['leadLap']==0) or
+  (r['musicHeader']==winner and r['leadLap']>finalLap) for r in audible),'Individual power-up or wrong course BGM played'
  assert all(r['musicTempo'] in (256,320) for r in owner)
  assert all(r['musicHeader']!=jingle and r['musicTempo']==256 for r in owner if r['leadLap']<finalLap),'Music accelerated before the native final lap'
  assert any(r['musicHeader']==jingle for r in game),'Shared final-lap jingle was never played'
