@@ -27,7 +27,7 @@ READY packets carry the sampled inputs; a following COMMIT forms a deterministic
 physics advances only after everyone receives the same input vector. Serial-completion IRQs keep receivers armed while rendering and mixing audio. Critical transport code runs from IWRAM. A peer that missed an earlier READY holds COMMIT until a replay restores its complete input vector.
 Timer 2 supplies a 512-cycle forwarding turnaround, preserving audio timers 0/1 and native serial timer 3.
 Once a READY has returned around the ring its sender stops repeating it. At
-five or more players the owner spaces idle polling by 1024 cycles while waiting
+five or more players the owner spaces idle polling by 2048 cycles while waiting
 for rendering; active forwarding and protected input trains retain 512 cycles.
 Failures stop the game and show a connection error. Re-enter Ring Link to start
 a fresh session. The stock Multi-Pak/Single-Pak paths remain separate.
@@ -47,11 +47,12 @@ yellow, pink, blue, orange, cyan, and purple. Portraits use native assets. The r
 Battle shows the four players with the most remaining balloons, with stable
 player-order ties. Floating balloons retain native highlights; the reserved
 identity palettes are restored after course animation and graphics DMA so
-those highlights do not become white/gray while moving. Course palettes and minimap background tiles remain owned by the original renderer. Menus
-currently use a simple bitmap layout. Migration to the shared stock Multi-Pak
-mode, character and course pages, and native results presentation, is ongoing.
-The character-order queries and shared eight-entry result records have been
-decompiled to matching C as foundations for that work.
+those highlights do not become white/gray while moving. Course palettes and minimap background tiles remain owned by the original renderer. Mode/class, character and course selection share the native menu state,
+graphics and page implementations. An eight-player input coordinator supplies
+independent character picks without extending the native four-slot widgets.
+Results reuse the native eight-row graphics/renderer; GP standings and tied
+ranks use the original builder. Menu accessors and positional volume queries
+are matching C, and the clean build remains hash-identical.
 After the BIOS-backed matrix passed, optional
 HLE passed two- and eight-player entry and complete rounds in both modes, plus
 the ordinary GP character-voice regression. Add `--hle` to `test_game.py`,
@@ -114,8 +115,9 @@ flags. `--boot-ring` enters the connection menu directly and still waits for
 Start on one console. It supports the same connection, Vs., Battle, and GP flow.
 
 `--no-music` disables player-zero BGM and jingles, retaining effects and voices.
-`--shared-music` plays BGM only on software P1, the clock owner, while keeping
-effects and voices on all consoles. It retains course/Battle music, suppresses
+`--shared-music` plays BGM only on software P1, the clock owner, while keeping each console's own engine and character voices. Remote engine/voice mixer players are
+muted; spectator-camera voice requests are checked against the local character.
+Other sound effects remain available on all consoles. It retains course/Battle music, suppresses
 individual power-up music, and derives final-lap tempo from all racers,
 including GP CPUs. The first racer reaching
 the final lap triggers the common jingle and fast course tempo. Audio reacts
@@ -166,7 +168,9 @@ eight humans. `test_gp_cup.py` completes a four-course Retro cup, checking
 synchronized human/CPU physics, five laps per Retro race, and a total of 76
 awarded points. Its optional `--autofire` also uses items. Both GP
 scripts need the matching `--elf`. `test_target.py` compares the Battle target
-response C implementation to the actual native Thumb code in 4096 fixtures.
+response C implementation to the actual native Thumb code in 16,384 fixtures, including its real camera-facing query. Entire
+416-byte driver records are compared after each update, rather than just
+comparing calls or animation fields.
 
 Music regressions accept `--players 2..8`, `--gp` and `--retro`; the GP/Retro
 case checks that final-lap BGM begins on lap five and remains host-only while
@@ -189,3 +193,38 @@ For relocation checks, build the same configuration with and without
 --shifted-elf SHIFTED_ELF`. Follow this static callback check with the real-BIOS
 `test_singleplayer.py` voice/item regression and the relevant ring game tests.
 This flag only pads the ROM for validation; normal builds use no added padding.
+
+The ring mixer keeps the native 10,512 Hz sample rate and six-channel budget.
+It snapshots its PCM destination before the music callbacks. Shared audio
+prepares one extra frame ahead (about 16.7 ms additional output latency);
+normal and silent builds prepare two extra frames ahead (about 33.5 ms),
+allowing for their retained remote engine and voice mixing. Delayed segments
+are recovered in playback order before their deadlines. Frame/counter reads are
+atomic, and diagnostics retain both missed services and recovered/late
+segments. The native RAM mixing kernel remains unchanged. `test_audio_queue.py`
+executes the actual ROM mixer entry across 440 counter/override/IRQ fixtures;
+use `--ahead 2` for shared audio and `--ahead 3` for normal/silent audio.
+`test_audio.py --gp --frames 90000` records a complete eight-player Retro cup,
+checks local voice ownership, remote-player suppression and PCM deadlines,
+and retains eight per-instance WAV files.
+
+`test_all_courses.py` profiles eight moving racers with items on all 20 Super
+courses, 20 Retro courses and four Battle arenas. `--complete` runs races
+through the native result transition. Reports preserve instruction-cycle
+profiles, video-by-video simulation/audio timing and screenshots. Profiles
+record individual ARM/Thumb instruction addresses, accounting for the CPU's
+prefetch, rather than attributing whole address ranges to nearby functions.
+Use `--audio-policy normal` or `--audio-policy off` when checking those builds;
+only shared audio requires remote engine/voice channels to remain silent. Performance
+checks require both a mean and every measured 300-frame window to reach 95%
+of the video rate; emulator FPS alone is insufficient.
+
+Ring builds compile the pure target calculations for ARM, and the collision code/
+renderer for Thumb, with explicit wrapping arithmetic and interworking. The
+matching build still uses agbcc. Collision regression compares the exact
+matching Thumb object with the optimized Thumb object, including callback
+ordering, mutations seen by subsequent collisions and the full 24/64-list
+limits. The original stable OAM sort and exact reciprocal division helper run
+from IWRAM; cold menu/session records
+are above the native EWRAM scratch area. Symbolic loader addresses and linker
+assertions protect the native globals and system-stack reserve.

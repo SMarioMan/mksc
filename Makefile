@@ -47,6 +47,9 @@ CPPFLAGS += -DMKSC_RING_MUSIC_OFF=1
 endif
 ifeq ($(RING_MUSIC),shared)
 CPPFLAGS += -DMKSC_RING_MUSIC_SHARED=1
+ASFLAGS += --defsym MKSC_RING_AUDIO_AHEAD=2
+else
+ASFLAGS += --defsym MKSC_RING_AUDIO_AHEAD=3
 endif
 ASFLAGS += --defsym MKSC_RING=1
 LD_SCRIPT := build-ring/ld_script.ld
@@ -132,6 +135,16 @@ $(C_BUILDDIR)/mp2000/%.o : $(C_SUBDIR)/mp2000/%.c
 	@echo -e ".text\n\t.align\t2, 0\n" >> $(OBJ_DIR)/src/mp2000/$*.s
 	$(AS) $(ASFLAGS) -o $@ $(OBJ_DIR)/src/mp2000/$*.s
 
+ifeq ($(RING),1)
+RING_FAST_MODE := -mthumb
+$(C_BUILDDIR)/ringTarget.O3.o: RING_FAST_MODE := -marm
+# Ring renderer/target hot paths use the optimizing toolchain.
+# The clean matching build continues to use agbcc and its native byte layout.
+$(C_BUILDDIR)/ringTarget.O3.o $(C_BUILDDIR)/collision.o $(C_BUILDDIR)/oam.O3.o : $(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c Makefile
+	@$(CPP) -MMD -MT $@ $(CPPFLAGS) $< -o $(C_BUILDDIR)/$*.i
+	$(BIN_DIR)/./$(PREFIX)gcc -mcpu=arm7tdmi $(RING_FAST_MODE) -mthumb-interwork -O3 -fwrapv -fno-toplevel-reorder -fno-strict-aliasing -ffreestanding -std=gnu89 -Wa,--defsym,MKSC_RING=1 -x cpp-output -c $(C_BUILDDIR)/$*.i -o $@
+endif
+
 $(C_BUILDDIR)/%.O3.o : $(C_SUBDIR)/%.O3.c
 	@$(CPP) -MMD -MT $@ $(CPPFLAGS) $< -o $(C_BUILDDIR)/$*.i
 	@$(AGBCC) $(C_BUILDDIR)/$*.i $(CFLAGS) -O3 -o $(C_BUILDDIR)/$*.s
@@ -178,3 +191,5 @@ $(ROM): $(ELF)
 $(C_BUILDDIR)/oam.O3.o: nonmatching/text0802F6BC.s
 
 $(C_BUILDDIR)/camera.o: nonmatching/ringCamera.s
+
+$(ASM_BUILDDIR)/m4a_1.o: Makefile

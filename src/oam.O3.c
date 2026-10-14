@@ -19,7 +19,11 @@ static bool32 oam_300218C;
 
 bool32 oam_renderCell(OamCell* cell);
 void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int scaleY, int rotation, struc_6* a6);
+#ifdef MKSC_RING
+OamCellListEntry* oam_802FC48(OamCellListEntry* a1) __attribute__((section(".ring_irq")));
+#else
 OamCellListEntry* oam_802FC48(OamCellListEntry* a1);
+#endif
 void oam_init(void);
 void oam_update(void);
 void oam_reset(void);
@@ -159,6 +163,7 @@ static void ring_renderAllCells(void)
     OamCellListEntry* entry = sCellListHead;
     u32 i;
     for (i = 0; i < 8; i++) { cache[i].scaleX = 0; cache[i].scaleY = 0; }
+    ring_serviceRenderAudio();
     while (entry)
     {
         OamCell* cell = &entry->cell;
@@ -588,6 +593,9 @@ void oam_init(void)
 
 void oam_update(void)
 {
+#ifdef MKSC_RING
+    ring_drawNativeMenuCursors();
+#endif
     if (!oam_3002188 || !sCopyDisabled)
         return;
     oam_300218C = 1;

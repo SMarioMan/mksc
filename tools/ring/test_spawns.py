@@ -17,14 +17,14 @@ for arena in range(4):
  for n in (4,8):
   events=[]
   for f,k in base:
-   if f in (2350,2365):continue
+   if f in (2200,2215):continue
    events.extend((f,i,k) for i in range(n if f<1500 or f in (2000,2015) else 1))
   events.extend([(1600,0,128),(1615,0,0)])
-  for j in range(arena):events.extend([(2070+j*40,0,128),(2090+j*40,0,0)])
+  for j in range(arena):events.extend([(2300+j*40,0,128),(2320+j*40,0,0)])
   name=f'arena-{arena+1}-{n}';inputs=a.results/(name+'.csv')
   inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(events)))
   proc=subprocess.run([str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(n),
-   '--frames','3300','--input',str(inputs),'--dump','0x03002E68','--barrier-before-input','--barrier-state','0x03006B40'],capture_output=True,text=True,timeout=300)
+   '--frames','4300','--input',str(inputs),'--dump','0x03002E68','--barrier-before-input','--barrier-state','0x03006B40'],capture_output=True,text=True,timeout=300)
   (a.results/(name+'.json')).write_text(proc.stdout);(a.results/(name+'.stderr')).write_text(proc.stderr)
   assert proc.returncode==0,(name,proc.stderr)
   data=json.loads(proc.stdout)

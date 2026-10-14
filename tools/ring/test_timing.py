@@ -34,7 +34,7 @@ for n in a.players:
         name = f'{mode}-{n}'
         events = []
         for frame, slot, keys in base:
-            if slot or frame >= 3500 or (mode == 'battle' and frame in (2350, 2365)):
+            if slot or frame >= 3500 or (mode == 'battle' and frame in (2500, 2515)):
                 continue
             events.extend((frame, i, keys) for i in range(n if frame < 1500 or frame in (2000, 2015) else 1))
         if mode == 'battle':
@@ -43,8 +43,8 @@ for n in a.players:
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))
         video = a.results / (name + '-video.csv')
         proc = subprocess.run([str(a.runner), '--ring', '--rom', str(rom), '--bios', str(a.bios),
-                               '--players', str(n), '--frames', '3900', '--input', str(inputs),
-                               '--video-from', '3300', '--video-log', str(video),
+                               '--players', str(n), '--frames', '5100', '--input', str(inputs),
+                               '--video-from', '4500', '--video-log', str(video),
                                '--barrier-before-input', '--barrier-state', '0x03006B40'],
                               capture_output=True, text=True, timeout=300)
         (a.results / (name + '.json')).write_text(proc.stdout)
@@ -57,7 +57,7 @@ for n in a.players:
         rates[name] = []
         commit_rates[name] = []
         for i in range(n):
-            peer = [row for row in rows if int(row['player']) == i and int(row['frame']) < 3900]
+            peer = [row for row in rows if int(row['player']) == i and int(row['frame']) < 5100]
             assert len(peer) == 600, (name, i, len(peer))
             rate = (int(peer[-1]['simulationFrames']) - int(peer[0]['simulationFrames'])) / 599
             commit_rates[name].append((int(peer[-1]['commits']) - int(peer[0]['commits'])) / 599)

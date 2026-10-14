@@ -35,6 +35,12 @@ SoundMain_1:
 	mov r4, r11
 	push {r0-r4}
 	sub sp, 0x18
+.ifdef MKSC_RING
+    @ Snapshot before music callbacks: VBlank may advance the DMA counter.
+    bl ring_audioMixCounter
+    str r0, [sp, 0x10]
+    ldr r0, [sp, 0x18]
+.endif
 	ldrb r1, [r0, o_SoundInfo_maxLines]
 	cmp r1, 0 @ if maxLines is 0, there is no maximum
 	beq SoundMain_3
@@ -61,7 +67,26 @@ SoundMain_4:
 	mov r8, r3
 	ldr r5, lt_o_SoundInfo_pcmBuffer
 	adds r5, r0
+ .ifdef MKSC_RING
+    ldr r4, [sp, 0x10]
+    cmp r4, 0
+    beq 991f
+    @ Counter tag is counter+1; queue one/two extra segments by audio policy.
+    subs r4, MKSC_RING_AUDIO_AHEAD
+    bgt 992f
+.if MKSC_RING_AUDIO_AHEAD == 2
+    ldrb r4, [r0, o_SoundInfo_pcmDmaPeriod]
+.else
+    ldrb r1, [r0, o_SoundInfo_pcmDmaPeriod]
+    adds r4, r4, r1
+.endif
+    b 992f
+991:
+.endif
 	ldrb r4, [r0, o_SoundInfo_pcmDmaCounter]
+.ifdef MKSC_RING
+992:
+.endif
 	subs r7, r4, 1
 	bls SoundMain_5
 	ldrb r1, [r0, o_SoundInfo_pcmDmaPeriod]

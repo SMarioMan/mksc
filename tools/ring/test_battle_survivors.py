@@ -14,11 +14,11 @@ events = []
 for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitlines():
     f, i, k = line.split(',')
     f = int(f)
-    if int(i) == 0 and f < 3500 and f not in (2350, 2365):
+    if int(i) == 0 and f < 3500 and f not in (2200, 2215):
         events.extend((f, j, int(k, 16)) for j in range(8 if f < 1500 or f in (2000, 2015) else 1))
 events.extend([(1600, 0, 128), (1615, 0, 0)])
 for step in range(3):
-    events.extend([(2070 + step * 40, 0, 128), (2090 + step * 40, 0, 0)])
+    events.extend([(2300 + step * 40, 0, 128), (2320 + step * 40, 0, 0)])
 events.extend((3500, i, 17 if i < 4 else 0) for i in range(8))
 inputs = a.results / 'survivors.csv'
 inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))

@@ -20,19 +20,22 @@ assert symbols['sRing']==0x03006B40,'Protocol diagnostic ABI moved'
 base=[]
 for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=line.split(',');f=int(f)
- if int(i)==0 and f<3500 and (not a.boot_ring or f>=1500) and (not a.gp or f not in (2350,2365)):base.append((f,int(k,16)))
+ if int(i)==0 and f<3500 and (not a.boot_ring or f>=1500) and (not a.gp or f not in (2500,2515)):base.append((f,int(k,16)))
 rows=[]
 for f,k in base:
  rows.extend((f,i if f<1500 or f in (2000,2015) else a.host,k) for i in range(a.players if f<1500 or f in (2000,2015) else 1))
 if a.gp:rows.extend([(1600,a.host,64),(1615,a.host,0)])
-if a.retro:rows.extend([(2100,a.host,4),(2115,a.host,0)])
+if a.retro:
+ rows=[r for r in rows if r[0]<2200]
+ rows.extend((f,a.host,k) for f,k in ((2800,4),(2815,0),(3200,1),(3215,0),(3500,1),(3515,0)))
+ if not a.gp:rows.extend((f,a.host,k) for f,k in ((4000,1),(4015,0),(4300,1),(4315,0)))
 inputs=a.results/'inputs.csv';inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
 video=a.results/'video.csv'
 command=[str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(a.players),
- '--frames',str(50000 if a.policy=='shared' else 3900),'--input',str(inputs),
+ '--frames',str(70000 if a.policy=='shared' else 5000),'--input',str(inputs),
  '--video-from','3300','--video-log',str(video),'--barrier-before-input','--barrier-state','0x03006B40']
-if a.policy=='shared':command+=['--until-scene',hex(symbols['results_main']|1),'--autodrive-frame','3500','--autofire']
-proc=subprocess.run(command,capture_output=True,text=True,timeout=600)
+if a.policy=='shared':command+=['--until-scene',hex(symbols['results_main']|1),'--autodrive-frame','4500','--autofire']
+proc=subprocess.run(command,capture_output=True,text=True,timeout=1200)
 (a.results/'result.json').write_text(proc.stdout);(a.results/'result.stderr').write_text(proc.stderr)
 assert proc.returncode==0,(proc.returncode,proc.stderr)
 result=json.loads(proc.stdout)

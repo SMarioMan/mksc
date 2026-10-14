@@ -80,6 +80,10 @@ void dmaq_init(DmaQueue* queue)
 void dmaq_reset(DmaQueue* queue)
 {
     bool32 one;
+#ifdef MKSC_RING
+    u16 ime = REG_IME;
+    REG_IME = 0;
+#endif
     do
     {
         one = TRUE;
@@ -91,12 +95,21 @@ void dmaq_reset(DmaQueue* queue)
     queue->list.tail = NULL;
     queue->list.head = NULL;
     queue->inUse = FALSE;
+#ifdef MKSC_RING
+    REG_IME = ime;
+#endif
 }
 
 DmaQueueEntry* dmaq_enqueue(DmaQueue* queue, const void* src, void* dst, u32 config)
 {
     DmaQueueEntry* result;
     bool32 one;
+#ifdef MKSC_RING
+    /* Rain animation enqueues from VBlank too. Protect this short mutation
+     * so its interrupt cannot wait for a lock held by the interrupted code. */
+    u16 ime = REG_IME;
+    REG_IME = 0;
+#endif
     do
     {
         one = TRUE;
@@ -113,6 +126,9 @@ DmaQueueEntry* dmaq_enqueue(DmaQueue* queue, const void* src, void* dst, u32 con
         list_insertTailSingle(&queue->list, &result->link);
     }
     queue->inUse = FALSE;
+#ifdef MKSC_RING
+    REG_IME = ime;
+#endif
     return result;
 }
 

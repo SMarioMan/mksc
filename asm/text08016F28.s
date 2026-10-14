@@ -11779,8 +11779,8 @@ sub_801D28C: @ 0x0801D28C
 	.align 2, 0
 _0801D2A0: .4byte 0x03000190
 
-	thumb_func_start sub_801D2A4
-sub_801D2A4: @ 0x0801D2A4
+	thumb_func_start race_updateFinishBanners
+race_updateFinishBanners: @ 0x0801D2A4
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
@@ -12763,8 +12763,8 @@ _0801DA8A:
 _0801DA9C: .4byte 0x03002E20
 _0801DAA0: .4byte 0x00000814
 
-	thumb_func_start sub_801DAA4
-sub_801DAA4: @ 0x0801DAA4
+	thumb_func_start results_loadStandingsGraphics
+results_loadStandingsGraphics: @ 0x0801DAA4
 	push {r4, r5, r6, r7, lr}
 	mov r7, r8
 	push {r7}
@@ -13039,8 +13039,8 @@ _0801DD4C: .4byte 0x800000E0
 _0801DD50: .4byte _080DB2FC
 _0801DD54: .4byte _080AACF0
 
-	thumb_func_start sub_801DD58
-sub_801DD58: @ 0x0801DD58
+	thumb_func_start results_drawStandingRow
+results_drawStandingRow: @ 0x0801DD58
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
@@ -13469,8 +13469,8 @@ _0801E0A8:
 	pop {r0}
 	bx r0
 
-	thumb_func_start sub_801E0B8
-sub_801E0B8: @ 0x0801E0B8
+	thumb_func_start results_buildStandings
+results_buildStandings: @ 0x0801E0B8
 	push {r4, r5, r6, r7, lr}
 	mov r7, sl
 	mov r6, sb
@@ -14229,7 +14229,7 @@ _0801E684:
 	adds r0, r4, #0
 	bl CpuFastSet
 	movs r0, #1
-	bl sub_801D2A4
+	bl race_updateFinishBanners
 	bl sub_801D33C
 	bl sub_801D3D0
 	ldr r0, _0801E7BC @ =0x03002E20
@@ -14676,7 +14676,7 @@ _0801EA3C:
 	.align 2, 0
 _0801EA5C: .4byte 0x01000140
 _0801EA60:
-	bl sub_801DAA4
+	bl results_loadStandingsGraphics
 	movs r6, #0
 	movs r0, #0xfe
 	lsls r0, r0, #3
@@ -14697,7 +14697,7 @@ _0801EA7A:
 	adds r0, r6, #0
 	adds r1, r4, #0
 	movs r2, #0
-	bl sub_801DD58
+	bl results_drawStandingRow
 	adds r4, #0x10
 	adds r6, #1
 	movs r0, #0xfe
@@ -14839,7 +14839,7 @@ _0801EB9A:
 	adds r0, r6, #0
 	adds r1, r4, #0
 	movs r2, #0
-	bl sub_801DD58
+	bl results_drawStandingRow
 	adds r4, #0x10
 	adds r6, #1
 	movs r0, #0xfe
@@ -14942,7 +14942,7 @@ _0801EC66:
 	adds r0, r6, #0
 	adds r1, r4, #0
 	movs r2, #1
-	bl sub_801DD58
+	bl results_drawStandingRow
 	adds r4, #0x10
 	adds r6, #1
 	movs r0, #0xfe
@@ -15094,7 +15094,7 @@ _0801ED74:
 	adds r0, r4, #0
 	adds r1, r5, #0
 	movs r2, #1
-	bl sub_801DD58
+	bl results_drawStandingRow
 	movs r0, #1
 	str r0, [r7, #0x10]
 	ldr r0, _0801EDD4 @ =0x00000814
@@ -15180,7 +15180,7 @@ _0801EE3C:
 	adds r0, r6, #0
 	adds r1, r5, #0
 	movs r2, #1
-	bl sub_801DD58
+	bl results_drawStandingRow
 	adds r4, #0x10
 	adds r5, #0x10
 	adds r6, #1
@@ -15416,7 +15416,7 @@ _0801F02C:
 	.align 2, 0
 _0801F038: .4byte gKeyTriggerBuf
 _0801F03C:
-	bl sub_801E0B8
+	bl results_buildStandings
 	movs r0, #0
 	str r0, [sp, #0x10]
 	add r4, sp, #0x10
@@ -15451,7 +15451,7 @@ _0801F076:
 	adds r0, r6, #0
 	adds r1, r4, #0
 	movs r2, #2
-	bl sub_801DD58
+	bl results_drawStandingRow
 	adds r4, #0x10
 	adds r6, #1
 	movs r0, #0xfe
@@ -15648,7 +15648,7 @@ _0801F206:
 	.align 2, 0
 _0801F214: .4byte gKeyTriggerBuf
 _0801F218:
-	bl sub_801E0B8
+	bl results_buildStandings
 	movs r0, #0
 	str r0, [sp, #0x14]
 	add r4, sp, #0x14
@@ -15682,7 +15682,7 @@ _0801F252:
 	adds r0, r6, #0
 	adds r1, r4, #0
 	movs r2, #2
-	bl sub_801DD58
+	bl results_drawStandingRow
 	adds r4, #0x10
 	adds r6, #1
 	movs r0, #0xfe
@@ -15765,7 +15765,7 @@ _0801F300:
 	adds r0, r4, #0
 	bl CpuFastSet
 	movs r0, #0
-	bl sub_801D2A4
+	bl race_updateFinishBanners
 	bl sub_801D33C
 	bl sub_801D3D0
 	ldr r0, _0801F494 @ =0x03002E20
@@ -16037,7 +16037,7 @@ _0801F512:
 	adds r0, r4, #0
 	bl CpuFastSet
 	movs r0, #0
-	bl sub_801D2A4
+	bl race_updateFinishBanners
 	bl sub_801D33C
 	bl sub_801D3D0
 	ldr r0, _0801F6A8 @ =0x03002E20

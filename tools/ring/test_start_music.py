@@ -30,7 +30,7 @@ for mode in ('vs', 'battle', 'gp'):
         frame, player, key = (int(value, 16 if i == 2 else 10) for i, value in enumerate(line.split(',')))
         if player or frame >= 3500 or (a.boot_ring and frame < 1500):
             continue
-        if mode != 'vs' and frame in (2350, 2365):
+        if mode != 'vs' and frame in (2500, 2515):
             continue
         for peer in range(a.players if frame < 1500 or frame in (2000, 2015) else 1):
             rows.append((frame, peer if frame < 1500 or frame in (2000, 2015) else a.host, key))
