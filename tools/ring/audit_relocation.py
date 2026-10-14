@@ -55,15 +55,30 @@ original, shifted = a.rom.read_bytes(), a.shifted_rom.read_bytes()
 # or audio as pointers. Script and menu tables are deliberately not excluded.
 opaque = []
 for name, start in symbols.items():
-    if not (re.fullmatch(r'wave(?:_\d+|[0-9A-Fa-f]{8})', name) or name in ('courseData_bin', '_08089A04')):
+    if not (re.fullmatch(r'wave(?:_\d+|[0-9A-Fa-f]{8})', name) or name in ('courseData_bin', '_08089A04', '_080907B0')):
         continue
     end = symbols.get(name + '_end')
     if end is None or not 0x08000000 <= start < end:
         continue
     start -= 0x08000000
     end -= 0x08000000
-    if name == '_08089A04':
+    if name in ('_08089A04', '_080907B0'):
         assert original[start] == 0x10 and int.from_bytes(original[start+1:start+4], 'little') == 0x1440, 'Expected LZ image asset'
+    if name == '_080907B0':
+        # Validate this complete compressed stream, including the interior
+        # bytes that once acquired a false pointer label in the decompilation.
+        cursor, produced = start + 4, 0
+        while produced < 0x1440:
+            flags = original[cursor]; cursor += 1
+            for bit in range(7, -1, -1):
+                if produced >= 0x1440: break
+                if flags >> bit & 1:
+                    first, second = original[cursor:cursor+2]; cursor += 2
+                    assert ((first & 15) << 8 | second) + 1 <= produced, 'Invalid LZ back reference'
+                    produced += (first >> 4) + 3
+                else:
+                    produced += 1; cursor += 1
+        assert produced == 0x1440 and cursor == end, 'LZ asset boundary is not exact'
     assert original[start:end] == shifted[start + a.padding:end + a.padding], (name, 'Opaque asset changed')
     opaque.append((start, end))
 checked = 0
@@ -83,4 +98,8 @@ for offset in range(0, len(original) - 3, 4):
         failures.append((hex(0x08000000 + offset), addresses[value], hex(actual)))
 assert not failures, ('Unrelocated function-pointer words', failures)
 assert checked, 'No function pointers were examined'
+rare = symbols['gCreditsRareLine'] - 0x08000000
+assert original[rare:rare+4] == shifted[rare+a.padding:rare+a.padding+4] == bytes((11,13,9,8)), 'Packed credits layout was relocated as a pointer'
+assert struct.unpack_from('<I', shifted, rare+a.padding+4)[0] == struct.unpack_from('<I', original, rare+4)[0] + a.padding, 'Credits text pointer did not relocate'
 print(f'PASS relocation: {len(addresses)} ROM functions shift by {a.padding} bytes; {checked} callback words relocate; {sample_matches} coincidences in byte-identical PCM/course/LZ image assets')
+print('PASS credits: packed coordinates/count/delay remain native; the following text pointer relocates')
