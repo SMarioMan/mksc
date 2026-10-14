@@ -214,6 +214,11 @@ through the native result transition. Reports preserve instruction-cycle
 profiles, video-by-video simulation/audio timing and screenshots. Profiles
 record individual ARM/Thumb instruction addresses, accounting for the CPU's
 prefetch, rather than attributing whole address ranges to nearby functions.
+The runner observes instructions inside its normal scheduling quantum.
+`test_profile.py` compares complete eight-player snapshots and every logged
+video frame with profiling enabled/disabled; both must be byte-identical.
+Performance captures require `profileScheduling: "quantum"`; `--resume`
+recaptures results made by the older stepping profiler.
 Use `--audio-policy normal` or `--audio-policy off` when checking those builds;
 only shared audio requires remote engine/voice channels to remain silent. Performance
 checks require both a mean and every measured 300-frame window to reach 95%
@@ -225,10 +230,18 @@ each variant with the appropriate inputs and sound ownership checks.
 
 Ring builds compile the pure target calculations for ARM, and the collision code/
 renderer for Thumb, with explicit wrapping arithmetic and interworking. The
+projection and native positional sound/track controls also use optimized
+Thumb C. Projection preserves every native product/truncation and checks all
+signed quotient boundaries; OAM tests compare all 1024 bytes and affine state
+with the original renderer. Mixer controls retain the native track state and
+identification lock while stopping once no selected tracks remain. The
 matching build still uses agbcc. Collision regression compares the exact
 matching Thumb object with the optimized Thumb object, including callback
 ordering, mutations seen by subsequent collisions and the full 24/64-list
 limits. The original stable OAM sort and exact reciprocal division helper run
-from IWRAM; cold menu/session records
+from IWRAM, along with the exact first-minimum checkpoint scan. Its caller
+must remain out of line (`test_hot_code.py` checks the actual compiled call).
+Checkpoint index filling snapshots one actor's checkpoint before writing
+the separate index array. Cold menu/session records
 are above the native EWRAM scratch area. Symbolic loader addresses and linker
 assertions protect the native globals and system-stack reserve.
