@@ -16,6 +16,7 @@ p.add_argument('--courses',nargs='+',default=[f'{s}-{i}' for s in ('super','retr
 p.add_argument('--frames',type=int,default=18000)
 p.add_argument('--profile-frames',type=int,default=300)
 p.add_argument('--analyze-only',action='store_true',help='Recheck existing captured JSON/video/profile files')
+p.add_argument('--resume',action='store_true',help='Recheck completed passing cases and run the remainder')
 p.add_argument('--audio-policy',choices=('shared','normal','off'),default='shared')
 p.add_argument('--complete',action='store_true',help='Run each race through results, up to 70000 frames')
 a=p.parse_args();a.results.mkdir(parents=True,exist_ok=True)
@@ -35,7 +36,11 @@ base=[]
 for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=line.split(',')
  if int(i)==0 and int(f)<2200:base.append((int(f),int(k,16)))
-reports={}
+reports={};completed={}
+if a.resume and (a.results/'summary.json').exists():
+ previous=json.loads((a.results/'summary.json').read_text())
+ assert previous['rom_sha256']==hashlib.sha256(rom.read_bytes()).hexdigest(),'Resume requires the same ROM'
+ completed={k:v for k,v in previous['passed'].items() if v.get('audio_policy')==a.audio_policy}
 def run(case):
  kind,idx=case.split('-');idx=int(idx);assert 0<=idx<(4 if kind=='battle' else 20)
  events=[]
@@ -60,7 +65,7 @@ def run(case):
  '--profile-file',str(profile),'--profile-until',str(6000+a.profile_frames),'--dump',hex(courseBase),'--dump-words',str(courseWords),
  '--barrier-before-input','--barrier-state',hex(symbols['sRing']),'--screens',str(a.results/case)]
  if a.complete and kind!='battle':command.extend(['--until-scene',hex(symbols['results_main']|1)])
- if a.analyze_only:
+ if a.analyze_only or case in completed:
   proc=SimpleNamespace(returncode=0,stdout=(a.results/(case+'.json')).read_text(),stderr=(a.results/(case+'.stderr')).read_text())
  else:proc=subprocess.run(command,capture_output=True,text=True,timeout=2400)
  (a.results/(case+'.json')).write_text(proc.stdout);(a.results/(case+'.stderr')).write_text(proc.stderr)

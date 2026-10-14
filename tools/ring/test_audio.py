@@ -7,6 +7,7 @@ for k in ('runner','rom','elf','bios','results'):p.add_argument('--'+k,required=
 p.add_argument('--frames',type=int,default=36000)
 p.add_argument('--gp',action='store_true',help='Record a complete four-course Retro GP cup')
 p.add_argument('--boot-ring',action='store_true',help='Skip title inputs for a ROM built with --boot-ring')
+p.add_argument('--audio-policy',choices=('shared','normal','off'),default='shared')
 p.add_argument('--analyze-only',action='store_true',help='Analyze already captured JSON, CSV and WAV files')
 a=p.parse_args();a.results.mkdir(parents=True,exist_ok=True)
 symbols={}
@@ -46,14 +47,15 @@ for i,n in enumerate(d['nodes']):
 rows=[[] for _ in range(8)]
 with video.open() as f:
  for r in csv.DictReader(f):rows[int(r['player'])].append({k:int(v) for k,v in r.items()})
-report={'rom_sha256':hashlib.sha256(rom).hexdigest(),'frames':a.frames,'nodes':[]}
+report={'rom_sha256':hashlib.sha256(rom).hexdigest(),'audio_policy':a.audio_policy,'frames':a.frames,'nodes':[]}
 for i,rs in enumerate(rows):
  race=[r for r in rs if r['sceneMain']==symbols['race_main']|1]
  assert len(race)>(10000 if a.gp else 6000),(i,'No extended moving race',len(race))
- assert all(not r['voiceHeader'] or r['voiceHeader'] in allowed[i] for r in race),(i,'Foreign character voice')
  char=d['nodes'][i]['game']['drivers'][i]['character']&7
- assert all(r['effectHeader'] not in special or special[r['effectHeader']]==char for r in race),(i,'Foreign special voice')
- assert race[-1]['audioStarts3']==race[-1]['audioStarts4']==0,(i,'Remote engine/voice accepted')
+ if a.audio_policy=='shared':
+  assert all(not r['voiceHeader'] or r['voiceHeader'] in allowed[i] for r in race),(i,'Foreign character voice')
+  assert all(r['effectHeader'] not in special or special[r['effectHeader']]==char for r in race),(i,'Foreign special voice')
+  assert race[-1]['audioStarts3']==race[-1]['audioStarts4']==0,(i,'Remote engine/voice accepted')
  assert race[-1]['audioStarts1']>0 and race[-1]['audioStarts2']>0,(i,'Own engine/voice absent')
  assert rs[-1]['audioMissedFrames']==rs[-1]['audioRecoveredFrames'],(i,'Unfilled PCM segment')
  assert rs[-1]['audioLateSegments']==0,(i,'Late PCM segment')
@@ -70,4 +72,4 @@ for i,rs in enumerate(rows):
  report['nodes'].append({'player':i+1,'character':char,'audio_frames':frames,'peak':peak,'nonzero_samples':nonzero,'clipped_samples':clipped,
   'missed_services':rs[-1]['audioMissedFrames'],'recovered_segments':rs[-1]['audioRecoveredFrames'],'late_segments':rs[-1]['audioLateSegments']})
 (a.results/'summary.json').write_text(json.dumps(report,indent=2))
-print('PASS extended eight-player shared PCM: local voices/engines, no unfilled or late segments; per-instance WAV recordings retained',flush=True)
+print(f'PASS extended eight-player {a.audio_policy} PCM: no unfilled or late segments; per-instance WAV recordings retained',flush=True)

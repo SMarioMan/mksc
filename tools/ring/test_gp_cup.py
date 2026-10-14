@@ -28,8 +28,6 @@ for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitline
 for count in a.players:
     events = []
     for frame, keys in base:
-        if count == 1 and frame in (2000, 2015):
-            continue  # Solo was ready at 1800; keep CUP open for Select at 2100.
         if count == 1 and frame == 1500:
             keys = 4
         events.extend((frame, i, keys) for i in range(count if frame < 1500 or frame in (2000, 2015) else 1))
@@ -46,6 +44,7 @@ for count in a.players:
         '--barrier-state', '0x03006B40', '--until-scene', hex(symbols['results_main'] | 1),
         '--auto-confirm-scene', hex(symbols['results_main'] | 1),
         '--watch', hex(symbols['sGPCupComplete']), '--until-watch-value', '1',
+        '--settle-frames', '3',
         '--dump', hex(symbols['sGPPoints']), '--screens', str(a.results / name)
     ]
     command.extend(['--progress-file', str(a.results / (name + '-progress.csv'))])
