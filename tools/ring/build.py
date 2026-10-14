@@ -40,6 +40,9 @@ link = link.replace('        src/vcount.o(COMMON);', '''        src/vcount.o(COM
 link = link.replace('        data/characterTiles.o(.rodata*);', '''        data/characterTiles.o(.rodata*);
         src/ringLink.o(.text);
         src/ringTarget.O3.o(.text);
+        src/ringProjection.O3.o(.text);
+        src/ringProjection.O3.o(.rodata*);
+        src/ringSoundControl.O3.o(.text);
         src/ringLink.o(.rodata);''')
 link = link.replace('    /* Discard everything not specifically mentioned above. */', '''    .ring_irq ALIGN(ADDR(.bss) + SIZEOF(.bss), 4) : AT(ALIGN(LOADADDR(.text) + SIZEOF(.text), 4))
     {
@@ -47,6 +50,7 @@ link = link.replace('    /* Discard everything not specifically mentioned above.
         src/ringLink.o(.ring_irq);
         src/camera.o(.ring_irq);
         src/oam.O3.o(.ring_irq);
+        src/collision.o(.ring_irq);
         . = ALIGN(4);
         __ring_irq_end = .;
 

@@ -140,7 +140,7 @@ RING_FAST_MODE := -mthumb
 $(C_BUILDDIR)/ringTarget.O3.o: RING_FAST_MODE := -marm
 # Ring renderer/target hot paths use the optimizing toolchain.
 # The clean matching build continues to use agbcc and its native byte layout.
-$(C_BUILDDIR)/ringTarget.O3.o $(C_BUILDDIR)/collision.o $(C_BUILDDIR)/oam.O3.o : $(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c Makefile
+$(C_BUILDDIR)/ringTarget.O3.o $(C_BUILDDIR)/ringProjection.O3.o $(C_BUILDDIR)/ringSoundControl.O3.o $(C_BUILDDIR)/soundQueries.o $(C_BUILDDIR)/collision.o $(C_BUILDDIR)/oam.O3.o : $(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c Makefile
 	@$(CPP) -MMD -MT $@ $(CPPFLAGS) $< -o $(C_BUILDDIR)/$*.i
 	$(BIN_DIR)/./$(PREFIX)gcc -mcpu=arm7tdmi $(RING_FAST_MODE) -mthumb-interwork -O3 -fwrapv -fno-toplevel-reorder -fno-strict-aliasing -ffreestanding -std=gnu89 -Wa,--defsym,MKSC_RING=1 -x cpp-output -c $(C_BUILDDIR)/$*.i -o $@
 endif
@@ -190,6 +190,6 @@ $(ROM): $(ELF)
 # The OAM renderer embeds this assembly through asm_unified.
 $(C_BUILDDIR)/oam.O3.o: nonmatching/text0802F6BC.s
 
-$(C_BUILDDIR)/camera.o: nonmatching/ringCamera.s
+$(C_BUILDDIR)/camera.o: nonmatching/ringCamera.s nonmatching/camProjectActor.s
 
 $(ASM_BUILDDIR)/m4a_1.o: Makefile
