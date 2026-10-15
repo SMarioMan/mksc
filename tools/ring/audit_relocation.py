@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check every aligned ROM function-pointer word after a controlled code shift.
+"""Check aligned and packed ROM callbacks after a controlled code shift.
 
 Build the same variant twice, adding --code-padding 0x400 for the second.
 This also scans incbin data, where fixed callback addresses can evade a source
@@ -81,25 +81,52 @@ for name, start in symbols.items():
         assert produced == 0x1440 and cursor == end, 'LZ asset boundary is not exact'
     assert original[start:end] == shifted[start + a.padding:end + a.padding], (name, 'Opaque asset changed')
     opaque.append((start, end))
+# Packed script pointers can start between aligned words. Four more matches
+# belong to native LZ images; validate complete streams and their exact padded
+# boundaries before treating their compressed bytes as opaque.
+for name, following, size in (
+    ('_08085294', '_08085EE0', 0x1440),
+    ('_080990CC', '_08099CFC', 0x1440),
+    ('_08099DB4', '_0809A8CC', 0x1440),
+    ('title_sDriversBgTiles2', 'title_sDriversBgTiles3', 0x1600),
+):
+    start, end = symbols[name] - 0x08000000, symbols[following] - 0x08000000
+    assert original[start] == 0x10 and int.from_bytes(original[start+1:start+4], 'little') == size
+    cursor, produced = start + 4, 0
+    while produced < size:
+        flags = original[cursor]; cursor += 1
+        for bit in range(7, -1, -1):
+            if produced >= size: break
+            if flags >> bit & 1:
+                first, second = original[cursor:cursor+2]; cursor += 2
+                assert ((first & 15) << 8 | second) + 1 <= produced, (name, 'Invalid LZ back reference')
+                produced += (first >> 4) + 3
+            else:
+                produced += 1; cursor += 1
+    assert produced == size and 0 <= end - cursor < 4 and not any(original[cursor:end]), (name, 'Invalid image boundary/padding')
+    assert original[start:end] == shifted[start+a.padding:end+a.padding], (name, 'Compressed image changed')
+    opaque.append((start, end))
 checked = 0
+packed = 0
 sample_matches = 0
 failures = []
-for offset in range(0, len(original) - 3, 4):
+for offset in range(0, len(original) - 3):
     value = struct.unpack_from('<I', original, offset)[0]
     if value not in addresses:
         continue
-    if any(start <= offset < end for start, end in opaque):
+    if any(start <= offset and offset + 4 <= end for start, end in opaque):
         sample_matches += 1
         continue
     destination = offset + (a.padding if offset >= a.start else 0)
     actual = struct.unpack_from('<I', shifted, destination)[0]
     checked += 1
+    packed += bool(offset % 4)
     if actual != value + a.padding:
         failures.append((hex(0x08000000 + offset), addresses[value], hex(actual)))
-assert not failures, ('Unrelocated function-pointer words', failures)
+assert not failures, ('Unrelocated aligned/packed function pointers', failures)
 assert checked, 'No function pointers were examined'
 rare = symbols['gCreditsRareLine'] - 0x08000000
 assert original[rare:rare+4] == shifted[rare+a.padding:rare+a.padding+4] == bytes((11,13,9,8)), 'Packed credits layout was relocated as a pointer'
 assert struct.unpack_from('<I', shifted, rare+a.padding+4)[0] == struct.unpack_from('<I', original, rare+4)[0] + a.padding, 'Credits text pointer did not relocate'
-print(f'PASS relocation: {len(addresses)} ROM functions shift by {a.padding} bytes; {checked} callback words relocate; {sample_matches} coincidences in byte-identical PCM/course/LZ image assets')
+print(f'PASS relocation: {len(addresses)} ROM functions shift by {a.padding} bytes; {checked} callbacks relocate ({packed} packed, {checked-packed} aligned); {sample_matches} coincidences in byte-identical PCM/course/LZ image assets')
 print('PASS credits: packed coordinates/count/delay remain native; the following text pointer relocates')
