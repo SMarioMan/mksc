@@ -8,12 +8,14 @@ except ImportError:
  np=None
 p=argparse.ArgumentParser(description=__doc__)
 for k in ('runner','rom','elf','bios','results'):p.add_argument('--'+k,required=True,type=Path)
-p.add_argument('--frames',type=int,default=36000)
+p.add_argument('--frames',type=int,help='Maximum video frames (default: 70000 for a GP cup, 36000 otherwise)')
 p.add_argument('--gp',action='store_true',help='Record a complete four-course Retro GP cup')
 p.add_argument('--boot-ring',action='store_true',help='Skip title inputs for a ROM built with --boot-ring')
 p.add_argument('--audio-policy',choices=('shared','normal','off'),default='shared')
 p.add_argument('--analyze-only',action='store_true',help='Analyze already captured JSON, CSV and WAV files')
-a=p.parse_args();a.results.mkdir(parents=True,exist_ok=True)
+a=p.parse_args()
+if a.frames is None:a.frames=70000 if a.gp else 36000
+a.results.mkdir(parents=True,exist_ok=True)
 symbols={}
 for l in subprocess.check_output(['arm-none-eabi-nm','-n',str(a.elf)],text=True).splitlines():
  f=l.split()
