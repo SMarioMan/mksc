@@ -245,3 +245,26 @@ Checkpoint index filling snapshots one actor's checkpoint before writing
 the separate index array. Cold menu/session records
 are above the native EWRAM scratch area. Symbolic loader addresses and linker
 assertions protect the native globals and system-stack reserve.
+
+## Reproducible release verification
+
+The release helpers retain immutable ROM/ELF/symbol variants and run the existing
+regressions in four queues. Source the prepared ARM/Qt environment first:
+
+```sh
+python3 tools/ring/build_release.py --output /path/to/private-builds
+python3 tools/ring/verify_release.py \
+  --runner /path/to/mgba-link --bios /path/to/gba.bin \
+  --builds /path/to/private-builds --results /path/to/private-results \
+  --mgba-build /path/to/mgba-build --mgba-source /path/to/mgba
+```
+
+This is an extensive release check, rather than a quick development smoke test.
+It covers all 44 courses in normal/shared audio, all 2–8-player game entries
+and complete Vs./Battle rounds, native menu/rendering/recovery regressions,
+extended audio, full GP cups, private GUI rows, native-code arithmetic oracles,
+and controlled ROM relocation. HLE starts only after every BIOS queue passes.
+A successful run writes `verification-complete.json`; partial runs retain their
+logs but do not receive that completion marker. Results and builds contain
+private ROM copies and must remain outside version control. The BIOS/base ROM
+are never part of a distributable release.
