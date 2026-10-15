@@ -7,7 +7,7 @@ commit the results directory or redistribute the BIOS/base ROM.
 """
 from pathlib import Path
 import argparse
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor,as_completed
 import hashlib,json,os,shutil,subprocess,threading,time,traceback
 p=argparse.ArgumentParser(description=__doc__)
 for name in ('runner','bios','results','builds','mgba-build','mgba-source'):
@@ -56,7 +56,7 @@ def logic():
  test('repeat',extra=('--players','2','8','--baseline',r/'rounds'))
  test('menu_audio',variant='mksc-ring-shared',extra=('--host','3'))
  test('start_music',variant='mksc-ring-boot-shared',extra=('--boot-ring','--host','3'))
- test('music','music-leader',variant='mksc-ring-boot-shared',extra=('--boot-ring','--policy','shared','--host','3','--gp','--retro'))
+ test('music','music-leader',variant='mksc-ring-boot-shared',extra=('--boot-ring','--policy','shared','--host','3','--gp','--retro','--require-shrink'))
  test('audio','audio-shared',variant='mksc-ring-boot-shared',extra=('--boot-ring','--gp','--audio-policy','shared'))
  test('audio','audio-normal',extra=('--frames','24000','--audio-policy','normal'))
  test('gp_cup',extra=('--players','2','3','4','5','6','7','8','--autofire'))
@@ -90,7 +90,7 @@ def gui_audio():
 with ThreadPoolExecutor(max_workers=3) as pool:
  futures=[pool.submit(matrix,'normal'),pool.submit(matrix,'shared'),pool.submit(logic)]
  failures=[]
- for f in futures:
+ for f in as_completed(futures):
   try:f.result()
   except Exception:
    failures.append(traceback.format_exc());print(failures[-1],flush=True)
