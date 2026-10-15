@@ -79,10 +79,10 @@ sub_SetHDMA:
     sub r5, r5, #1
     subs r8, r8, #1
     bne .Lring_hdma_line
-    ldr r8, [sp]
-    ldr r9, [r8, #0x50]
-    rsb r9, r9, #1
-    str r9, [r8, #0x50]
+    /* Match the supplied USA 60 FPS patch: leave the selected write bank
+     * unchanged. The road display consumes bank zero; alternating writes
+     * previously made only every other projection visible (0x08030C18 in
+     * the clean ROM). Other camera publication helpers remain unchanged. */
     pop {r0-r11, lr}
     bx lr
     .ltorg

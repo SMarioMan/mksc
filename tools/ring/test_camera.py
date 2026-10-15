@@ -62,7 +62,7 @@ int main(void) {
             expected[i].dy = worldY + screenX * pc + scanline * pd;
         }
         sub_SetHDMA(camera);
-        if (camera[0x50/4] != 1-bank) { result[0] = 0xBAD00001; break; }
+        if (camera[0x50/4] != bank) { result[0] = 0xBAD00001; break; }
         for (i = 0; i < 96; i++) {
             volatile Affine* got = &BgAffineBuf[bank][i];
             Affine* want = &expected[i];
@@ -74,6 +74,7 @@ int main(void) {
             }
         }
         if (i != 96) break;
+
     }
     if (test == 4096) result[0] = 0x600DC0DE;
     for (;;) {}
@@ -103,4 +104,4 @@ proc = subprocess.run([str(a.runner), '--rom', str(a.results/'camera-test.gba'),
 assert proc.returncode == 0, proc.stderr
 result = json.loads(proc.stdout)
 assert result['bios'] == 'real' and result['nodes'][0]['dump'][0] == 0x600DC0DE, result
-print('PASS: ARM HDMA matches native arithmetic for 393,216 scanlines, including signed overflow and both buffers')
+print('PASS: ARM HDMA matches native arithmetic for 393,216 scanlines, including signed overflow, both buffers, and a stable write bank')

@@ -25,8 +25,8 @@ typedef struct Camera
     u32 field_0x34;
     Vec3s32 unk38;
     u8 field_0x44[8];
-    u32 field_0x4c;
-    s32 field_0x50;
+    u32 displayAffineBuffer; /* Completed road projection consumed by HBlank DMA. */
+    s32 writeAffineBuffer;   /* Next projection; publication advances it once. */
     u8 field_0x54[8];
     Vec3s32 unk5C[3];
     Vec2s32 hdmaBuffer[0x60];
