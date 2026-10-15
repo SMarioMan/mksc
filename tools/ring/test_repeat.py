@@ -43,7 +43,7 @@ for n in a.players:
     rows.extend((frame+2000,i,0 if i==0 else 17) for i in range(n))
     name=f'battle-repeat-{n}';inputs=a.results/(name+'.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
-    proc=subprocess.run([str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),
+    proc=subprocess.run([str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(rom),'--bios',str(a.bios),
                          '--players',str(n),'--frames',str(min(100000,frame*2+6000)),
                          '--input',str(inputs),'--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                          '--until-scene',hex(symbols['results_main']|1),

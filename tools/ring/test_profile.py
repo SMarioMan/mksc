@@ -15,7 +15,7 @@ for line in subprocess.check_output(['arm-none-eabi-nm','-n',str(a.elf)],text=Tr
 captures=[]
 for enabled in (False,True):
  name='profile' if enabled else 'normal';video=a.results/(name+'.csv')
- cmd=[str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players','8','--frames','6600',
+ cmd=[str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(a.rom),'--bios',str(a.bios),'--players','8','--frames','6600',
   '--input',str(a.inputs),'--autodrive-frame','5500','--autofire','--video-from','6000','--video-log',str(video),
   '--audio-state',hex(symbols['ring_audioTiming']),'--sound-table',hex(symbols['gMPlayTable']),
   '--timing-state',hex(symbols['ring_frameTiming']),'--barrier-before-input','--barrier-state',hex(symbols['sRing'])]

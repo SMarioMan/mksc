@@ -1466,16 +1466,36 @@ _080E80B4: .4byte _080E7DBC
 _080E80B8: .4byte _080E7DF4
 
 	.global _080E80BC
-_080E80BC: .4byte _080E7E2C
+_080E80BC:
+    .ifdef MKSC_RING
+    .4byte ring_retroBattleDef0
+    .else
+    .4byte _080E7E2C
+    .endif
 
 	.global _080E80C0
-_080E80C0: .4byte _080E7E64
+_080E80C0:
+    .ifdef MKSC_RING
+    .4byte ring_retroBattleDef1
+    .else
+    .4byte _080E7E64
+    .endif
 
 	.global _080E80C4
-_080E80C4: .4byte _080E7E9C
+_080E80C4:
+    .ifdef MKSC_RING
+    .4byte ring_retroBattleDef2
+    .else
+    .4byte _080E7E9C
+    .endif
 
 	.global _080E80C8
-_080E80C8: .4byte _080E7ED4
+_080E80C8:
+    .ifdef MKSC_RING
+    .4byte ring_retroBattleDef3
+    .else
+    .4byte _080E7ED4
+    .endif
 
 	.global _080E80CC
 _080E80CC: .4byte _080760FC

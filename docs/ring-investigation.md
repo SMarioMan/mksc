@@ -1,4 +1,33 @@
-## Current verification: native eight-player ring release (2026-10-14)
+## Active review (2026-10-15)
+
+The sections below describe the previous release and are historical evidence,
+not validation of the pending changes. The current review removes solo ring
+GP and the no-music build, restores native character selection, adjusts shared
+audio and adds the supplied full-rate road-display fix. New checks are being
+recorded privately under `/workspace/.setup/results/review-5`.
+
+Eight-window wall-clock audio delivery remains under investigation. Native
+simulation updates and a passing software PCM test do not establish that all
+eight host audio devices receive samples without underruns. Hardware remains
+untested. See `ring-display-rate.md` for the supplied patch analysis and
+`ring-menu-art.md` for replacement asset specifications.
+
+The current real-BIOS build passes all 21 mode-entry cases (Vs., Battle and
+Grand Prix at two through eight players), and all 56 authored Battle spawn
+cases across the four GBA and four restored SNES arenas. Waiting for discovery
+plays the stock link song in both normal and shared builds; shared peers stop
+their music after learning which console is host. Native music-handler
+comparison also corrected the driver timer names: Boo is at `0x66`, lightning
+at `0x68`, and Star at `0x6A`. The common music policy matches 349,504 native
+priority cases. Earlier diagnostics that called `0x66` Star are superseded.
+
+An isolated eight-window moving-race comparison measures 97.64 FPS before
+host interrupt waits and 98.25 FPS afterward, both with one simulation update
+per video frame. This measures uncapped emulation headroom, not audio quality.
+Extended host-output validation and the full updated 48-course matrix remain
+pending; `ring-validation.json` records those distinctions.
+
+## Previous release verification: native eight-player ring release (2026-10-14)
 
 All 44 courses pass complete eight-player real-BIOS validation in both normal
 and shared audio modes: 20 Super races, 20 Retro races and all four Battle

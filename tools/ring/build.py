@@ -8,8 +8,7 @@ p.add_argument("--boot-ring", action="store_true", help="Boot directly into the 
 p.add_argument("--code-padding", type=lambda value: int(value, 0), default=0,
                help="Insert aligned ROM padding before game code to test relocation")
 music = p.add_mutually_exclusive_group()
-music.add_argument("--music", choices=("normal", "off", "shared"), default="normal", help="Music policy; effects remain enabled")
-music.add_argument("--no-music", dest="music", action="store_const", const="off")
+music.add_argument("--music", choices=("normal", "shared"), default="normal", help="Music policy; effects remain enabled")
 music.add_argument("--shared-music", dest="music", action="store_const", const="shared")
 a = p.parse_args()
 if a.code_padding < 0 or a.code_padding > 65536 or a.code_padding % 4:
@@ -27,7 +26,7 @@ if not stamp.exists() or stamp.read_text() != configuration:
 link = (root / 'ld_script.ld').read_text()
 # Native decompression scratch extends beyond the frame heap. Put counters
 # above the last native global (0x0203EC8C), outside all graphics scratch.
-link = link.replace('        gMenuState = .; . += 4;', '        gMenuState = .; . += 4;\n        . = 0x3ED00;\n        ring_audioTiming = .; . += 64;\n        ring_audioDmaOverride = .; . += 4;\n        . = 0x3ED80;\n        src/ringSessionState.o(.bss);\n        src/ringSessionState.o(COMMON);\n        ASSERT(. <= 0x40000, "Audio counters exceed external RAM");')
+link = link.replace('        gMenuState = .; . += 4;', '        gMenuState = .; . += 4;\n        . = 0x3ED00;\n        ring_audioTiming = .; . += 64;\n        ring_audioDmaOverride = .; . += 4;\n        ring_audioMenuStarts = .; . += 44;\n        . = 0x3ED80;\n        src/ringSessionState.o(.bss);\n        src/ringSessionState.o(COMMON);\n        ASSERT(. <= 0x40000, "Audio counters exceed external RAM");')
 if a.code_padding:
     link = link.replace('        asm/crt0.o(.text);',
                         '        asm/crt0.o(.text);\n        . += %d;' % a.code_padding)
@@ -43,7 +42,8 @@ link = link.replace('        data/characterTiles.o(.rodata*);', '''        data/
         src/ringProjection.O3.o(.text);
         src/ringProjection.O3.o(.rodata*);
         src/ringSoundControl.O3.o(.text);
-        src/ringLink.o(.rodata);''')
+        src/ringLink.o(.rodata);
+        asm/ringBattleData.o(.rodata);''')
 link = link.replace('    /* Discard everything not specifically mentioned above. */', '''    .ring_irq ALIGN(ADDR(.bss) + SIZEOF(.bss), 4) : AT(ALIGN(LOADADDR(.text) + SIZEOF(.text), 4))
     {
         __ring_irq_start = .;

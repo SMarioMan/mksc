@@ -10,6 +10,14 @@ static int sBufferOffset;
 static int sNextAffineId;
 static u16 sBuffer[128 * 4];
 static OamCellListEntry sCellListEntries[32];
+#ifdef MKSC_RING
+extern OamCellListEntry* ring_sOamCells;
+#define OAM_CELL_ENTRIES (ring_sOamCells ? ring_sOamCells : sCellListEntries)
+#define OAM_CELL_LAST (ring_sOamCells ? 127 : 31)
+#else
+#define OAM_CELL_ENTRIES sCellListEntries
+#define OAM_CELL_LAST 31
+#endif
 static OamCellListEntry* sCellListHead;
 static OamCellListEntry* sCellListTail;
 static int sCellListEntryCount;
@@ -456,14 +464,14 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
         oam_300218C = 0;
         return;
     }
-    if (sCellListEntryCount <= 31)
+    if (sCellListEntryCount <= OAM_CELL_LAST)
     {
-        v12 = &sCellListEntries[sCellListEntryCount];
+        v12 = &OAM_CELL_ENTRIES[sCellListEntryCount];
         v13 = sCellListHead;
         if (!v13)
         {
-            sCellListTail = &sCellListEntries[sCellListEntryCount];
-            sCellListHead = &sCellListEntries[sCellListEntryCount];
+            sCellListTail = &OAM_CELL_ENTRIES[sCellListEntryCount];
+            sCellListHead = &OAM_CELL_ENTRIES[sCellListEntryCount];
             v12->prev = v13;
             v12->next = v13;
         }
@@ -475,11 +483,11 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
             v12->next = 0;
             sCellListTail = v12;
         }
-        v16 = &sCellListEntries[sCellListEntryCount].field8;
+        v16 = &OAM_CELL_ENTRIES[sCellListEntryCount].field8;
         v16->field0 = a6->field0;
         v16->priority = a6->priority;
         v16->priority += ((cellData[3] & 0xC00) << 16);
-        cell = &sCellListEntries[sCellListEntryCount].cell;
+        cell = &OAM_CELL_ENTRIES[sCellListEntryCount].cell;
         cell->cellData = cellData;
         cell->offsetX = position->x;
         cell->offsetY = position->y;
@@ -586,6 +594,7 @@ void oam_init(void)
     CpuFastFill(0, (void*)OAM, OAM_SIZE);
     sBufferOffset = 0;
 #ifdef MKSC_RING
+    if (ring_active()) ring_allocateSpriteQueue();
     for (i = 0; i < 8; i++) ring_balloonAffineIndex[i] = 255;
 #endif
     sNextAffineId = 0;
@@ -604,9 +613,6 @@ void oam_init(void)
 
 void oam_update(void)
 {
-#ifdef MKSC_RING
-    ring_drawNativeMenuCursors();
-#endif
     if (!oam_3002188 || !sCopyDisabled)
         return;
     oam_300218C = 1;

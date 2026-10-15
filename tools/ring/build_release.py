@@ -12,7 +12,7 @@ def publish(source,target):
  shutil.copyfile(source,temporary);temporary.replace(target)
 variants={}
 for boot in (False,True):
- for music,label in (('normal',''),('shared','-shared'),('off','-silent')):
+ for music,label in (('normal',''),('shared','-shared')):
   name='mksc-ring'+('-boot' if boot else '')+label
   with (out/(name+'-build.log')).open('w') as log:
    subprocess.run(['python3','tools/ring/build.py','--music',music]+(['--boot-ring'] if boot else []),cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
@@ -23,5 +23,8 @@ for boot in (False,True):
 with (out/'shifted-build.log').open('w') as log:
  subprocess.run(['python3','tools/ring/build.py','--code-padding','0x400'],cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
 for ext in ('gba','elf','sym'):publish(root/('mksc-ring.'+ext),out/('mksc-ring-shifted.'+ext))
+# Keep the ordinary working filenames useful for manual testing. The shifted
+# relocation fixture has its own explicit name in the release directory.
+for ext in ('gba','elf','sym'):publish(out/('mksc-ring.'+ext),root/('mksc-ring.'+ext))
 assert hashlib.sha1((root/'mksc.gba').read_bytes()).hexdigest()=='9d327c030c3e2d9007990518594f70c3340ac56f'
-print('PASS six variants, shifted build, and stock hash',flush=True)
+print('PASS four variants, shifted build, and stock hash',flush=True)

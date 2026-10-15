@@ -21,7 +21,7 @@ for arena in a.arenas:
  events.extend((3500,i,1 if i==0 else 17) for i in range(8))
  name=f'arena-{arena+1}';inputs=a.results/(name+'.csv');video=a.results/(name+'-video.csv')
  inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(events)))
- proc=subprocess.run([str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players','8','--frames','5700','--input',str(inputs),'--video-log',str(video),'--video-from','4500','--barrier-before-input','--barrier-state','0x03006B40','--screens',str(a.results/name)],capture_output=True,text=True,timeout=300)
+ proc=subprocess.run([str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(a.rom),'--bios',str(a.bios),'--players','8','--frames','5700','--input',str(inputs),'--video-log',str(video),'--video-from','4500','--barrier-before-input','--barrier-state','0x03006B40','--screens',str(a.results/name)],capture_output=True,text=True,timeout=300)
  (a.results/(name+'.json')).write_text(proc.stdout);(a.results/(name+'.stderr')).write_text(proc.stderr)
  assert proc.returncode==0 and not proc.stderr,(name,proc.stderr)
  result=json.loads(proc.stdout);assert result['collisions']==0

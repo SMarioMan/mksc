@@ -4,7 +4,7 @@ import argparse,json,struct,subprocess
 from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__)
 for k in ('runner','rom','elf','bios','results'):p.add_argument('--'+k,required=True,type=Path)
-p.add_argument('--players',nargs='+',type=int,default=[1,2,8])
+p.add_argument('--players',nargs='+',type=int,choices=range(2,9),default=list(range(2,9)))
 a=p.parse_args();a.results.mkdir(parents=True,exist_ok=True)
 sym={f[2]:int(f[0],16) for l in subprocess.check_output(['arm-none-eabi-nm','-n',str(a.elf)],text=True).splitlines() if len(f:=l.split())==3}
 base=[]
@@ -14,13 +14,12 @@ for l in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
 for n in a.players:
  rows=[]
  for f,k in base:
-  if n==1 and f==1500:k=4
   rows.extend((f,i,k) for i in range(n if f<1500 or f in (2000,2015) else 1))
- if n>1:rows.extend([(1600,0,64),(1615,0,0)])
+ rows.extend([(1600,0,64),(1615,0,0)])
  inputs=a.results/f'gp-{n}.csv';inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
  for advance in (False,True):
   name=f'gp-{n}-'+('next' if advance else 'points')
-  cmd=[str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(n),'--frames','50000','--input',str(inputs),'--autodrive-frame','3500','--autofire','--barrier-before-input','--barrier-state','0x03006B40','--dump',hex(sym['sGPPoints']),'--until-scene',hex(sym['race_main' if advance else 'results_main']|1),'--screens',str(a.results/name)]
+  cmd=[str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(n),'--frames','50000','--input',str(inputs),'--autodrive-frame','3500','--autofire','--barrier-before-input','--barrier-state','0x03006B40','--dump',hex(sym['sGPPoints']),'--until-scene',hex(sym['race_main' if advance else 'results_main']|1),'--screens',str(a.results/name)]
   if advance:cmd+=['--auto-confirm-scene',hex(sym['results_main']|1),'--watch',hex(sym['sCourse']),'--until-watch-value','1']
   r=subprocess.run(cmd,capture_output=True,text=True,timeout=600)
   (a.results/(name+'.json')).write_text(r.stdout);(a.results/(name+'.stderr')).write_text(r.stderr)

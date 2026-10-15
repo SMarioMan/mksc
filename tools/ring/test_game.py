@@ -61,7 +61,7 @@ for n in a.players:
         name = f'{mode}-{n}'
         inputs = a.results / f'{name}.csv'
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))
-        command = [str(a.runner), '--ring', '--rom', str(rom),
+        command = [str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(rom),
                                '--bios', str(a.bios), '--players', str(n),
                                '--frames', '3750', '--input', str(inputs),
                                '--keys-address', '0x03006B00', '--key-slots', '8',
@@ -91,6 +91,8 @@ for n in a.players:
             assert node['menu']['heldKeys'] == HELD[:n] + [0] * (8 - n), (name, node['menu'])
             racers = game['drivers'][:8 if mode == 'gp' else n]
             assert all(r['address'] for r in racers), name
+            if mode == 'gp':
+                assert len(racers)==8 and len({r['character'] for r in racers})==8, (name,'GP roster must contain eight distinct characters',racers)
             if 'id' in racers[0]:
                 assert [r['id'] for r in racers] == list(range(8 if mode == 'gp' else n)), (name, racers)
                 if mode == 'battle':

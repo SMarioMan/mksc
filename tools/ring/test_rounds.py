@@ -19,6 +19,7 @@ p.add_argument('--nm', default='arm-none-eabi-nm')
 p.add_argument('--players', nargs='+', type=int, default=list(range(2,9)))
 p.add_argument('--modes', nargs='+', choices=['vs','battle'], default=['vs','battle'])
 p.add_argument('--workers', type=int, choices=range(1,5), default=3)
+p.add_argument('--toad-150cc-retro', action='store_true', help='Reproduce host Toad finishing SNES Mario Circuit 1 at 150cc')
 p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
 a = p.parse_args()
 if any(n < 2 or n > 8 for n in a.players):
@@ -54,16 +55,28 @@ def run(n,mode):
         for step in range(3):
             rows.extend([(2300+step*40,0,128),(2320+step*40,0,0)])
         rows.extend((3500,i,0 if i == 0 else 17) for i in range(n))
+    if a.toad_150cc_retro:
+        assert mode == 'vs' and n == 8, 'Finish regression uses eight-player Vs.'
+        rows = [row for row in rows if row[0] < 1500]
+        rows.extend([(1500,0,8),(1515,0,0),(1650,0,1),(1665,0,0),
+                     (1850,0,128),(1865,0,0),(1890,0,128),(1905,0,0),
+                     (1950,0,1),(1965,0,0),(2150,0,128),(2165,0,0),
+                     (2150,3,64),(2165,3,0)])
+        rows.extend((2300,i,1) for i in range(n))
+        rows.extend((2315,i,0) for i in range(n))
+        rows.extend((f,0,k) for f,k in ((2600,256),(2615,0),(3000,1),(3015,0),
+                    (3300,1),(3315,0),(3600,1),(3615,0),(3900,1),(3915,0)))
     inputs = a.results/(name+'.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
-    command = [str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),
+    command = [str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(rom),'--bios',str(a.bios),
                '--players',str(n),'--frames',str(50000 if mode == 'vs' else 30000),
                '--input',str(inputs),'--dump',hex(dumpBase),
                '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                '--until-scene',hex(symbols['results_main'] | 1),
                '--screens',str(a.results/name)]
+    if a.toad_150cc_retro:command += ['--record-inputs',str(a.results/(name+'-recorded.csv'))]
     if mode == 'vs':
-        command += ['--autodrive-frame','3500','--autofire']
+        command += ['--autodrive-frame','5500' if a.toad_150cc_retro else '3500','--autofire']
     if a.hle:
         bios_index = command.index('--bios')
         del command[bios_index:bios_index + 2]
@@ -78,6 +91,12 @@ def run(n,mode):
     states = []
     rounds = []
     for node in result['nodes']:
+        if a.toad_150cc_retro:
+            assert node['game']['engineClass']==2,('Finish fixture did not select 150cc',node['game']['engineClass'])
+            first=struct.unpack_from('<I',rom_data,symbols['gRetroCups']-0x08000000)[0]
+            assert node['game']['headerIndex']==first,('Finish fixture did not select Retro Mario Circuit 1',node['game']['headerIndex'],first)
+            assert node['game']['drivers'][0]['character']==6, 'Host must be Toad'
+            assert node['game']['drivers'][0]['lap']>=4,'Host did not cross the finish line'
         assert node['game']['sceneMain'] == symbols['results_main'] | 1, (name,node['game'])
         barrier = node['barrier']
         assert barrier['errors'] == barrier['timeouts'] == 0, (name,barrier)

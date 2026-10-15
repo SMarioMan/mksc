@@ -39,7 +39,7 @@ for mode in ('vs', 'battle', 'gp'):
     inputs = a.results / (mode + '-inputs.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(rows)))
     video = a.results / (mode + '-video.csv')
-    proc = subprocess.run([str(a.runner), '--ring', '--rom', str(a.rom), '--bios', str(a.bios),
+    proc = subprocess.run([str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(a.rom), '--bios', str(a.bios),
                            '--players', str(a.players), '--frames', '4000', '--input', str(inputs),
                            '--video-from', '2000', '--video-log', str(video), '--barrier-before-input',
                            '--barrier-state', hex(symbols['sRing'])], capture_output=True, text=True, timeout=120)

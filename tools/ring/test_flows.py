@@ -14,7 +14,7 @@ for name in ('runner', 'rom', 'elf', 'bios', 'results'):
     p.add_argument('--'+name, required=True, type=Path)
 p.add_argument('--nm', default='arm-none-eabi-nm')
 p.add_argument('--players', nargs='+', type=int, default=[2,8])
-p.add_argument('--cases', nargs='+', choices=['loss','pause','restart','cancel'], default=['loss','pause','restart','cancel'])
+p.add_argument('--cases', nargs='+', choices=['loss','pause','restart','cancel','characters'], default=['loss','pause','restart','cancel','characters'])
 a=p.parse_args()
 assert all(2<=n<=8 for n in a.players)
 assert hashlib.sha1(a.bios.read_bytes()).hexdigest()=='300c20df6731a33952ded8c436f7f186d25d3492'
@@ -36,7 +36,11 @@ for n in a.players:
             if case=='cancel' and f>=1500:continue
             rows.extend((f,i,k) for i in range(n if f<1500 or f in (2000,2015) else 1))
         extra=[];frames=6400
-        if case in ('pause','restart'):
+        if case=='characters':
+            frames=5200
+            rows.extend([(3800,0,8),(3815,0,0),(4200,0,128),(4215,0,0),
+                         (4240,0,128),(4255,0,0),(4300,0,1),(4315,0,0)])
+        elif case in ('pause','restart'):
             rows.extend([(3800,0,8),(3815,0,0),(4200,0,128),(4215,0,0),
                          (4300,0,1),(4315,0,0),(4600,0,1),(4615,0,0)])
             if case=='restart':rows=[row for row in rows if row[0] not in (4200,4215,4600,4615)]
@@ -58,13 +62,13 @@ for n in a.players:
             for f,k in [(5500,8),(5515,0),(5650,1),(5665,0),(5800,1),(5815,0),
                         (6000,1),(6015,0),(6200,1),(6215,0),(6350,1),(6365,0)]:
                 rows.extend((f,i,k) for i in range(n if f in (6000,6015) else 1))
-        rows.extend((frames-100,i,1) for i in range(n))
+        if case!='characters':rows.extend((frames-100,i,1) for i in range(n))
         name=f'{case}-{n}';inputs=a.results/(name+'.csv')
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
-        command=[str(a.runner),'--ring','--rom',str(rom),'--bios',str(a.bios),
+        command=[str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(rom),'--bios',str(a.bios),
                  '--players',str(n),'--frames',str(frames),'--input',str(inputs),
                  '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),'--dump',hex(symbols['sRing']),
-                 '--keys-address','0x03006B00','--key-slots','8','--screens',str(a.results/name)]+extra
+                 '--watch','0x0202A400','--keys-address','0x03006B00','--key-slots','8','--screens',str(a.results/name)]+extra
         proc=subprocess.run(command,capture_output=True,text=True,timeout=300)
         (a.results/(name+'.json')).write_text(proc.stdout)
         (a.results/(name+'.stderr')).write_text(proc.stderr)
@@ -75,8 +79,11 @@ for n in a.players:
             r=node['barrier'];g=node['game']
             assert r['errors']==r['timeouts']==0,(name,r)
             assert r['id']==node['slot'] and r['count']==n,(name,r)
+            if case=='characters':
+                assert g['sceneMain']==symbols['ring_main']|1 and node['watch']==1,(name,'Pause did not return to native character select',g,node['watch'])
+                continue
             assert g['sceneMain']==symbols['race_main']|1 and g['humanCount']==n,(name,g)
             assert node['menu']['heldKeys']==[1]*n+[0]*(8-n),(name,node['menu'])
             states.append((r['round'],[v['position'] for v in g['drivers'][:n]]))
         assert all(s==states[0] for s in states),(name,states)
-        print(f'PASS {name}: fresh synchronized race with {n} humans',flush=True)
+        print(f'PASS {name}: '+('native character page restored' if case=='characters' else f'fresh synchronized race with {n} humans'),flush=True)

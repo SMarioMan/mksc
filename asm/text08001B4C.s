@@ -9241,6 +9241,20 @@ _08006514: .4byte _080D93A0
 
 	thumb_func_start sub_8006518
 sub_8006518: @ 0x08006518
+    .ifdef MKSC_RING
+    push {r0-r4, lr}
+    bl ring_drawNativeCharacterCursor
+    cmp r0, #0
+    pop {r0-r4}
+    push {r3}
+    ldr r3, [sp, #4]
+    mov lr, r3
+    pop {r3}
+    add sp, #4
+    beq .LnativeCharacterCursor
+    bx lr
+.LnativeCharacterCursor:
+    .endif
 	push {r4, r5, r6, r7, lr}
 	mov r7, r8
 	push {r7}

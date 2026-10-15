@@ -12,12 +12,11 @@ consoles, enter Ring Link on each, and press Start on one console. That console
 owns the clock and menus. Choose Vs., Battle, or Grand Prix, engine class (races), individual
 characters, and a track or arena. Eight controllers, character slots, and
 converted driver input words have separate storage; unused slots stay released.
-Grand Prix supports 1–8 humans, fills the remaining grid slots with CPUs, and
+Grand Prix supports 2–8 humans, fills the remaining grid slots with CPUs, and
 runs four-course cups with native 9/6/3/1 points and the native three Super /
 five Retro laps. Awards use the original points table; cumulative standings
 use the original eight-racer builder and its tied ranks and human/CPU rules.
-Select in the disconnected
-Ring Link lobby starts solo GP. In linked GP, choose a cup rather than a single
+Ring Link requires 2–8 connected players. In GP, choose a cup rather than a single
 course; A advances results to the next race, then returns to cup selection.
 
 The normal-32 transport uses the standard 2 MHz serial clock and assigns
@@ -35,8 +34,9 @@ a fresh session. The stock Multi-Pak/Single-Pak paths remain separate.
 Use `mgba-link` with the real uploaded BIOS for tests. `test_game.py` exercises
 menu/gameplay entry and independent controls for every count from 2 through 8
 in both modes. Its default snapshot is before physics at a common input barrier.
-`--arena 0..3` selects a Battle arena. `test_lobby.py` checks the complete PCM
-buffer while waiting for discovery. `test_singleplayer.py` exercises item use
+`--arena 0..3` selects a Battle arena. `test_lobby.py` checks the stock link-menu
+song and continuously changing PCM while waiting for discovery. It also needs
+the matching `--elf`. `test_singleplayer.py` exercises item use
 and character sound scripts in ordinary GP, checking that shifted callbacks
 return safely. Each script needs `--runner`, `--rom`, `--bios`, and `--results`;
 the single-player script additionally needs the matching `--elf` and optionally
@@ -53,9 +53,10 @@ independent character picks without extending the native four-slot widgets.
 Results reuse the native eight-row graphics/renderer; GP standings and tied
 ranks use the original builder. Menu accessors and positional volume queries
 are matching C, and the clean build remains hash-identical.
-After the BIOS-backed matrix passed, optional
-HLE passed two- and eight-player entry and complete rounds in both modes, plus
-the ordinary GP character-voice regression. Add `--hle` to `test_game.py`,
+The previous release passed optional HLE entry and complete rounds at two and
+eight players, plus the ordinary GP character-voice regression. The pending
+release must repeat its BIOS checks before HLE is tested again.
+Add `--hle` to `test_game.py`,
 `test_rounds.py`, or `test_singleplayer.py` to select it explicitly. Their BIOS
 argument still identifies the supplied validation fixture; it is not loaded
 in HLE mode. The complete 2–8-player matrix, recovery, and replay coverage use
@@ -99,26 +100,29 @@ product wrapping; `test_camera.py` builds a separate homebrew and compares
 393,216 scanlines against the native arithmetic using the supplied BIOS.
 Balloons sharing the same transform reuse an affine matrix, preserving space
 in the GBA's 32-matrix OAM budget for karts and course objects.
+Ring sessions also expand the native sorted sprite queue from 32 to 128
+entries. Its allocation belongs to the scene heap and is invalidated when
+that heap resets. This lets all 24 Battle balloons reach the renderer while
+retaining the hardware limit of 128 sprites.
 
 ## Build and launch options
 
 ```sh
 python3 tools/ring/build.py                         # Normal title-menu boot/music
 python3 tools/ring/build.py --boot-ring --shared-music
-python3 tools/ring/build.py --boot-ring --no-music
 ```
 
 Each command writes `mksc-ring.gba`, `.elf`, and `.sym`; changing options
 rebuilds the variant's objects automatically. The stock matching build and ROM
-remain separate. `--music normal|off|shared` is an alternative to the two music
-flags. `--boot-ring` enters the connection menu directly and still waits for
+remain separate. `--music normal|shared` selects the audio policy. `--boot-ring` enters the connection menu directly and still waits for
 Start on one console. It supports the same connection, Vs., Battle, and GP flow.
 
-`--no-music` disables player-zero BGM and jingles, retaining effects and voices.
-`--shared-music` plays BGM only on software P1, the clock owner, while keeping each console's own engine and character voices. Remote engine/voice mixer players are
+The connection screen plays the stock link-menu song. Before discovery, each
+standalone console plays it locally; in shared mode, peers stop their BGM as
+soon as their software ID is known. After connection, `--shared-music` plays
+BGM only on software P1, the clock owner, while keeping each console's own engine and character voices. Remote engine/voice mixer players are
 muted; spectator-camera voice requests are checked against the local character.
-Other sound effects remain available on all consoles. It retains course/Battle music, suppresses
-individual power-up music, and derives final-lap tempo from all racers,
+Other sound effects remain available on all consoles. Non-music effects play at one quarter of their normal volume, including menus. The host combines every racer's effect state using the stock priority: Star, Boo, then lightning. It derives final-lap tempo from all racers,
 including GP CPUs. The first racer reaching
 the final lap triggers the common jingle and fast course tempo. Audio reacts
 on the next video frame. End-of-race jingles use the common victory theme.
@@ -132,14 +136,16 @@ mgba-qt --ring-players 8 --instance-settings ./ring-settings --hide-menu \
 
 Replace the executable with `mGBA.exe` on Windows. Open Settings in each window
 to save independent bindings; Alt reveals the hidden windowed menu. Press Start
-in P1 to host. Select switches between Super and Retro on both the cup and track
-screens, and the Retro track screen displays course names.
+in P1 to host. Use the stock L/R prompts to switch between Super and Retro
+courses. The Retro track screen displays course names. Battle also supports
+L/R, selecting four restored SNES arenas alongside the four GBA arenas.
 
-Battle slots 5–8 pair with slots 1–4. Each pair moves symmetrically left/right
-of the native marker's heading; candidate distances shrink together if either
-side would land on a void/lava tile. The native marker remains the midpoint.
-`test_spawns.py` checks the midpoint, heading, right-hand side, and synchronization
-on all four arenas.
+Battle uses the eight distinct spawn markers already authored in each arena.
+Each kart faces inward toward the center of those markers. No custom paired
+offsets are applied. `test_spawns.py` checks the exact authored coordinates,
+terrain, heading and synchronization at every player count from two to eight
+on all eight arenas. See `docs/ring-retro-battle.md` for restoration details
+and reference-patch attribution.
 
 Completed race graphics that miss the initial VBlank IRQ can publish during
 the remaining blanking interval, with a deadline based on queued DMA bytes and
@@ -165,8 +171,8 @@ also checks a mixed-count snapshot where a living low-index racer has fewer
 balloons than players 5–8, so merely skipping eliminated racers cannot pass.
 `test_transition.py` exercises Rainbow Road → pause/change track → Back →
 Battle, guarding against carried course indexes and double-consumed Back.
-`test_gp.py` checks first-race points and next-course loading at one, two, and
-eight humans. `test_gp_cup.py` completes a four-course Retro cup, checking
+`test_gp.py` checks first-race points and next-course loading at every count
+from two through eight humans. `test_gp_cup.py` completes a four-course Retro cup, checking
 synchronized human/CPU physics, five laps per Retro race, and a total of 76
 awarded points. Its optional `--autofire` also uses items. Both GP
 scripts need the matching `--elf`. `test_target.py` compares the Battle target
@@ -187,7 +193,22 @@ scene memory.
 `test_start_music.py` covers the opening fanfare before course BGM in eight-player
 Vs./Battle/GP (including a host in another physical window). Shared music waits
 for the native opening song to end, preserves common final-lap/result jingles,
-and ignores local power-up themes. Peers retain sound effects and voices.
+and chooses a common Star or lightning theme from every racer's effect state.
+Peers retain their own engine and voice sounds. Common menu sounds play on
+the host; shared-build effects use one quarter of their original volume.
+
+`test_battle_menu.py` compares the published SNES preview graphics and palette
+with the supplied reference patch, then checks a round trip back to the GBA
+page. `test_threaded_video.py` requires exact CPU/game/transport snapshots,
+framebuffers and PCM recordings with threaded rendering enabled and disabled.
+`verify_release.py` runs host-clock SDL and Qt audio checks after its CPU-heavy
+checks have finished. Those checks need a working audio server and fail on
+any underrun during the five-minute moving measurement. HLE runs last.
+MKSC fixtures use a 2,048-cycle normal-32 cable quantum, matching the GUI's
+transfer limit. The generic protocol runner retains its conservative default
+for other ROMs and serial modes. `test_shared_themes.py` compares 349,504
+effect-mask combinations with the original Thumb music-request handler,
+including inactive slots and native Star/Boo/lightning priority.
 
 For relocation checks, build the same configuration with and without
 `--code-padding 0x400`, save immutable ROM/ELF copies, and run
@@ -199,13 +220,13 @@ This flag only pads the ROM for validation; normal builds use no added padding.
 The ring mixer keeps the native 10,512 Hz sample rate and six-channel budget.
 It snapshots its PCM destination before the music callbacks. Shared audio
 prepares one extra frame ahead (about 16.7 ms additional output latency);
-normal and silent builds prepare two extra frames ahead (about 33.5 ms),
+normal builds prepare two extra frames ahead (about 33.5 ms),
 allowing for their retained remote engine and voice mixing. Delayed segments
 are recovered in playback order before their deadlines. Frame/counter reads are
 atomic, and diagnostics retain both missed services and recovered/late
 segments. The native RAM mixing kernel remains unchanged. `test_audio_queue.py`
 executes the actual ROM mixer entry across 440 counter/override/IRQ fixtures;
-use `--ahead 2` for shared audio and `--ahead 3` for normal/silent audio.
+use `--ahead 2` for shared audio and `--ahead 3` for normal audio.
 `test_audio.py --gp --frames 90000` records a complete eight-player Retro cup,
 checks local voice ownership, remote-player suppression and PCM deadlines,
 and retains eight per-instance WAV files.
@@ -221,7 +242,7 @@ The runner observes instructions inside its normal scheduling quantum.
 video frame with profiling enabled/disabled; both must be byte-identical.
 Performance captures require `profileScheduling: "quantum"`; `--resume`
 recaptures results made by the older stepping profiler.
-Use `--audio-policy normal` or `--audio-policy off` when checking those builds;
+Use `--audio-policy normal` when checking those builds;
 only shared audio requires remote engine/voice channels to remain silent. Performance
 checks require both a mean and every measured 300-frame window to reach 95%
 of the video rate; emulator FPS alone is insufficient.
@@ -270,3 +291,5 @@ A successful run writes `verification-complete.json`; partial runs retain their
 logs but do not receive that completion marker. Results and builds contain
 private ROM copies and must remain outside version control. The BIOS/base ROM
 are never part of a distributable release.
+
+Replacement menu art specifications and the private-reference export command are in [ring-menu-art.md](../../docs/ring-menu-art.md).

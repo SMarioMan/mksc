@@ -18,6 +18,7 @@
 #include "singleplayer.h"
 #include "menuQueries.h"
 #include "ringSessionState.h"
+#include "songs.h"
 
 /* Serial transport owns timer 2 only. Audio owns timers 0/1; stock cable
  * transports keep timer 3. All software IDs travel through the cable. */
@@ -56,7 +57,8 @@ extern u8 gSelectedCharacters[8];
 extern u16 sio2_sKeyBuf[8];
 void sub_804AE58(RaceState* state, int character, int human);
 int spm_menuCharIdxToCharId(int menuIndex);
-enum { GAME, ENGINE, CHARACTERS, CUP, COURSE, ARENA };
+/* Zero means a fresh discovery; every resume destination must be nonzero. */
+enum { GAME = 1, ENGINE, CHARACTERS, CUP, COURSE, ARENA };
 extern u8 sSession, sResume;
 extern u8 sEliminated;
 enum { VS_MODE, BATTLE_MODE, GP_MODE };
@@ -67,6 +69,7 @@ extern u32 ring_frameTiming[5];
  * mixer services, missed video-frame services, longest service gap,
  * recovered segments and segments prepared after their playback deadline. */
 extern u32 ring_audioTiming[16];
+extern u32 ring_audioMenuStarts[11];
 extern u32 ring_audioDmaOverride;
 /* Preserve the queued PCM destination across a VBlank interrupt during the
  * music-player pass; the assembler applies the configured queue depth. */
@@ -79,9 +82,10 @@ u32 ring_audioMixCounter(struct SoundInfo* sound)
 void ring_noteAudioStart(struct MusicPlayerInfo* player)
 {
     u32 i;
-    if (!sRing.enabled || !sRing.inGame) return;
+    u32* starts = sRing.inGame ? ring_audioTiming : ring_audioMenuStarts;
+    if (!sRing.enabled) return;
     for (i = 0; i < 11; i++)
-        if (player == gMPlayTable[i].info) { ring_audioTiming[i]++; break; }
+        if (player == gMPlayTable[i].info) { starts[i]++; break; }
 }
 extern u32 sRenderStart;
 static u32 ring_cycles(void)
@@ -123,7 +127,14 @@ int ring_sharedAudioMuted(struct MusicPlayerInfo* player, struct SongHeader* son
     extern const u16 _080ECC48[8][2], _080ECC88[8][2];
     u32 i, character;
     Driver* local;
-    if (!sRing.enabled || !sRing.inGame) return FALSE;
+    if (!sRing.enabled) return FALSE;
+    if (!sRing.inGame)
+    {
+        /* Mode, course and results pages replay the same host input on all
+         * peers. Emit their common menu effects once. Character selection
+         * keeps each console's own navigation/confirmation sounds. */
+        return sRing.count && sRing.id != 0 && !sNativeCharacterMenu;
+    }
     if (player == gMPlayTable[3].info || player == gMPlayTable[4].info) return TRUE;
     if (player != gMPlayTable[2].info && player != gMPlayTable[6].info) return FALSE;
     local = gSceneState.raceState.drivers[sRing.id];
@@ -151,13 +162,14 @@ u16 ring_sharedMusicSong(u16 song)
 {
     return ring_sharedMusicActive() && song >= 5 && song <= 7 ? 5 : song;
 }
-/* Derive BGM from the whole race, ignoring local power-up themes. Native
+/* Derive BGM from the whole race, including shared power-up themes. Native
  * final-lap flag is bit 3; finished drivers keep it set, so tempo never drops. */
 static void ring_updateSharedMusic(void)
 {
     extern void m4aMPlayTempoControl(struct MusicPlayerInfo*, u16);
     RaceState* state = &gSceneState.raceState;
-    u32 i, fast = 0, music, finished = 0, alive = 0;
+    extern u16 ring_raceEffectMusic(const RaceState*);
+    u32 i, fast = 0, music, effect, finished = 0, alive = 0;
     if (ring_sharedMusicMuted())
     {
         if (!(gMPlayTable[0].info->status & MUSICPLAYER_STATUS_PAUSE))
@@ -169,8 +181,7 @@ static void ring_updateSharedMusic(void)
     /* Physics begins during the native opening fanfare. Do not treat its
      * first tick as permission to replace a still-playing start song. Both
      * GP and linked races use player zero for this finite introductory cue. */
-    if (!sSharedSong &&
-        (gMPlayTable[0].info->songHeader == gSongTable[3].header ||
+    if ((gMPlayTable[0].info->songHeader == gSongTable[3].header ||
          gMPlayTable[0].info->songHeader == gSongTable[4].header) &&
         (gMPlayTable[0].info->status & MUSICPLAYER_STATUS_TRACK) &&
         !(gMPlayTable[0].info->status & MUSICPLAYER_STATUS_PAUSE)) return;
@@ -186,6 +197,12 @@ static void ring_updateSharedMusic(void)
     if (sBattle) fast = 0;
     music = sBattle ? 18 : track_getRaceMusic(state);
     if (music == 36) music = 28;
+    /* Native timers belong to every racer, including CPUs. Star takes
+     * priority over lightning until the last protected racer loses it. */
+    effect = ring_raceEffectMusic(state);
+    if (effect) music = effect;
+    if (gMPlayTable[0].info->songHeader == gSongTable[19].header &&
+        (gMPlayTable[0].info->status & MUSICPLAYER_STATUS_TRACK)) return;
     if (sSharedSong != music || sSharedFinalLap != fast)
     {
         if (fast && !sSharedFinalLap)
@@ -194,14 +211,14 @@ static void ring_updateSharedMusic(void)
             sSharedSong = music; sSharedFinalLap = fast;
             return;
         }
-        m4aSongNumStart(music);
+        MPlayStart(gMPlayTable[0].info, gSongTable[music].header);
         sSharedSong = music; sSharedFinalLap = fast;
     }
-    /* Resume after the common final-lap jingle, never an individual star. */
+    /* A finite final-lap cue finishes before returning to the common theme. */
     if (gMPlayTable[0].info->songHeader == gSongTable[19].header &&
         (gMPlayTable[0].info->status & MUSICPLAYER_STATUS_TRACK)) return;
     if (gMPlayTable[0].info->songHeader != gSongTable[music].header)
-        m4aSongNumStart(music);
+        MPlayStart(gMPlayTable[0].info, gSongTable[music].header);
     m4aMPlayTempoControl(gMPlayTable[gSongTable[music].ms].info, fast ? 320 : 256);
 }
 #endif
@@ -710,14 +727,15 @@ static void RING_IRQ ring_timerHandler(void)
     poll();
 }
 
-static void waitReceiver(void)
+static void waitForLinkInterrupt(void)
 {
-    if (sRing.owner) return;
     /* Serial and VBlank IRQs wake HALT even with IME masked. Check and sleep
      * atomically so a COMMIT between the check and HALT cannot strand a peer.
-     * Keep external-clock consoles from spending the whole barrier spinning. */
+     * The clock owner can sleep too: an active transfer completes through
+     * SIO, and its forwarding turnaround is driven by the Timer 2 IRQ. */
     REG_IME = 0;
-    if (sRing.enabled && sRing.inFlight && !sRing.complete && !sRing.failed)
+    if (sRing.enabled && !sRing.complete && !sRing.failed &&
+        (sRing.inFlight || (sRing.owner && (REG_TM2CNT_H & 0x80))))
         *(vu8*)0x04000301 = 0;
     REG_IME = 1;
 }
@@ -783,7 +801,7 @@ void sub_8031ED8(RaceState* state);
 int sub_8032990(RaceState* state, int x, int y, int layer);
 void loadtrack_8031F9C(RaceState* state)
 {
-    u32 i, candidate;
+    u32 i;
 
     /* Stock Vs. generates only two, three or four start positions. Tracks
      * already contain the eight-position Grand Prix grid. */
@@ -791,33 +809,70 @@ void loadtrack_8031F9C(RaceState* state)
         sub_8031ED8(state);
     else
         loadtrack_stockStartGrid(state);
-    if (sRing.enabled && sRing.count > 4 && (state->curRaceStateUnknown & 0x800))
+    if (sRing.enabled && (state->curRaceStateUnknown & 0x800))
     {
-        /* Pair each new slot with its native marker, symmetrically across
-         * the marker's facing direction. Shrink both offsets together when
-         * the arena edge would put either racer in a void/lava tile. */
-        for (i = 4; i < sRing.count; i++)
+        /* Battle records already contain eight distinct 0x81..0x88 markers.
+         * The stock four-player generator ignores half of them. Use their
+         * authored positions directly, independent of participant count. */
+        extern int sub_8032BC8(int header);
+        const u8* data = (const u8*)state->trackData;
+        u32 offset = *(const u32*)(data + 0x98);
+        const u8* marker = data + offset;
+        s32 centerX = 0, centerY = 0;
+        u32 seen = 0;
+        if (!offset) { sRing.failed = TRUE; return; }
+        while (marker[0])
         {
-            s32* base = (s32*)((u8*)state + 0x24 + (i - 4) * 16);
-            s32* extra = (s32*)((u8*)state + 0x24 + i * 16);
-            s32 x = base[0], y = base[1];
-            s16 yaw = base[2];
-            for (candidate = 12; candidate >= 4; candidate -= 4)
+            u32 slot = marker[0] - 0x81;
+            if (slot < 8)
             {
-                s32 dx = math_cos(yaw) * candidate * 2;
-                s32 dy = math_sin(yaw) * candidate * 2;
-                if (!(sub_8032990(state, (x + dx) >> 16, (y + dy) >> 16, 0) & 0x80) &&
-                    !(sub_8032990(state, (x - dx) >> 16, (y - dy) >> 16, 0) & 0x80))
-                {
-                    base[0] = x - dx; base[1] = y - dy;
-                    extra[0] = x + dx; extra[1] = y + dy;
-                    extra[2] = base[2]; extra[3] = base[3];
-                    break;
-                }
+                s32* position = (s32*)((u8*)state + 0x24 + slot * 16);
+                position[0] = (marker[1] * 8 + (sub_8032BC8(state->headerTableIdx) ? 0 : 4)) << 16;
+                position[1] = (marker[2] * 8 + 4) << 16;
+                position[3] = 0;
+                seen |= 1 << slot;
             }
-            if (candidate < 4) sRing.failed = TRUE;
+            marker += 4;
+        }
+        if (seen != 255) { sRing.failed = TRUE; return; }
+        for (i = 0; i < 8; i++)
+        {
+            s32* position = (s32*)((u8*)state + 0x24 + i * 16);
+            centerX += position[0] >> 16;
+            centerY += position[1] >> 16;
+        }
+        centerX /= 8; centerY /= 8;
+        for (i = 0; i < 8; i++)
+        {
+            s32* position = (s32*)((u8*)state + 0x24 + i * 16);
+            s32 dx = centerX - (position[0] >> 16);
+            s32 dy = centerY - (position[1] >> 16);
+            /* Driver yaw zero faces north; the BIOS angle starts at east.
+             * Looking inward fixes unused native directions that otherwise
+             * read past the stock four-entry yaw table into cup numbers. */
+            extern u16 ring_battleSpawnTerrain[8];
+            position[2] = ArcTan2(-dy, dx);
+            ring_battleSpawnTerrain[i] = sub_8032990(state, position[0] >> 16, position[1] >> 16, 0);
         }
     }
+}
+
+/* The native 32-cell sorted draw queue is too small for eight karts,
+ * 24 balloons, identity markers and arena objects. Keep the hardware OAM
+ * limit, but allow one queued cell per possible hardware sprite. The queue
+ * belongs to the scene heap and is invalidated whenever that heap resets. */
+void ring_resetSpriteHeap(FrameHeap* heap)
+{
+    extern OamCellListEntry* ring_sOamCells;
+    if (heap == &gSceneState.raceState.frameHeap) ring_sOamCells = 0;
+}
+
+void ring_allocateSpriteQueue(void)
+{
+    extern OamCellListEntry* ring_sOamCells;
+    if (!ring_sOamCells)
+        ring_sOamCells = frmheap_calloc(&gSceneState.raceState.frameHeap, 128, sizeof(OamCellListEntry));
+    if (!ring_sOamCells) sRing.failed = TRUE;
 }
 
 void ring_stop(void)
@@ -912,7 +967,7 @@ bool32 ring_exchange(void)
             sRing.timeouts++;
             sRing.failed = TRUE;
         }
-        waitReceiver();
+        waitForLinkInterrupt();
     } while (!sRing.complete && !sRing.failed);
     if (!sRing.failed)
     {
@@ -1109,8 +1164,6 @@ void sub_804E7EC(Driver* driver, int local)
         oam_renderCellData(cell, &position, 0, 0, 0, 0);
     }
 }
-static const char* const sCharacterNames[8] = { "MARIO", "LUIGI", "PEACH", "TOAD", "YOSHI", "DK", "WARIO", "BOWSER" };
-static const char* const sCupNames[5] = { "MUSHROOM CUP", "FLOWER CUP", "LIGHTNING CUP", "STAR CUP", "SPECIAL CUP" };
 static const char* const sTracks[20] = {
     "PEACH CIRCUIT", "SHY GUY BEACH", "RIVERSIDE PARK", "BOWSER CASTLE 1",
     "MARIO CIRCUIT", "BOO LAKE", "CHEESE LAND", "BOWSER CASTLE 2",
@@ -1199,15 +1252,6 @@ static void portrait(int x, int y, int menuCharacter)
         }
 }
 
-static void number(int x, int y, unsigned n, u16 color)
-{
-    char string[3];
-    string[0] = '0' + (n / 10) % 10;
-    string[1] = '0' + n % 10;
-    string[2] = 0;
-    text(x, y, string, color);
-}
-
 static void screen(const char* heading)
 {
     sMenuReady = FALSE;
@@ -1255,7 +1299,7 @@ void ring_initTitleOption(void)
     /* Include each glyph's outline, excluding the adjacent E/L columns.
      * The former crops picked up the preceding E beside R and the following
      * L beside ING, producing stray edges when the fragments were joined. */
-    static const s16 slices[3][4] = { {0,32,7,3}, {0,-33,18,11}, {5,25,25,34} };
+    static const s16 slices[3][4] = { {0,32,7,3}, {0,-33,18,10}, {5,25,25,33} };
     u16 tiles[256];
     int i, row, col, x, offset;
     for (i = 0; i < 256; i++) tiles[i] = 0;
@@ -1288,6 +1332,7 @@ void sub_801528C(int value);
 void sub_80152F8(int value);
 void sub_80152D4(int value);
 u8 track_getBattleTrack(int arena);
+u32 track_getRetroBattleTrack(int arena);
 u8 track_getMKSCTrack(int track);
 u8 track_getRetroTrack(int track);
 bool32 race_main(void);
@@ -1306,7 +1351,7 @@ static void prepareRace(const u8* characters, int mode, int engine, int course, 
     sBalloonArtReady = FALSE;
     sGpBannersInitialized = FALSE;
 #ifdef MKSC_RING_MUSIC_SHARED
-    sMusicRacing = FALSE;
+    sMusicRacing = sSharedSong = sSharedFinalLap = FALSE;
 #endif
     sTickEpochStarted = FALSE;
     sGame = mode; sBattle = mode == BATTLE_MODE; sEngine = engine; sCourse = course; sRetro = retro;
@@ -1341,7 +1386,7 @@ static void prepareRace(const u8* characters, int mode, int engine, int course, 
             sub_804AE58(state, spm_menuCharIdxToCharId(character), 0);
         }
     }
-    state->headerTableIdx = sBattle ? track_getBattleTrack(course) :
+    state->headerTableIdx = sBattle ? (retro ? track_getRetroBattleTrack(course) : track_getBattleTrack(course)) :
                            retro ? track_getRetroTrack(course) : track_getMKSCTrack(course);
     spm_setTrackSelection(course);
     sRing.inGame = TRUE;
@@ -1359,8 +1404,11 @@ typedef struct NativeMenuExtras
     u8 playerLabel[580];
     u8 countLabel[292];
     u16 playerPalette[16];
-    u16 footerCells[55];
-    u16 footerTiles[288];
+    u16 countPalette[16];
+    u16 cursorTiles[256];
+    u32 nativeMarkerTiles[128];
+    u16 extendedCursorTiles[1024];
+    bool32 extendedCursorReady;
 } NativeMenuExtras;
 
 static unsigned nativeLabelPixel(const u8* tiles, int width, int x, int y)
@@ -1379,25 +1427,63 @@ static void nativeLabelSetPixel(u8* tiles, int width, int x, int y, int color)
 /* New digits preserve the stock label's border, lettering and background.
  * Only the unavailable player/count numeral is replaced. Literal LZ blocks
  * let the original menu loaders consume the generated art without overrides. */
-static void nativeLabelNumber(u8* tiles, int width, int left, int number,
-                              const u16* palette)
+static void nativeLabelNumber(u8* tiles, int width, int number)
 {
-    int row, col, white = 0, brightest = -1;
-    for (col = 0; col < 16; col++)
+    u16 raster[18];
+    u16* rows = raster + 2;
+    int row, col;
+    int player = width == 64;
+    int left = player ? 39 : 7;
+    int top = player ? 2 : 3;
+    int height = player ? 13 : 10;
+    int background = player ? 13 : 12;
+    /* Sampling the old digit's neighbour painted bevel pixels across whole
+     * rows. Clear only its rectangle, keeping the native border and kart. */
+    for (row = player ? 1 : 2; row < (player ? 16 : 14); row++)
+        for (col = player ? 38 : 6; col < (player ? 48 : 16); col++)
+            nativeLabelSetPixel(tiles, width, col, row, background);
+    /* Scale the glyph once. Neighbour tests then use row masks, avoiding
+     * thousands of software divides while the menu audio queue is active. */
+    for (row = 0; row < 18; row++) raster[row] = 0;
+    for (row = 0; row < height; row++)
     {
-        int color = palette[col];
-        int brightness = (color & 31) + (color >> 5 & 31) + (color >> 10 & 31);
-        if (brightness > brightest) { brightest = brightness; white = col; }
+        u32 bits = sFont[26 + number][row * 7 / height];
+        for (col = 0; col < 8; col++)
+            if (bits & (16 >> (col * 5 / 8))) rows[row] |= 1 << (col + 1);
     }
-    for (row = 0; row < 16; row++)
+    /* Match the native numeral's dark outline, inner shadow and highlight. */
+    for (row = -1; row <= height; row++)
     {
-        int background = nativeLabelPixel(tiles, width, left - 1, row);
-        for (col = 0; col < 14; col++) nativeLabelSetPixel(tiles, width, left + col, row, background);
+        u32 neighbours = rows[row - 1] | rows[row] | rows[row + 1];
+        u32 outline = neighbours | neighbours << 1 | neighbours >> 1;
+        u32 shadow = rows[row - 1] << 1;
+        int ink = player ? 10 : 1 + row * 6 / height;
+        for (col = -1; col <= 8; col++)
+        {
+            u32 pixel = 1 << (col + 1);
+            if (left + col >= (player ? 48 : 16) || top + row >= 16) continue;
+            if (outline & pixel) nativeLabelSetPixel(tiles, width, left + col, top + row, player ? 12 : 15);
+            if (shadow & pixel) nativeLabelSetPixel(tiles, width, left + col, top + row, player ? 11 : 14);
+            if (rows[row] & pixel) nativeLabelSetPixel(tiles, width, left + col, top + row, ink);
+        }
     }
-    for (row = 0; row < 14; row++)
-        for (col = 0; col < 10; col++)
-            if (sFont[26 + number][row / 2] & (16 >> (col / 2)))
-                nativeLabelSetPixel(tiles, width, left + col + 1, row + 1, white);
+}
+
+static void nativeTintPalette(const u16* source, u16* output, u16 color, int limit)
+{
+    int i;
+    for (i = 0; i < 16; i++)
+    {
+        u32 r = source[i] & 31, g = source[i] >> 5 & 31, b = source[i] >> 10 & 31;
+        u32 low = r < g ? r : g, high = r > g ? r : g;
+        if (i >= limit) { output[i] = source[i]; continue; }
+        if (b < low) low = b;
+        if (b > high) high = b;
+        r = low + (high - low) * (color & 31) / 31;
+        g = low + (high - low) * (color >> 5 & 31) / 31;
+        b = low + (high - low) * (color >> 10 & 31) / 31;
+        output[i] = r | g << 5 | b << 10;
+    }
 }
 
 static void nativeLabelCompress(const u8* tiles, int bytes, u8* output)
@@ -1415,60 +1501,25 @@ static void nativeLabelCompress(const u8* tiles, int bytes, u8* output)
 static void ring_initNativeLabels(SpmState* menu)
 {
     u32 raw[128];
-    u32 i, row, col;
-    const char* hint = "SELECT";
     sNativeMenuContext = menu;
     sNativeMenuExtras = frmheap_calloc(&gSceneState.raceState.frameHeap, 1, sizeof(NativeMenuExtras));
     if (sRing.id >= 4)
     {
         LZ77UnCompWram(_080D8E9C[3].tiles, raw);
-        nativeLabelNumber((u8*)raw, 64, 39, sRing.id + 1, _080D8E9C[3].palette);
+        nativeLabelNumber((u8*)raw, 64, sRing.id + 1);
         nativeLabelCompress((u8*)raw, 512, sNativeMenuExtras->playerLabel);
-        for (i = 0; i < 16; i++)
-        {
-            u32 source = _080D8E9C[3].palette[i];
-            u32 r = source & 31, g = source >> 5 & 31, b = source >> 10 & 31;
-            u32 low = r < g ? r : g, high = r > g ? r : g;
-            u32 color = sPlayerColors[sRing.id];
-            if (b < low) low = b;
-            if (b > high) high = b;
-            r = low + (high - low) * (color & 31) / 31;
-            g = low + (high - low) * (color >> 5 & 31) / 31;
-            b = low + (high - low) * (color >> 10 & 31) / 31;
-            sNativeMenuExtras->playerPalette[i] = r | g << 5 | b << 10;
-        }
+        nativeTintPalette(_080D8E9C[3].palette, sNativeMenuExtras->playerPalette,
+                          sPlayerColors[sRing.id], 16);
     }
     if (sRing.count > 4)
     {
         LZ77UnCompWram(_080D8EBC[3].tiles, raw);
-        nativeLabelNumber((u8*)raw, 32, 4, sRing.count, _080D8EBC[3].palette);
+        nativeLabelNumber((u8*)raw, 32, sRing.count);
         nativeLabelCompress((u8*)raw, 256, sNativeMenuExtras->countLabel);
+        nativeTintPalette(_080D8EBC[3].palette, sNativeMenuExtras->countPalette,
+                          sPlayerColors[sRing.count - 1], 10);
     }
-    /* Two short lines fit between the stock controls and player name. The
-     * five packed objects also stay within the native page's OAM budget. */
-    for (i = 0; i < 17; i++)
-    {
-        u32 x, tile;
-        if (i == 6) hint = "SUPER/RETRO";
-        x = (i < 6 ? i : i - 6) * 6;
-        tile = i < 6 ? 0 : 5;
-        for (row = 0; row < 7; row++)
-            for (col = 0; col < 5; col++)
-                if (sFont[glyph(hint[i < 6 ? i : i - 6])][row] & (16 >> col))
-                {
-                    u32 at = x + col;
-                    sNativeMenuExtras->footerTiles[(tile + at / 8) * 16 + row * 2 + (at & 7) / 4] |= 15 << ((at & 3) * 4);
-                }
-    }
-    sNativeMenuExtras->footerCells[0] = 5;
-    for (i = 0; i < 5; i++)
-    {
-        static const u16 offsets[5] = {0, 4, 5, 9, 13};
-        static const u16 x[5] = {0x4000, 32, 0x4000, 0x4020, 64};
-        sNativeMenuExtras->footerCells[1 + i * 3] = (i == 1 || i == 4 ? 0 : 0x4000) | (i >= 2 ? 8 : 0);
-        sNativeMenuExtras->footerCells[2 + i * 3] = x[i];
-        sNativeMenuExtras->footerCells[3 + i * 3] = 0x63EE + offsets[i];
-    }
+
 }
 
 /* Native pages intentionally share their state and graphics cache. Resetting
@@ -1507,7 +1558,7 @@ const u32* ring_nativeCountLabel(const u32* original)
 const u16* ring_nativeCountPalette(const u16* original)
 {
     if (!sNativeMenuContext) return original;
-    return _080D8EBC[sRing.count <= 4 ? sRing.count - 1 : 3].palette;
+    return sRing.count <= 4 ? _080D8EBC[sRing.count - 1].palette : sNativeMenuExtras->countPalette;
 }
 
 typedef struct
@@ -1532,6 +1583,8 @@ void ring_restoreNativeMenuKeys(void)
  * renders one local view; this coordinator owns all eight independent picks
  * and publishes confirmation only when every participant has a unique pick.
  * No native four-controller array is enlarged into adjacent menu widgets. */
+void ring_switchNativeBattlePage(SpmState* menu);
+
 void ring_nativeMenuFrame(void)
 {
     extern u16 gKeyBuf[8], gKeyTriggerBuf[8], gKeyRepeatTriggerBuf[8];
@@ -1544,8 +1597,13 @@ void ring_nativeMenuFrame(void)
     sNativeHostKeysSaved = TRUE;
     if (sNativeCourseMenu)
     {
-        if (gKeyTriggerBuf[0] & SELECT_BUTTON)
-            gKeyTriggerBuf[0] = (gKeyTriggerBuf[0] & ~SELECT_BUTTON) | R_BUTTON;
+        if (sNativeCourseMenu->gamemode == GAMEMODE_BATTLE &&
+            (gKeyTriggerBuf[0] & (L_BUTTON | R_BUTTON)))
+        {
+            ring_switchNativeBattlePage(sNativeCourseMenu);
+            gKeyTriggerBuf[0] &= ~(L_BUTTON | R_BUTTON);
+            gKeyRepeatTriggerBuf[0] &= ~(L_BUTTON | R_BUTTON);
+        }
         return;
     }
     held = gKeyBuf[sRing.id];
@@ -1615,7 +1673,7 @@ void ring_nativeMenuFrame(void)
         }
     }
     gKeyBuf[0] = held & ~(A_BUTTON | B_BUTTON);
-    gKeyTriggerBuf[0] = 0;
+    gKeyTriggerBuf[0] = gKeyTriggerBuf[sRing.id] & (L_BUTTON | R_BUTTON);
     gKeyRepeatTriggerBuf[0] = 0;
     if (sNativeCharacterMenu->characterPhases[0] == 2 ||
         sNativeCharacterMenu->characterPhases[0] == 4)
@@ -1627,35 +1685,103 @@ void ring_nativeMenuFrame(void)
      * must not apply the same edge a second time after the cursor update. */
 }
 
-void ring_drawNativeMenuCursors(void)
+/* Reuse the original multipak cursor frames and confirmed-player badges.
+ * The native chooser still owns only one safe local animation slot. */
+bool32 ring_drawNativeCharacterCursor(SpmState* menu, int slot, int x, int y)
 {
-    u32 i;
-    u16* cells = sNativeCharacterCursorCells;
-    Vec2s16 origin;
+    extern const u16* _080D93A8[4];
+    extern const u16* _080D93B8[4];
     static const s8 offsets[8][2] = {
-        {-16,-16},{-4,-16},{8,-16},{16,-4},
-        {8,16},{-4,16},{-16,8},{-16,-4}
+        {-12,12},{12,12},{-12,-12},{12,-12},
+        {0,-16},{16,0},{0,16},{-16,0}
     };
-    if (sNativeCourseMenu && sNativeCourseMenu->gamemode != GAMEMODE_BATTLE)
+    u32 i;
+    Vec2s16 position;
+    u16 cells[13];
+    if (menu != sNativeCharacterMenu) return FALSE;
+    if (!sNativeMenuExtras->extendedCursorReady)
     {
-        CpuCopy16(sNativeMenuExtras->footerTiles, (void*)0x06017DC0, sizeof(sNativeMenuExtras->footerTiles));
-        pltt_getBuffer(1)[111] = 0x7FFF;
-        pltt_setDirtyFlag(TRUE);
-        origin.x = 128; origin.y = 144;
-        oam_renderCellData(sNativeMenuExtras->footerCells, &origin, 0, 0, 0, 0);
-        return;
+        u8 lookup[16];
+        u8* output = (u8*)sNativeMenuExtras->extendedCursorTiles;
+        u16* palette = pltt_getBuffer(1);
+        u32 colorIndex, pixel;
+        /* Every native OBJ palette is occupied, including bank 15 for the
+         * animated kart. Use 8-bpp objects to address existing colors across
+         * all banks rather than overwriting CC, portraits or the kart. */
+        for (colorIndex = 0; colorIndex < 16; colorIndex++)
+        {
+            u32 color = palette[48 + colorIndex];
+            if (colorIndex != 0 && colorIndex != 1 && colorIndex != 3)
+            {
+                u32 group = colorIndex == 2 ? 0 : (colorIndex - 4) / 3;
+                u32 low = color & 31, high = low, g = color >> 5 & 31, b = color >> 10 & 31;
+                u32 target = sPlayerColors[4 + group];
+                if (g < low) low = g; if (g > high) high = g;
+                if (b < low) low = b; if (b > high) high = b;
+                color = (low + (high - low) * (target & 31) / 31) |
+                    (low + (high - low) * (target >> 5 & 31) / 31) << 5 |
+                    (low + (high - low) * (target >> 10 & 31) / 31) << 10;
+            }
+            lookup[colorIndex] = 0;
+            if (colorIndex)
+            {
+                u32 candidate, best = 0x7FFFFFFF;
+                for (candidate = 1; candidate < 240; candidate++)
+                {
+                    s32 dr = (palette[candidate] & 31) - (color & 31);
+                    s32 dg = (palette[candidate] >> 5 & 31) - (color >> 5 & 31);
+                    s32 db = (palette[candidate] >> 10 & 31) - (color >> 10 & 31);
+                    u32 error = dr * dr + dg * dg + db * db;
+                    if (error < best) { best = error; lookup[colorIndex] = candidate; }
+                }
+            }
+        }
+        for (pixel = 0; pixel < 2048; pixel++)
+        {
+            const u8* source;
+            u32 offset;
+            if (pixel < 1024)
+            {
+                source = (const u8*)OBJ_VRAM0;
+                offset = (_080D93A8[sRing.id & 3][3 + pixel / 256 * 3] & 1023) * 64 + pixel % 256;
+            }
+            else
+            {
+                source = (const u8*)sNativeMenuExtras->cursorTiles;
+                offset = pixel - 1024;
+            }
+            output[pixel] = lookup[(source[offset / 2] >> ((offset & 1) * 4)) & 15];
+        }
+        CpuCopy16(output, (void*)0x06017800, sizeof(sNativeMenuExtras->extendedCursorTiles));
+        sNativeMenuExtras->extendedCursorReady = TRUE;
     }
-    if (!sNativeCharacterMenu || sNativeCharacterConfirm || sNativeCharacterBack) return;
-    cells[0] = sRing.count;
+    if (slot) return TRUE;
+    position.x = x; position.y = y;
+    for (i = 0; i < 13; i++) cells[i] = _080D93A8[sRing.id & 3][i];
+    if (sRing.id >= 4)
+        for (i = 0; i < 4; i++)
+        {
+            cells[1 + i * 3] |= 0x2000;
+            cells[3 + i * 3] = 0x3C0 + i * 8;
+        }
+    oam_renderCellData(cells, &position, 0, 0, 0, 0);
     for (i = 0; i < sRing.count; i++)
     {
-        const NativeCharacterNavigation* choice = &_080D9274[sNativeCharacterChoices[i]];
-        cells[1 + i * 3] = (choice->y + offsets[i][1]) & 255;
-        cells[2 + i * 3] = (choice->x + offsets[i][0]) & 511;
-        cells[3 + i * 3] = 0x63C0 + i;
+        const NativeCharacterNavigation* choice;
+        if (!(sNativeCharactersReady & (1 << i))) continue;
+        choice = &_080D9274[sNativeCharacterChoices[i]];
+        position.x = choice->x + offsets[i][0];
+        position.y = choice->y + offsets[i][1];
+        if (i < 4) oam_renderCellData(_080D93B8[i], &position, 0, 0, 0, 0);
+        else
+        {
+            u16 badge[4];
+            badge[0] = 1; badge[1] = 0x20F8; badge[2] = 0x41F8;
+            badge[3] = 0x3E0 + (i - 4) * 8;
+            oam_renderCellData(badge, &position, 0, 0, 0, 0);
+        }
     }
-    origin.x = origin.y = 0;
-    oam_renderCellData(cells, &origin, 0, 0, 0, 0);
+    return TRUE;
 }
 
 static int ring_chooseNativeCharacters(u8* characters, int mode, int engine)
@@ -1663,12 +1789,13 @@ static int ring_chooseNativeCharacters(u8* characters, int mode, int engine)
     extern bool32 spm_chooseCharacter(SpmState*, int resume, int allowBack);
     extern void sub_8001DDC(void);
     extern void sub_800C680(void);
-    u16 tiles[128];
+    u16* tiles;
     u32 i, row, col;
     int accepted;
     SpmState* menu;
     bool32 fresh = !sNativeMenuContext;
     menu = ring_getNativeMenu();
+    tiles = sNativeMenuExtras->cursorTiles;
     menu->menuPage = MENU_PAGE_CHARACTER;
     menu->lastPlayer = 0;
     menu->localPlayerId = 0;
@@ -1681,15 +1808,35 @@ static int ring_chooseNativeCharacters(u8* characters, int mode, int engine)
     menu->suppressConnectionCheck = 1;
     for (i = 0; i < 8; i++)
         sNativeCharacterChoices[i] = characters[i] + (characters[i] >= 4);
-    for (i = 0; i < 128; i++) tiles[i] = 0;
-    for (i = 0; i < 8; i++)
-        for (row = 0; row < 7; row++)
-            for (col = 0; col < 5; col++)
-                if (sFont[27 + i][row] & (16 >> col))
-                    tiles[i * 16 + row * 2 + (col + 1) / 4] |= (i + 1) << (((col + 1) & 3) * 4);
-    CpuCopy16(tiles, (void*)0x06017800, sizeof(tiles));
-    for (i = 0; i < 8; i++) pltt_getBuffer(1)[97 + i] = sPlayerColors[i];
-    pltt_setDirtyFlag(TRUE);
+    {
+        extern const u32 _080B042C[];
+        u32* native = sNativeMenuExtras->nativeMarkerTiles;
+        LZ77UnCompWram(_080B042C, native);
+        for (i = 0; i < 4; i++)
+        {
+            u8* marker = (u8*)tiles + i * 128;
+            CpuCopy16(native, marker, 128);
+            for (row = 3; row < 13; row++)
+                for (col = 4; col < 12; col++)
+                    nativeLabelSetPixel(marker, 16, col, row, 4);
+            for (row = 0; row < 7; row++)
+                for (col = 0; col < 5; col++)
+                    if (sFont[31 + i][row] & (16 >> col))
+                    {
+                        nativeLabelSetPixel(marker, 16, 6 + col, 5 + row, 6);
+                        nativeLabelSetPixel(marker, 16, 5 + col, 4 + row, 1);
+                    }
+            for (row = 0; row < 16; row++)
+                for (col = 0; col < 16; col++)
+                {
+                    u32 color = nativeLabelPixel(marker, 16, col, row);
+                    if (i && color >= 4 && color <= 6) color += i * 3;
+                    if (i && color == 2) color = 4 + i * 3;
+                    nativeLabelSetPixel(marker, 16, col, row, color);
+                }
+        }
+    }
+    sNativeMenuExtras->extendedCursorReady = FALSE;
     *(u8*)0x03000019 = sNativeCharacterChoices[sRing.id];
     sNativeCharactersReady = sNativeCharacterConfirm = sNativeCharacterBack = 0;
     sNativeCharacterMenu = menu;
@@ -1746,9 +1893,8 @@ static int ring_chooseNativeMode(int* mode, int* engine, bool32 chooseMode)
          * Keep its two-slot presentation separate from ring participants. */
         ((u8*)0x03000010)[1] = *mode == GP_MODE ? 0 : *mode == BATTLE_MODE ? 2 : 1;
     }
-    /* A solo session reaches the class page without first visiting mode
-     * selection. The native resume path requires that earlier page's
-     * initialization, so enter normally for a newly allocated context. */
+    /* Initialize the native mode page before using its class-page resume
+     * path when this context has just been allocated. */
     if (!spm_chooseModeAndClass(menu, chooseMode || fresh ? 0 : 1))
     {
             return FALSE;
@@ -1756,6 +1902,28 @@ static int ring_chooseNativeMode(int* mode, int* engine, bool32 chooseMode)
     *mode = menu->gamemode == GAMEMODE_GP ? GP_MODE : menu->gamemode == GAMEMODE_BATTLE ? BATTLE_MODE : VS_MODE;
     *engine = *mode == BATTLE_MODE ? 0 : menu->raceSpeed;
     return TRUE;
+}
+
+/* Resolve the existing Battle thumbnail/palette widgets against the active
+ * set. Outside the ring course page this remains the stock GBA lookup. */
+u32 ring_nativeBattleTrack(int arena)
+{
+    extern const u32 gBattleCup[4];
+    if (sNativeCourseMenu && sNativeCourseMenu->gamemode == GAMEMODE_BATTLE &&
+        sNativeCourseMenu->trackPage) return track_getRetroBattleTrack(arena);
+    return gBattleCup[arena];
+}
+
+void ring_switchNativeBattlePage(SpmState* menu)
+{
+    volatile u32* previewPhase = (volatile u32*)0x0203EBFC;
+    if (menu != sNativeCourseMenu || menu->gamemode != GAMEMODE_BATTLE) return;
+    menu->trackPage ^= 1;
+    m4aSongNumStart(0x93);
+    /* Schedule the same two-phase preview reload as a native cursor move.
+     * State 2 loads graphics, then state 1 publishes graphics and palette.
+     * Calling the loader while idle (state 0) does not reload anything. */
+    *previewPhase = 2;
 }
 
 bool32 ring_unlockNativeMenu(SpmState* menu)
@@ -1790,7 +1958,7 @@ static int ring_chooseNativeCourse(int mode, int engine, int character,
     menu->character = character;
     menu->cup = mode == BATTLE_MODE ? 0 : *course / 4;
     menu->track = mode == BATTLE_MODE ? *course : *course % 4;
-    menu->trackPage = mode == BATTLE_MODE ? 0 : *retro;
+    menu->trackPage = *retro;
     menu->reenteringLinkMenu = 1;
     menu->suppressConnectionCheck = 1;
     sub_8002E08(menu, menu->cup);
@@ -1809,7 +1977,7 @@ static int ring_chooseNativeCourse(int mode, int engine, int character,
     if (accepted)
     {
         *course = mode == BATTLE_MODE ? menu->track : menu->cup * 4 + menu->track;
-        *retro = mode == BATTLE_MODE ? 0 : menu->trackPage;
+        *retro = menu->trackPage;
     }
     sNativeCourseMenu = 0;
     return accepted;
@@ -1824,42 +1992,53 @@ bool32 ring_main(void)
     u8 characters[8], ready = 0, ignoreStart = !sResume;
     int drawnPhase = -1;
     u16 previous = 0, keys, trigger;
+#ifdef MKSC_RING_MUSIC_SHARED
+    bool32 discoveryMusicStopped = FALSE;
+#endif
     u32 i;
     extern u16 gKeyTriggerBuf[8], gKeyBuf[8];
     sNativeMenuContext = sNativeCourseMenu = sNativeCharacterMenu = 0;
+    if (sResume && ring_active())
+    {
+        REG_DISPCNT = 0x80;
+        scene_setVBlankFunc(0);
+        DmaStop(0);
+        vcount_reset();
+        oam_init();
+        trns_init();
+        goto connected;
+    }
     resetMenuDisplay();
-    if (sResume && ring_active()) goto connected;
     sSession = TRUE;
     for (i = 0; i < 8; i++) sWins[i] = 0;
     screen("RING LINK");
     text(12, 42, "CONNECT ALL GBAS IN A RING", 0x7FFF);
     text(12, 60, "PRESS START ON ONE CONSOLE", 0x03FF);
     text(12, 78, "WAITING FOR OTHER PLAYERS", 0x7FFF);
-    text(12, 100, "SELECT SOLO GRAND PRIX", 0x7FFF);
     sMenuReady = TRUE;
     /* Discovery polls without the normal frame loop. Continue servicing
      * MP2000 every VBlank so the last title sample cannot loop indefinitely. */
     m4aMPlayAllStop();
     sLastAudioFrame = gSceneState.field14 - 1;
     start(FALSE);
+    m4aSongNumStart(SONG_LINK);
     while (!sRing.count && !sRing.failed)
     {
         ring_serviceAudio();
+#ifdef MKSC_RING_MUSIC_SHARED
+        /* Before discovery, each standalone console has its own menu music.
+         * Once a peer learns its software ID, the chosen host owns the BGM.
+         * Stop it here rather than touching the mixer from the serial IRQ. */
+        if (!discoveryMusicStopped && sRing.id != RING_INVALID && sRing.id != 0)
+        {
+            m4aMPlayStop(gMPlayTable[0].info);
+            discoveryMusicStopped = TRUE;
+        }
+#endif
         keys = ~REG_KEYINPUT & 1023;
         trigger = keys & ~previous;
         previous = keys;
         if (trigger & B_BUTTON) goto cancelled;
-        if ((trigger & SELECT_BUTTON) && sRing.id == RING_INVALID)
-        {
-            sRing.id = 0; sRing.count = 1; sRing.owner = TRUE;
-            /* Solo bypasses DISCOVER/ASSIGN, but the shared native pages
-             * still need the same connected endpoint metadata. */
-            sio2_sMPlayerId.mPlayerId = 0;
-            sio2_sMPlayerId.playerCount = 1;
-            sio2_sMPlayerId.field_16 = 0x8001;
-            mode = GP_MODE; phase = ENGINE; ignoreStart = FALSE;
-            break;
-        }
         if ((trigger & START_BUTTON) && sRing.id == RING_INVALID)
         {
             REG_SIOCNT = RING_CONTROL;
@@ -1874,11 +2053,15 @@ bool32 ring_main(void)
         poll();
         if (gSceneState.field14 - sRing.startVideoFrame > 180 && sRing.owner)
             sRing.failed = TRUE;
-        waitReceiver();
+        waitForLinkInterrupt();
     }
     if (sRing.failed) goto lost;
 connected:
-    m4aSongNumStart(2);
+#ifdef MKSC_RING_MUSIC_SHARED
+    /* ANNOUNCE may finish discovery before the loop's next iteration. */
+    if (sRing.id != 0) m4aMPlayStop(gMPlayTable[0].info);
+#endif
+    m4aSongNumStart(SONG_MENU);
     for (i = 0; i < 8; i++) characters[i] = sResume ? sCharacters[i] : i;
     sResume = 0;
     sRing.inGame = FALSE;
@@ -1904,7 +2087,6 @@ connected:
             if (phase == GAME) goto cancelled;
             if (phase == ENGINE)
             {
-                if (sRing.count == 1) goto cancelled;
                 phase = GAME;
             }
             else if (phase == COURSE) phase = CUP;
@@ -1916,16 +2098,25 @@ connected:
         switch (phase)
         {
         case GAME:
-            if (sRing.count == 1) { mode = GP_MODE; phase = ENGINE; continue; }
+            {
+            int previousMode = mode;
             if (!ring_chooseNativeMode(&mode, &engine, TRUE)) goto cancelled;
-            course = cup = 0;
+            if (mode != previousMode) course = cup = retro = 0;
             phase = CHARACTERS;
             drawnPhase = -1;
+            }
             break;
         case ENGINE:
-            if (ring_chooseNativeMode(&mode, &engine, FALSE)) phase = CHARACTERS;
+            {
+            int previousMode = mode;
+            if (ring_chooseNativeMode(&mode, &engine, FALSE))
+            {
+                if (mode != previousMode) course = cup = retro = 0;
+                phase = CHARACTERS;
+            }
             else phase = GAME;
             drawnPhase = -1;
+            }
             break;
         case CHARACTERS:
             if (ring_chooseNativeCharacters(characters, mode, engine))
@@ -1941,6 +2132,7 @@ connected:
             {
                 if (mode == GP_MODE)
                 {
+                    course = course / 4 * 4;
                     sGPRace = sGPCupComplete = 0;
                     for (i = 0; i < 8; i++) sGPPoints[i] = 0;
                 }
@@ -2022,7 +2214,7 @@ bool32 ring_finishRace(void)
     }
     else if (choice == 2 || choice == 3 || choice == 4)
     {
-        sResume = choice == 4 ? CHARACTERS : sBattle ? ARENA : sGame == GP_MODE || choice == 3 ? CUP : COURSE;
+        sResume = choice == 4 ? GAME : choice == 3 ? CHARACTERS : sBattle ? ARENA : sGame == GP_MODE ? CUP : COURSE;
         scene_setMainFunc(ring_main);
     }
     else
@@ -2058,6 +2250,7 @@ static void resetMenuDisplay(void)
     extern const u16 _08062774[];
     u16* palette = pltt_getBuffer(0);
     u32 i;
+    REG_DISPCNT = 0x80;
     sMenuReady = FALSE;
     scene_setVBlankFunc(0);
     DmaStop(0);
