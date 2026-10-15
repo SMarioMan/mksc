@@ -1,35 +1,94 @@
-## Current validation: native pages, scoring, audio and course profiling (2026-10-14)
+## Current verification: native eight-player ring release (2026-10-14)
 
-The ring coordinator now shares `spm_chooseModeAndClass`,
-`spm_chooseCharacter` and `spm_chooseCourse` with the stock game. Eight independent
-character choices are coordinated outside the native four-controller widgets.
-The original eight-row result presentation and GP standings builder are reused.
-Real-BIOS tests pass complete Vs./Battle rounds at every count from two through
-eight, four-race Retro GP cups at one, two and eight humans, repeated Battle
-rounds, and Vs.-to-Battle transitions. The Battle portrait selection orders
-survivors by remaining balloons, with player-order ties.
+All 44 courses pass complete eight-player real-BIOS validation in both normal
+and shared audio modes: 20 Super races, 20 Retro races and all four Battle
+arenas. Race courses run through results with driving and item inputs. Battle
+arenas run for 18,000 video frames. Every console must pass both the full-run
+mean and each measured 300-frame window at 0.95 native simulation updates per
+video frame. The minimum normal mean/window is 0.998244/0.950000;
+shared is 0.996939/0.956667. All captures use the exact final ROM
+hashes and the profiler that preserves ordinary scheduling. No legacy
+instruction-stepping captures are reused. Per-course metrics are recorded in
+`docs/ring-validation.json`; full profiles, frame CSVs and screenshots remain
+with the release artifacts/workspace captures.
 
-All 44 courses pass eight-player shared-audio profiling, including full race
-completion with items on all 40 race courses. The minimum measured average is
-0.994 updates per video frame, and the lowest 300-frame window is 0.953.
-Normal audio passes 42 of 44 courses; Snow Land and Yoshi Desert still have
-short windows below the required 0.95 rate. Those remaining performance dips
-are under investigation; emulator video FPS alone is not a passing result.
+The coordinator shares `spm_chooseModeAndClass`, `spm_chooseCharacter` and
+`spm_chooseCourse` with the stock game. Independent eight-player choices remain
+outside the native four-controller widgets. Results reuse the original
+eight-row presentation, points, cumulative standings and tied ranks. Fresh
+BIOS tests pass all 21 Vs./Battle/GP entry cases at 2–8 humans, all 14 complete
+Vs./Battle rounds at 2–8 humans, repeated Battle rounds, native menu return
+flows, and four-race Retro GP cups at 1, 2 and 8 humans with CPU fill and 76
+points per cup. The Battle HUD selects the four most balloons with stable
+player-order ties. Its mixed-count regression excludes a living P2 with two
+balloons in favor of P5–P8 with three; elimination coverage also passes.
 
-Extended recordings cover 650 seconds per console in eight-player shared GP
-and 377 seconds per console on Luigi Circuit with normal audio. Every console
-reports zero unfilled PCM segments, late mixer deadlines and clipped samples.
-Shared audio permits only the local character's engine and voice requests;
+The private emulator run passes all 35 CTest targets, including all 13 GUI
+rows without skips. The bundled libraries/plugins also pass scripted eight-
+window launch, independent saved bindings, numbered titles and hidden-menu
+handling. These offscreen checks establish native game update rate and
+functional behavior, rather than a desktop wall-clock throughput guarantee.
+The Windows-safe `_ring_write` callback rename is retained.
+
+Extended eight-console recordings cover at least 650.6 seconds per console
+in shared GP and 376.8 seconds with normal audio on Luigi Circuit. Every
+console has zero unfilled PCM segments, late mixer deadlines and clipped
+samples. Shared audio permits only the local engine/character voice requests;
 software P1 owns music even when hosted from physical window four. Native
-opening jingles finish before course music starts.
+opening songs finish before course music; leader final-lap tempo, GP CPUs,
+common jingles and suppression of individual Star music are checked.
 
 The clean build retains SHA-1
-`9d327c030c3e2d9007990518594f70c3340ac56f`. The controlled 1024-byte code shift
-checks 1885 ROM functions and 1052 callback words, with real-BIOS single-player
-and two/eight-player gameplay regressions. Matching C includes menu accessors,
-positional sound queries and typed driver records. The final optional HLE
-check follows the remaining BIOS performance work. Physical cables and GBAs
-have not been tested. Sections below describe earlier checkpoints.
+`9d327c030c3e2d9007990518594f70c3340ac56f`. The +1024-byte relocation check
+covers 1,886 functions and 1,054 callback values at all possible byte offsets;
+33 numerical coincidences are confined to validated, byte-identical PCM,
+course or LZ assets. Shifted native voice/items and 2/8-player Vs./Battle/GP
+pass with the real BIOS. Matching C includes native menu accessors, positional
+sound queries and typed driver/result records; optimized ring C has separate
+native-instruction equivalence oracles.
+
+HLE runs only after every real-BIOS queue passes. Final HLE passes 2/8-player
+entry in all three modes, complete Vs./Battle rounds and the ordinary
+DK-to-Wario character/voice regression. Physical GBAs/cables remain untested;
+the intended topology uses stock AGB-005 cables in a ring. The following older
+investigations describe historical intermediate states and do not override
+these final results.
+
+## Final implementation checks (2026-10-14)
+
+The checkpoint sorter caches actor checkpoint values while building its index
+list and calls its first-minimum scan in IWRAM. Selection swaps retain the
+native tie behavior. The collision oracle checks complete actors, callback
+order and both list-size limits across 4,096 fixtures. A linked-code audit
+also requires the caller to branch to the loaded RAM helper: placing a function
+in a RAM section alone is insufficient if the compiler inlines it into ROM.
+
+Readable Thumb C implements ring projection and track volume/pitch controls.
+Projection retains native signed truncation and wrapped products; 32,768
+camera/actor fixtures compare against the original assembly, including 5,996
+unclipped cases. The exact reciprocal quotient covers 175,252,488 boundaries
+across all 993 scales. The OAM oracle compares all 1,024 output bytes, affine
+allocation, return values and cell mutations across 16,384 varied default/custom
+mask fixtures. Sound attenuation compares 131,072 signed/wrapped positions;
+track controls compare whole player/16-track state across 16,384 masks, locks,
+flags and parameters. Golden fixture seeds are initialized in writable RAM.
+
+Instruction profiling observes instructions inside the ordinary CPU run-loop
+quantum. Earlier instruction-stepping captures changed cooperative link yields
+and are excluded from final performance measurements. The profiler regression
+compares complete eight-player snapshots and per-video timing CSVs with
+observation enabled and disabled. Both the full-run mean and each measured
+300-frame window must reach 0.95 native simulation updates/video frame on every
+console; emulator video FPS alone does not establish game speed.
+
+A packed credits record had been mistaken for a ROM pointer: its four bytes
+are x/y/count/delay, followed by a real text pointer. Its native 11/13/9/8 values
+now remain numeric while the actual pointer relocates. Removing a misleading
+interior image label allows the relocation audit to validate the complete
+compressed asset and every LZ backreference, rather than accidentally changing
+pixels. The audit scans every byte offset: all 1,054 callbacks relocate, while
+33 numerical coincidences are confined to validated, unchanged opaque assets. The clean ROM remains byte-identical. Final performance runs use the
+exact released ROM hashes, without substituting an earlier gameplay build.
 
 ## Follow-up: opening music and native menu/results foundations (2026-10-12)
 
