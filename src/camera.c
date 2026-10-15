@@ -130,7 +130,7 @@ void sub_SetHDMA(Camera* camera) {
     i = 159;
     j = i - 0x40;
     srcPos = camera->hdmaBuffer + (i - 64);
-    dest = BgAffineBuf[camera->field_0x50] + j;
+    dest = BgAffineBuf[camera->writeAffineBuffer] + j;
 
     unk_otherPos = &camera->unk_otherPos;
     worldX = ((unk_otherPos)->x / 256);
@@ -157,7 +157,7 @@ void sub_SetHDMA(Camera* camera) {
         scanline--;
         i--;
     } while (i >= 64);
-    camera->field_0x50 = 1 - camera->field_0x50;
+    camera->writeAffineBuffer = 1 - camera->writeAffineBuffer;
     return;
 }
 
@@ -275,7 +275,7 @@ void cam_CalcProjectActor(Camera *camera, Actor *actor, Vec2s16 *drawPosOut, s16
 
 u32 sub_8030E5C(Camera *camera)
 {
-    return camera->field_0x4c;
+    return camera->displayAffineBuffer;
 }
 void* sub_8030E60(Camera *camera,int param_2,int param_3)
 {
@@ -283,13 +283,13 @@ void* sub_8030E60(Camera *camera,int param_2,int param_3)
 }
 void sub_8030E74(Camera *camera)
 {
-    camera->field_0x4c = 1 - camera->field_0x50;
+    camera->displayAffineBuffer = 1 - camera->writeAffineBuffer;
     return;
 }
 void sub_8030E80(Camera *camera)
 {
-    camera->field_0x50 = 0;
-    camera->field_0x4c = 0;
+    camera->writeAffineBuffer = 0;
+    camera->displayAffineBuffer = 0;
     camera->unk380 = 0;
     return;
 }
@@ -493,11 +493,11 @@ void sub_8031064(Camera* camera) {
     temp_r7->z = (s32) (cam_pos->z - ((s32) ((temp_r3 >> shift1) * temp_r6[2].z) >> shift2));
 }
 void sub_80310E8(Camera* camera) {
-    camera->field_0x50 = 1 - camera->field_0x50;
+    camera->writeAffineBuffer = 1 - camera->writeAffineBuffer;
 }
 void sub_80310F4(Camera* camera) {
-    camera->field_0x4c = camera->field_0x50;
-    camera->field_0x50 = 1 - camera->field_0x50;
+    camera->displayAffineBuffer = camera->writeAffineBuffer;
+    camera->writeAffineBuffer = 1 - camera->writeAffineBuffer;
 }
 void sub_8031100(Camera* camera) {
     camera->field_0x398 = camera->unk_otherPos.x;
