@@ -160,7 +160,9 @@ actual simulation updates/video frame (at least 0.95), ranked portraits,
 published balloon colors and eight aligned minimap dots. It accepts
 `--boot-ring` for that build option and `--arenas 0..3` to select arenas.
 `test_battle_survivors.py` eliminates
-players 1–4 and checks that players 5–8 occupy every console's Battle HUD.
+players 1–4 and checks that players 5–8 occupy every console's Battle HUD. It
+also checks a mixed-count snapshot where a living low-index racer has fewer
+balloons than players 5–8, so merely skipping eliminated racers cannot pass.
 `test_transition.py` exercises Rainbow Road → pause/change track → Back →
 Battle, guarding against carried course indexes and double-consumed Back.
 `test_gp.py` checks first-race points and next-course loading at one, two, and
