@@ -16,7 +16,11 @@ typedef struct
     u8 gap4D[3];
     u8 gap50[6];
     u16 viewYaw;                 /* 0x56: orientation used by the sprite camera. */
-    u8 gap58[0x15];
+    u8 gap58[0xE];
+    s16 booTimer;               /* 0x66: Boo invisibility duration. */
+    s16 shrinkTimer;            /* 0x68: lightning shrink duration. */
+    s16 starTimer;              /* 0x6A: Star invincibility duration. */
+    u8 gap6C;
     u8 animationFlags;           /* 0x6D: bit 0 selects look-aside direction. */
     u8 animationCode;            /* 0x6E: low nibble is the active animation. */
     u8 animationPhase;           /* 0x6F: native frame/phase bits. */

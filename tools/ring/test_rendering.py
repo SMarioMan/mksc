@@ -2,7 +2,7 @@
 """Check consecutive BIOS-backed frames, including eight karts in one view.
 
 Stationary Vs. preserves the eight-place grid so natural occlusion/movement
-cannot masquerade as flicker. The native character menu checks eight persistent cursor sprites
+cannot masquerade as flicker. The native character menu checks the native local cursor
 while its background animates. All interaction uses the hardware keypad.
 """
 import argparse
@@ -43,7 +43,7 @@ for case in ('menu', 'vs', 'battle'):
     inputs.write_text(''.join(f'{f},{s},{k:x}\n' for f, s, k in sorted(rows)))
     video = a.results / (case + '-video.csv')
     first, last = (2100, 2400) if case == 'menu' else (4000, 4700)
-    proc = subprocess.run([str(a.runner), '--ring', '--rom', str(rom), '--bios', str(a.bios),
+    proc = subprocess.run([str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(rom), '--bios', str(a.bios),
                            '--players', '8', '--frames', str(last), '--input', str(inputs),
                            '--video-log', str(video), '--video-from', str(first),
                            '--dump', '0x03006B40', '--barrier-before-input', '--barrier-state', '0x03006B40',
@@ -61,8 +61,8 @@ for case in ('menu', 'vs', 'battle'):
     assert all(not row['invalidObjects'] for row in frames)
     if case == 'menu':
         assert all(row['dispcnt'] & 7 in (0,1) for row in frames)
-        assert all(row['menuCursors'] == 255 for row in frames), 'A ring character cursor flickered or disappeared'
-        print(f'PASS native menu: eight cursor sprites in each of {len(frames)} completed frames', flush=True)
+        assert all(row['menuCursors'] == (16 if row['player'] >= 4 else 1 << row['player']) for row in frames), 'The native local cursor disappeared or another player cursor leaked into this view'
+        print(f'PASS native menu: one correctly indexed native local cursor in each of {len(frames)} completed frames', flush=True)
     elif case == 'vs':
         rear = [row for row in frames if row['player'] == 7]
         assert all(all(row[f'kart{i}'] == 1 for i in range(8)) for row in rear), 'A kart disappeared from the stationary grid'

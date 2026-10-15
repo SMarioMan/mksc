@@ -9,6 +9,12 @@ a.results.mkdir(parents=True, exist_ok=True)
 source = r'''
 #include "oam.O3.c"
 u8 ring_balloonAffineIndex[8];
+OamCellListEntry* ring_sOamCells;
+static OamCellListEntry expandedQueue[128];
+void ring_allocateSpriteQueue(void) { ring_sOamCells = expandedQueue; }
+static u16 queuedTiles[128][4];
+int gSinTable[1024];
+void* memset(void* dst,int value,unsigned count) { volatile u8* at=dst;while(count--)*at++=value;return dst; }
 bool32 ring_active(void) { return TRUE; }
 void ring_serviceAudio(void) {}
 void ring_serviceRenderAudio(void) {}
@@ -51,6 +57,27 @@ int main(void) {
   for(i=0;i<512;i++)if(sBuffer[i]!=expected[i])goto bad;
   for(i=0;i<sizeof(OamCell)/4;i++)if(((u32*)&original)[i]!=((u32*)&actual)[i])goto bad;
  }
+ /* Exercise the actual queued path beyond the original 32-cell limit. */
+ for (test=0;test<2;test++) {
+  Vec2s16 position={120,80}; struc_6 priority;
+  u32 seen[4]={0,0,0,0}; int capacity=test?128:32;
+  ring_sOamCells=test?expandedQueue:0;
+  sBufferOffset=sNextAffineId=sCellListEntryCount=0;
+  sCellListHead=sCellListTail=0;sCopyDisabled=1;oam_3002188=1;oam_300218C=0;
+  for(i=0;i<128;i++) {
+   queuedTiles[i][0]=1;queuedTiles[i][1]=0;queuedTiles[i][2]=0;queuedTiles[i][3]=i;
+   priority.field0=0;priority.priority=i;
+   oam_renderCellData(queuedTiles[i],&position,256,256,0,&priority);
+  }
+  if(sCellListEntryCount!=capacity) {result[0]=0xbad00002;result[1]=test;for(;;){}}
+  oam_update();
+  if(sBufferOffset!=capacity*4) {result[0]=0xbad00003;result[1]=test;for(;;){}}
+  for(i=0;i<capacity;i++) {
+   u32 tile=sBuffer[i*4+2]&1023;
+   if(tile>=capacity || (seen[tile/32]&(1u<<(tile%32)))) {result[0]=0xbad00004;result[1]=test;for(;;){}}
+   seen[tile/32]|=1u<<(tile%32);
+  }
+ }
  result[0]=0x600dc0de;result[1]=16384;for(;;){}
  bad:result[0]=0xbad00001;result[1]=test;result[2]=i;result[3]=sBufferOffset;result[4]=nextOffset;for(;;){}
 }
@@ -67,9 +94,11 @@ commands = [
  ['arm-none-eabi-objcopy','-O','binary',str(a.results/'oam.elf'),str(a.results/'oam.gba')],
  [str(root/'tools/gbafix/gbafix'),str(a.results/'oam.gba'),'-p','-tOAMCOMPARE','--silent'],
 ]
-for cmd in commands: subprocess.run(cmd,cwd=root,check=True,capture_output=True)
+for cmd in commands:
+ result=subprocess.run(cmd,cwd=root,capture_output=True,text=True)
+ assert result.returncode==0,(cmd,result.stderr)
 proc=subprocess.run([str(a.runner),'--rom',str(a.results/'oam.gba'),'--bios',str(a.bios),'--players','1','--frames','8000','--dump','0x02000000','--dump-words','6'],capture_output=True,text=True,timeout=600)
 (a.results/'result.json').write_text(proc.stdout)
 assert proc.returncode==0,proc.stderr
 data=json.loads(proc.stdout);assert data['nodes'][0]['dump'][:2]==[0x600dc0de,16384],data
-print('PASS OAM cells: all 1024 OAM bytes, cell mutations, affine allocation and return values match original assembly across 16384 varied cells and default/custom masks',flush=True)
+print('PASS OAM cells: all 1024 OAM bytes, cell mutations, affine allocation and return values match original assembly across 16384 varied cells and default/custom masks; native 32-cell and expanded 128-cell queues preserve every sprite',flush=True)

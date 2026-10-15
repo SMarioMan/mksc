@@ -28,7 +28,7 @@ for name, frames in [('mixed', 5200), ('survivors', 9000)]:
     snapshot = a.results / (name + '.json')
     if not a.analyze_only:
         proc = subprocess.run([
-            str(a.runner), '--ring', '--rom', str(a.rom), '--bios', str(a.bios),
+            str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(a.rom), '--bios', str(a.bios),
             '--players', '8', '--frames', str(frames), '--input', str(inputs),
             '--barrier-before-input', '--barrier-state', '0x03006B40',
             '--screens', str(a.results / name)

@@ -42,7 +42,7 @@ for n in a.players:
         inputs = a.results / (name + '.csv')
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))
         video = a.results / (name + '-video.csv')
-        proc = subprocess.run([str(a.runner), '--ring', '--rom', str(rom), '--bios', str(a.bios),
+        proc = subprocess.run([str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(rom), '--bios', str(a.bios),
                                '--players', str(n), '--frames', '5100', '--input', str(inputs),
                                '--video-from', '4500', '--video-log', str(video),
                                '--barrier-before-input', '--barrier-state', '0x03006B40'],

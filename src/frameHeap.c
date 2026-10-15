@@ -1,9 +1,15 @@
 #include "common.h"
 #include "frameHeap.h"
+#ifdef MKSC_RING
+void ring_resetSpriteHeap(FrameHeap* heap);
+#endif
 
 void frmheap_init(FrameHeap* heap, void* address, u32 size)
 {
     u32 i;
+#ifdef MKSC_RING
+    ring_resetSpriteHeap(heap);
+#endif
     heap->head = address;
     heap->ptr = address;
     heap->size = size;
@@ -13,6 +19,9 @@ void frmheap_init(FrameHeap* heap, void* address, u32 size)
 
 void frmheap_reset(FrameHeap* heap)
 {
+#ifdef MKSC_RING
+    ring_resetSpriteHeap(heap);
+#endif
     heap->ptr = heap->head;
 }
 

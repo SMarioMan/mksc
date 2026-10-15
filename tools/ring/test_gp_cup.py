@@ -9,11 +9,11 @@ import subprocess
 p = argparse.ArgumentParser(description=__doc__)
 for key in ('runner', 'rom', 'elf', 'bios', 'results'):
     p.add_argument('--' + key, required=True, type=Path)
-p.add_argument('--players', nargs='+', type=int, default=[2, 8])
+p.add_argument('--players', nargs='+', type=int, choices=range(2,9), default=list(range(2,9)))
 p.add_argument('--autofire', action='store_true', help='Also use items while driving')
 a = p.parse_args()
-if any(n < 1 or n > 8 for n in a.players):
-    p.error('GP supports one through eight humans')
+if any(n < 2 or n > 8 for n in a.players):
+    p.error('GP supports two through eight humans')
 a.results.mkdir(parents=True, exist_ok=True)
 symbols = {}
 for line in subprocess.check_output(['arm-none-eabi-nm', '-n', str(a.elf)], text=True).splitlines():
@@ -28,17 +28,15 @@ for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitline
 for count in a.players:
     events = []
     for frame, keys in base:
-        if count == 1 and frame == 1500:
-            keys = 4
         events.extend((frame, i, keys) for i in range(count if frame < 1500 or frame in (2000, 2015) else 1))
     if count > 1:
         events.extend([(1600, 0, 64), (1615, 0, 0)])
-    events.extend([(2800, 0, 4), (2815, 0, 0), (3200, 0, 1), (3215, 0, 0), (3500, 0, 1), (3515, 0, 0)])
+    events.extend([(2800, 0, 256), (2815, 0, 0), (3200, 0, 1), (3215, 0, 0), (3500, 0, 1), (3515, 0, 0)])
     name = f'gp-cup-{count}'
     inputs = a.results / (name + '.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))
     command = [
-        str(a.runner), '--ring', '--rom', str(a.rom), '--bios', str(a.bios),
+        str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(a.rom), '--bios', str(a.bios),
         '--players', str(count), '--frames', '90000', '--input', str(inputs),
         '--autodrive-frame', '4500', '--barrier-before-input',
         '--barrier-state', '0x03006B40', '--until-scene', hex(symbols['results_main'] | 1),

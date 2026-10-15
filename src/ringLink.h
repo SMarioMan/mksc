@@ -3,6 +3,7 @@
 #define RING_MAX_PLAYERS 8
 #define RING_OPTION_ID 6
 void ring_initCode(void);
+void ring_allocateSpriteQueue(void);
 bool32 ring_main(void);
 bool32 ring_active(void);
 void ring_queueGraphics(void);
@@ -22,7 +23,6 @@ void ring_serviceRenderAudio(void);
 void ring_profileRender(void);
 void ring_nativeMenuFrame(void);
 void ring_restoreNativeMenuKeys(void);
-void ring_drawNativeMenuCursors(void);
 extern u32 ring_frameTiming[5];
 bool32 ring_exchange(void);
 bool32 ring_checkRoundEnd(void);

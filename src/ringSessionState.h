@@ -13,7 +13,7 @@ extern struct SpmState *sNativeMenuContext, *sNativeCharacterMenu, *sNativeCours
 extern struct NativeMenuExtras* sNativeMenuExtras;
 extern u8 sNativeCharacterChoices[8], sNativeCharactersReady;
 extern u8 sNativeCharacterConfirm, sNativeCharacterBack;
-extern u16 sNativeCharacterCursorCells[25], sNativeHostKeys[3];
+extern u16 sNativeHostKeys[3];
 extern bool8 sNativeHostKeysSaved;
 extern vu16* sMenuPixels;
 extern volatile bool32 sMenuReady;

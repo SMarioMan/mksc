@@ -14,7 +14,7 @@ p = argparse.ArgumentParser(description=__doc__)
 for name in ('runner', 'rom', 'elf', 'bios', 'results'):
     p.add_argument('--' + name, required=True, type=Path)
 p.add_argument('--nm', default='arm-none-eabi-nm')
-p.add_argument('--character', type=int, choices=range(8), default=0, help='Native menu index; 6 traverses DK to Wario')
+p.add_argument('--character', type=int, choices=range(8), default=0, help='Native character menu index')
 p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
 a = p.parse_args()
 if hashlib.sha1(a.bios.read_bytes()).hexdigest() != '300c20df6731a33952ded8c436f7f186d25d3492':
@@ -36,7 +36,7 @@ rows = []
 for frame in (700,900,1050,1200,1450,2850,3250,3500,3800,4300,4600,5000):
     rows.extend([(frame, 8 if frame == 700 else 1), (frame + 15, 0)])
 # Native selection uses a 3x3 grid with Random in the middle. Start there;
-# Wario deliberately moves left to Toad, down to DK, then right to Wario.
+# Select the requested native character using ordinary navigation.
 paths = [(32,64),(64,),(16,64),(32,),(16,),(32,128),(32,128,16),(16,128)]
 for step, key in enumerate(paths[a.character]):
     rows.extend([(2250+step*200,key),(2265+step*200,0)])

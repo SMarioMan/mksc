@@ -11,7 +11,7 @@ for k in ('runner','rom','elf','bios','results'):p.add_argument('--'+k,required=
 p.add_argument('--frames',type=int,help='Maximum video frames (default: 70000 for a GP cup, 36000 otherwise)')
 p.add_argument('--gp',action='store_true',help='Record a complete four-course Retro GP cup')
 p.add_argument('--boot-ring',action='store_true',help='Skip title inputs for a ROM built with --boot-ring')
-p.add_argument('--audio-policy',choices=('shared','normal','off'),default='shared')
+p.add_argument('--audio-policy',choices=('shared','normal'),default='shared')
 p.add_argument('--analyze-only',action='store_true',help='Analyze already captured JSON, CSV and WAV files')
 a=p.parse_args()
 if a.frames is None:a.frames=70000 if a.gp else 36000
@@ -27,12 +27,12 @@ for l in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  if int(i)==0 and f<2200 and (not a.boot_ring or f>=1500):events.extend((f,j,int(k,16)) for j in range(8 if f<1500 or f in (2000,2015) else 1))
 # Luigi Circuit reproduces the rain animation/audio contention.
 if a.gp:events.extend(((1600,0,64),(1615,0,0)))
-course_keys=((2800,4),(3200,1),(3500,1)) if a.gp else ((3000,128),(3040,128),(3400,1),(4300,1),(4600,1))
+course_keys=((2800,256),(3200,1),(3500,1)) if a.gp else ((3000,128),(3040,128),(3400,1),(4300,1),(4600,1))
 for f,k in course_keys:
  events.extend(((f,0,k),(f+15,0,0)))
 inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(events)))
 video=a.results/'video.csv'
-cmd=[str(a.runner),'--ring','--rom',str(a.rom),'--bios',str(a.bios),'--players','8','--frames',str(a.frames),
+cmd=[str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(a.rom),'--bios',str(a.bios),'--players','8','--frames',str(a.frames),
  '--input',str(inputs),'--autodrive-frame','5500','--autofire','--video-from','1500','--video-log',str(video),
  '--audio-prefix',str(a.results/'pcm'),'--audio-state',hex(symbols['ring_audioTiming']),
  '--sound-table',hex(symbols['gMPlayTable']),'--barrier-state',hex(symbols['sRing']),'--barrier-before-input']

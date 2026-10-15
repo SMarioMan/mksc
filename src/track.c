@@ -19,12 +19,22 @@ u32 track_getRetroTrack(int header_idx)
 }
 u32 track_getRetroBattleTrack(int header_idx)
 {
+#ifdef MKSC_RING
+    /* Hidden SNES Battle definitions follow the twenty Retro race tracks. */
+    return 52 + header_idx;
+#else
     return gRetroBattleCup[header_idx];
+#endif
 }
 
 u32 track_getBattleTrack(int header_idx)
 {
+#ifdef MKSC_RING
+    extern u32 ring_nativeBattleTrack(int);
+    return ring_nativeBattleTrack(header_idx);
+#else
     return gBattleCup[header_idx];
+#endif
 }
 
 u32 track_isRetroTrack(u8 header_idx)

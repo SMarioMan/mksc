@@ -38,13 +38,13 @@ SYMBOL_FILE := symbols.txt
 COMPARE_TARGET := compare
 
 ifeq ($(RING),1)
+ifneq ($(filter-out normal shared,$(RING_MUSIC)),)
+$(error RING_MUSIC must be normal or shared)
+endif
 ROM := mksc-ring.gba
 COMPARE_TARGET :=
 OBJ_DIR := build-ring
 CPPFLAGS += -DMKSC_RING=1 -DMKSC_RING_BOOT=$(or $(RING_BOOT),0)
-ifeq ($(RING_MUSIC),off)
-CPPFLAGS += -DMKSC_RING_MUSIC_OFF=1
-endif
 ifeq ($(RING_MUSIC),shared)
 CPPFLAGS += -DMKSC_RING_MUSIC_SHARED=1
 ASFLAGS += --defsym MKSC_RING_AUDIO_AHEAD=2
@@ -168,6 +168,17 @@ $(SOUND_BUILDDIR)/%.o: $(SOUND_SUBDIR)/%.s
 
 $(ASM_BUILDDIR)/%.o: $(ASM_SUBDIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
+
+ifeq ($(RING),1)
+$(OBJ_DIR)/retro-battle.stamp: baserom.gba tools/ring/restore_battle_assets.py tools/ring/fixtures/snes-battle-restoration.bps
+	python3 tools/ring/restore_battle_assets.py --rom baserom.gba --output $(OBJ_DIR)
+	@touch $@
+
+$(OBJ_DIR)/data/courseData.o: $(OBJ_DIR)/retro-battle.stamp
+	$(BIN2S) -H $(@).h $(OBJ_DIR)/courseData.bin | $(AS) -o $(@)
+
+$(OBJ_DIR)/asm/ringBattleData.o: $(OBJ_DIR)/retro-battle.stamp
+endif
 
 $(DATA_BUILDDIR)/%.o : $(DATA_SUBDIR)/%.bin
 	@echo $(notdir $<)

@@ -5,6 +5,7 @@ extern void ring_noteAudioStart(struct MusicPlayerInfo*);
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
 extern int ring_sharedMusicActive(void);
+extern bool32 ring_active(void);
 extern int ring_sharedMusicMuted(void);
 extern int ring_sharedAudioMuted(struct MusicPlayerInfo*, struct SongHeader*);
 extern u16 ring_sharedMusicSong(u16 song);
@@ -103,10 +104,6 @@ void m4aSongNumStart(u16 n)
     const struct Song* song = &songTable[n];
 #endif
     const struct MusicPlayer* mplay = &mplayTable[song->ms];
-#ifdef MKSC_RING_MUSIC_OFF
-    /* All BGM and jingles share player zero; effects/voices use other players. */
-    if (song->ms == 0) return;
-#endif
 #ifdef MKSC_RING_MUSIC_SHARED
     if (song->ms == 0 && ring_sharedMusicMuted()) return;
     if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
@@ -125,10 +122,6 @@ void m4aSongNumStartOrChange(u16 n)
     const struct Song* song = &songTable[n];
 #endif
     const struct MusicPlayer* mplay = &mplayTable[song->ms];
-#ifdef MKSC_RING_MUSIC_OFF
-    /* All BGM and jingles share player zero; effects/voices use other players. */
-    if (song->ms == 0) return;
-#endif
 #ifdef MKSC_RING_MUSIC_SHARED
     if (song->ms == 0 && ring_sharedMusicMuted()) return;
     if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
@@ -157,10 +150,6 @@ void m4aSongNumStartOrContinue(u16 n)
     const struct Song* song = &songTable[n];
 #endif
     const struct MusicPlayer* mplay = &mplayTable[song->ms];
-#ifdef MKSC_RING_MUSIC_OFF
-    /* All BGM and jingles share player zero; effects/voices use other players. */
-    if (song->ms == 0) return;
-#endif
 #ifdef MKSC_RING_MUSIC_SHARED
     if (song->ms == 0 && ring_sharedMusicMuted()) return;
     if (ring_sharedMusicActive() && n >= 10 && n <= 13) return;
@@ -777,6 +766,9 @@ void TrkVolPitSet(struct MusicPlayerInfo* mplayInfo, struct MusicPlayerTrack* tr
         s32 y;
 
         x = (u32)(track->vol * track->volX) >> 5;
+#ifdef MKSC_RING_MUSIC_SHARED
+        if (ring_active() && mplayInfo != gMPlayTable[0].info) x /= 4;
+#endif
 
         if (track->modT == 1)
             x = (u32)(x * (track->modM + 128)) >> 7;
