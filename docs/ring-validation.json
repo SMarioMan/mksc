@@ -1,6 +1,6 @@
 {
   "status": "in_progress",
-  "captured_at_utc": "2026-10-15T02:33:09.869813+00:00",
+  "captured_at_utc": "2026-10-15T03:19:35.145807+00:00",
   "production_source_commit": "0e07cc70ba48ec6fb9c4667bad940fc23dc1c034",
   "emulator_commit": "3cef7cd50bcc9c1cac39281d15fd05d82100625c",
   "variants": {
@@ -147,6 +147,58 @@
     {
       "name": "rounds",
       "seconds": 804.31
+    },
+    {
+      "name": "repeat",
+      "seconds": 177.8
+    },
+    {
+      "name": "start_music",
+      "seconds": 130.09
+    },
+    {
+      "name": "music-off",
+      "seconds": 61.92
+    },
+    {
+      "name": "music-leader",
+      "seconds": 126.77
+    },
+    {
+      "name": "all-44-shared",
+      "seconds": 4309.46
+    },
+    {
+      "name": "all-44-normal",
+      "seconds": 4413.47
+    },
+    {
+      "name": "audio-shared",
+      "seconds": 582.62
+    },
+    {
+      "name": "audio-normal",
+      "seconds": 178.35
+    },
+    {
+      "name": "gp_cup",
+      "seconds": 524.01
+    },
+    {
+      "name": "relocation",
+      "seconds": 2.2
+    },
+    {
+      "name": "shifted-singleplayer",
+      "seconds": 40.63
+    },
+    {
+      "name": "shifted-game",
+      "seconds": 334.82
+    },
+    {
+      "name": "silent-heavy",
+      "seconds": 377.66
     }
   ],
   "performance": {
@@ -802,6 +854,798 @@
             1.0,
             1.0,
             1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-1": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "super-19": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-3": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-2": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-4": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-5": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-6": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-7": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-8": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-9": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-10": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-12": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-11": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-13": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-14": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-15": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-16": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-18": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-17": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-19": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-0": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947
+          ],
+          "minimum_300_frame_rates": [
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-1": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325
+          ],
+          "minimum_300_frame_rates": [
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-2": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9993258426966292,
+            0.9993258426966292,
+            0.9993258426966292,
+            0.9993258426966292,
+            0.9993258426966292,
+            0.9993258426966292,
+            0.9993258426966292,
+            0.9993258426966292
+          ],
+          "minimum_300_frame_rates": [
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333,
+            0.9933333333333333
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-3": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9997699562916954,
+            0.9997699562916954,
+            0.9997699562916954,
+            0.9997699562916954,
+            0.9997699562916954,
+            0.9997699562916954,
+            0.9997699562916954,
+            0.9997699562916954
+          ],
+          "minimum_300_frame_rates": [
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667
           ],
           "audio_missed_frames": [
             0,
@@ -1545,8 +2389,935 @@
             0,
             0
           ]
+        },
+        "retro-2": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-3": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-4": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-5": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-6": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-7": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-8": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-9": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-10": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-12": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-11": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-13": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-14": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-15": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-16": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-18": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-17": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "retro-19": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "minimum_300_frame_rates": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-0": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947,
+            0.9995000416631947
+          ],
+          "minimum_300_frame_rates": [
+            0.99,
+            0.99,
+            0.99,
+            0.99,
+            0.99,
+            0.99,
+            0.99,
+            0.99
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-1": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325,
+            0.9999166736105325
+          ],
+          "minimum_300_frame_rates": [
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-2": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9969390878481788,
+            0.9969390878481788,
+            0.9969390878481788,
+            0.9969390878481788,
+            0.9969390878481788,
+            0.9969390878481788,
+            0.9969390878481788,
+            0.9969390878481788
+          ],
+          "minimum_300_frame_rates": [
+            0.9566666666666667,
+            0.9566666666666667,
+            0.9566666666666667,
+            0.9566666666666667,
+            0.9566666666666667,
+            0.9566666666666667,
+            0.9566666666666667,
+            0.9566666666666667
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "battle-3": {
+          "profile_scheduling": "quantum",
+          "rates": [
+            0.9997419354838709,
+            0.9997419354838709,
+            0.9997419354838709,
+            0.9997419354838709,
+            0.9997419354838709,
+            0.9997419354838709,
+            0.9997419354838709,
+            0.9997419354838709
+          ],
+          "minimum_300_frame_rates": [
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667,
+            0.9966666666666667
+          ],
+          "audio_missed_frames": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
         }
       }
     }
+  },
+  "audio": {
+    "audio-shared": {
+      "rom_sha256": "476ef8f506898f144b666d6f2d782618ca2ec081f7a4bbd6cf0ad93527c3b924",
+      "audio_policy": "shared",
+      "frames": 70000,
+      "nodes": [
+        {
+          "player": 1,
+          "character": 0,
+          "audio_frames": 42638064,
+          "peak": 24528,
+          "nonzero_samples": 82949783,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        },
+        {
+          "player": 2,
+          "character": 1,
+          "audio_frames": 42638052,
+          "peak": 24576,
+          "nonzero_samples": 70770651,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        },
+        {
+          "player": 3,
+          "character": 3,
+          "audio_frames": 42638052,
+          "peak": 21504,
+          "nonzero_samples": 73246704,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        },
+        {
+          "player": 4,
+          "character": 6,
+          "audio_frames": 42638052,
+          "peak": 24528,
+          "nonzero_samples": 73870950,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        },
+        {
+          "player": 5,
+          "character": 7,
+          "audio_frames": 42638052,
+          "peak": 23808,
+          "nonzero_samples": 74305411,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        },
+        {
+          "player": 6,
+          "character": 4,
+          "audio_frames": 42638052,
+          "peak": 24528,
+          "nonzero_samples": 76001947,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        },
+        {
+          "player": 7,
+          "character": 5,
+          "audio_frames": 42638048,
+          "peak": 24576,
+          "nonzero_samples": 71228063,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        },
+        {
+          "player": 8,
+          "character": 2,
+          "audio_frames": 42638052,
+          "peak": 23808,
+          "nonzero_samples": 74352216,
+          "clipped_samples": 0,
+          "missed_services": 0,
+          "recovered_segments": 0,
+          "late_segments": 0
+        }
+      ]
+    },
+    "audio-normal": {
+      "rom_sha256": "9e8f0f465f488fcf8c145b9a622f1c330be75e52e3f1c422c99d22b542f01248",
+      "audio_policy": "normal",
+      "frames": 24000,
+      "nodes": [
+        {
+          "player": 1,
+          "character": 0,
+          "audio_frames": 24691472,
+          "peak": 24576,
+          "nonzero_samples": 28190635,
+          "clipped_samples": 0,
+          "missed_services": 4,
+          "recovered_segments": 4,
+          "late_segments": 0
+        },
+        {
+          "player": 2,
+          "character": 1,
+          "audio_frames": 24691428,
+          "peak": 24576,
+          "nonzero_samples": 27723130,
+          "clipped_samples": 0,
+          "missed_services": 3,
+          "recovered_segments": 3,
+          "late_segments": 0
+        },
+        {
+          "player": 3,
+          "character": 3,
+          "audio_frames": 24691428,
+          "peak": 23040,
+          "nonzero_samples": 48546672,
+          "clipped_samples": 0,
+          "missed_services": 3,
+          "recovered_segments": 3,
+          "late_segments": 0
+        },
+        {
+          "player": 4,
+          "character": 6,
+          "audio_frames": 24691428,
+          "peak": 22848,
+          "nonzero_samples": 48530725,
+          "clipped_samples": 0,
+          "missed_services": 3,
+          "recovered_segments": 3,
+          "late_segments": 0
+        },
+        {
+          "player": 5,
+          "character": 7,
+          "audio_frames": 24691428,
+          "peak": 24576,
+          "nonzero_samples": 27776340,
+          "clipped_samples": 0,
+          "missed_services": 3,
+          "recovered_segments": 3,
+          "late_segments": 0
+        },
+        {
+          "player": 6,
+          "character": 4,
+          "audio_frames": 24691428,
+          "peak": 24576,
+          "nonzero_samples": 28418467,
+          "clipped_samples": 0,
+          "missed_services": 3,
+          "recovered_segments": 3,
+          "late_segments": 0
+        },
+        {
+          "player": 7,
+          "character": 5,
+          "audio_frames": 24692528,
+          "peak": 23808,
+          "nonzero_samples": 48493130,
+          "clipped_samples": 0,
+          "missed_services": 3,
+          "recovered_segments": 3,
+          "late_segments": 0
+        },
+        {
+          "player": 8,
+          "character": 2,
+          "audio_frames": 24692536,
+          "peak": 23808,
+          "nonzero_samples": 48503919,
+          "clipped_samples": 0,
+          "missed_services": 3,
+          "recovered_segments": 3,
+          "late_segments": 0
+        }
+      ]
+    }
+  },
+  "pending_gates": [
+    "silent stress revalidation",
+    "shifted linked entry",
+    "HLE"
+  ],
+  "additional_checks": {
+    "highest_balloon_hud": true,
+    "packed_relocation": true
   }
 }
