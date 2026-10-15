@@ -77,6 +77,83 @@
       ],
       "longest_host_frame_gap_ms": 43.34,
       "status": "passed"
+    },
+    "host_halt_queue_publish_extended": {
+      "build": "builds-v18",
+      "backend": "Qt/PulseAudio",
+      "frames": 18000,
+      "status": "failed",
+      "fps": 60.03,
+      "underrun_events_per_output": [
+        1,
+        1,
+        3,
+        1,
+        4,
+        2,
+        4,
+        3
+      ],
+      "longest_host_frame_gap_ms": 97.71,
+      "suspended_audio_shutdown": "passed",
+      "evidence": "gui-qt-halt-publish-extended.log"
+    },
+    "dedicated_worker_minute": {
+      "build": "builds-v18",
+      "backend": "Qt/PulseAudio",
+      "frames": 3600,
+      "status": "failed",
+      "underrun_events_per_output": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "longest_host_frame_gap_ms": 87.44,
+      "evidence": "gui-qt-worker.log"
+    },
+    "worker_pull_extended": {
+      "build": "builds-v18",
+      "backend": "Qt/PulseAudio",
+      "frames": 18000,
+      "status": "failed",
+      "fps": 60.01,
+      "underrun_events_per_output": [
+        2,
+        1,
+        1,
+        1,
+        2,
+        1,
+        2,
+        1
+      ],
+      "host_watchdog_max_gap_ms": 46.608208,
+      "cpu_quota_throttles": 0,
+      "evidence": "gui-qt-worker-extended.log"
+    },
+    "worker_push_two_player": {
+      "status": "passed",
+      "build": "builds-v18",
+      "players": 2,
+      "frames": 1900,
+      "fps": 59.99,
+      "underrun_events_per_output": [
+        0,
+        0
+      ],
+      "stock_ring_topology_roundtrip": true,
+      "evidence": "gui-qt-push-two-guarded.log"
+    },
+    "worker_push_extended": {
+      "status": "in_progress",
+      "players": 8,
+      "frames": 18000,
+      "gate_requires_zero": true
     }
   },
   "native_battle_spawns": {
@@ -199,7 +276,31 @@
       11
     ],
     "status": "passed",
-    "supersedes": "Earlier Star diagnostics used Boo timer 0x66 and are not valid Star coverage."
+    "supersedes": "Earlier Star diagnostics used Boo timer 0x66 and are not valid Star coverage.",
+    "live_race": {
+      "status": "passed",
+      "build": "builds-v18",
+      "players": 8,
+      "physical_host_window": 4,
+      "mode": "Grand Prix",
+      "course": "SNES Mario Circuit 1",
+      "updates_per_video_frame": 1.0,
+      "effects": {
+        "starMask": {
+          "frames": 843,
+          "non_host": true
+        },
+        "booMask": {
+          "frames": 718,
+          "non_host": true
+        },
+        "shrinkMask": {
+          "frames": 301,
+          "non_host": true
+        }
+      },
+      "evidence": "music-leader-v18-analysis.log"
+    }
   },
   "discovery_music": {
     "song": 40,
@@ -226,5 +327,33 @@
     ],
     "cases": 21,
     "evidence": "entry-v18.log"
+  },
+  "gui_performance": {
+    "build": "builds-v18",
+    "uncapped_moving_8_player_fps": 98.25,
+    "previous_busy_host_fps": 97.64,
+    "updates_per_video_frame": 1.0,
+    "audio_quality_inferred": false,
+    "evidence": [
+      "gui-headroom-v17.log",
+      "gui-headroom-v18.log"
+    ]
+  },
+  "restored_battle_menu": {
+    "status": "passed",
+    "build": "builds-v18",
+    "player_counts": [
+      2,
+      8
+    ],
+    "retro_previews_per_count": 4,
+    "roundtrip_to_gba": true,
+    "cases": 10,
+    "reference": "supplied restoration BPS",
+    "checks": [
+      "full preview tile bytes",
+      "distinguishing palette colors"
+    ],
+    "evidence": "battle-menu-v18.log"
   }
 }

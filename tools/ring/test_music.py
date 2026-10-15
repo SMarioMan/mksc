@@ -66,15 +66,27 @@ owner=[r for r in game if r['player']==a.host]
 opening={struct.unpack_from('<I',rom,table+i*8)[0] for i in (3,4)}
 audible=[r for r in owner if r['musicStatus']&65535 and not r['musicStatus']&0x80000000]
 coverage={}
+def theme(row):
+ return 10 if row['starMask'] else 12 if row['booMask'] else 11 if row['shrinkMask'] else 0
 for effect,mask in ((10,'starMask'),(12,'booMask'),(11,'shrinkMask')):
  expected=struct.unpack_from('<I',rom,table+effect*8)[0]
- stable={r['frame'] for before,r in zip(owner,owner[1:]) if before.get(mask,0) and r.get(mask,0)}
+ # Music is serviced before physics decrements item timers. Require the
+ # dominant native theme to persist across both observations; a higher
+ # priority effect expiring can legitimately retain its song for one frame.
+ stable={r['frame'] for before,r in zip(owner,owner[1:]) if theme(before)==theme(r)==effect}
  effectFrames=[r for r in owner if r['frame'] in stable and r.get(mask,0) and r['musicStatus']&65535 and r['musicHeader'] not in opening|{jingle,winner}]
  if effect!=10:effectFrames=[r for r in effectFrames if not r.get('starMask',0)]
  if effect==11:effectFrames=[r for r in effectFrames if not r.get('booMask',0)]
- coverage[mask]={'frames':len(effectFrames),'non_host':any(r.get(mask,0)&~(1<<a.host) for r in effectFrames)}
+ # Driver masks use software racer IDs: the elected host is always racer
+ # zero, even when --host chooses a different physical emulator window.
+ coverage[mask]={'frames':len(effectFrames),'non_host':any(r.get(mask,0)&~1 for r in effectFrames)}
  if effect==10 or effect==11 and a.require_shrink:assert effectFrames and coverage[mask]['non_host'],f'No non-host shared effect exercised: {mask}'
  assert all(r['musicHeader']==expected for r in effectFrames), f'Common {mask} theme missing'
+for before,row in zip(owner,owner[1:]):
+ if theme(before)!=theme(row) or row['musicHeader'] in opening|{jingle,winner}:continue
+ if not row['musicStatus']&65535 or row['musicStatus']&0x80000000:continue
+ expected=struct.unpack_from('<I',rom,table+theme(row)*8)[0] if theme(row) else course
+ assert row['musicHeader']==expected,('Stable global music policy differs',row['frame'],theme(row))
 (a.results/'effect-coverage.json').write_text(json.dumps(coverage,indent=2)+'\n')
 assert audible and all(r['musicHeader'] in (course,jingle,*effects) or
  (r['musicHeader'] in opening and r['leadLap']==0) or
