@@ -14,9 +14,10 @@ import subprocess
 BIOS_SHA1 = '300c20df6731a33952ded8c436f7f186d25d3492'
 HELD = [1, 17, 33, 257, 513, 65, 129, 1]
 p = argparse.ArgumentParser(description=__doc__)
-p.add_argument('--runner', required=True, type=Path)
-p.add_argument('--rom', required=True, type=Path)
-p.add_argument('--bios', required=True, type=Path)
+p.add_argument('--runner', type=Path)
+p.add_argument('--rom', type=Path)
+p.add_argument('--bios', type=Path)
+p.add_argument('--inputs-only', action='store_true', help='Export the same keypad fixtures without running an emulator')
 p.add_argument('--results', required=True, type=Path)
 p.add_argument('--players', nargs='+', type=int, default=list(range(2, 9)))
 p.add_argument('--host', type=int, default=0)
@@ -24,18 +25,21 @@ p.add_argument('--arena', type=int, choices=range(4), default=0)
 p.add_argument('--modes', nargs='+', choices=['vs', 'battle', 'gp'], default=['vs', 'battle'])
 p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
 a = p.parse_args()
-if hashlib.sha1(a.bios.read_bytes()).hexdigest() != BIOS_SHA1:
+if not a.inputs_only and not all((a.runner, a.rom, a.bios)):
+    p.error('--runner, --rom, and --bios are required unless --inputs-only is used')
+if not a.inputs_only and hashlib.sha1(a.bios.read_bytes()).hexdigest() != BIOS_SHA1:
     p.error('The supplied real GBA BIOS is required')
 if a.host < 0 or any(a.host >= n for n in a.players):
     p.error('The host console index must exist in every test')
 if any(n < 2 or n > 8 for n in a.players):
     p.error('Player counts must be 2 through 8')
 a.results.mkdir(parents=True, exist_ok=True)
-rom_data = a.rom.read_bytes()
-rom_hash = hashlib.sha256(rom_data).hexdigest()
-rom = a.results / f'{rom_hash}.gba'
-if not rom.exists():
-    rom.write_bytes(rom_data)
+if not a.inputs_only:
+    rom_data = a.rom.read_bytes()
+    rom_hash = hashlib.sha256(rom_data).hexdigest()
+    rom = a.results / f'{rom_hash}.gba'
+    if not rom.exists():
+        rom.write_bytes(rom_data)
 base = []
 for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitlines():
     frame, slot, keys = line.split(',')
@@ -61,6 +65,9 @@ for n in a.players:
         name = f'{mode}-{n}'
         inputs = a.results / f'{name}.csv'
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(events)))
+        if a.inputs_only:
+            print(f'EXPORTED {inputs}', flush=True)
+            continue
         command = [str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(rom),
                                '--bios', str(a.bios), '--players', str(n),
                                '--frames', '3750', '--input', str(inputs),
@@ -102,5 +109,7 @@ for n in a.players:
         assert all(s == positions[0] for s in positions), (name, positions)
         assert len({tuple(pos) for pos in positions[0]}) == (8 if mode == 'gp' else n), (name, positions[0])
         print(f'PASS {name}: {rounds[0]} commits, distinct controls and synchronized positions', flush=True)
+if a.inputs_only:
+    raise SystemExit(0)
 (a.results / 'manifest.json').write_text(json.dumps({'rom_sha256': rom_hash, 'bios_sha1': BIOS_SHA1, 'bios_mode': 'hle' if a.hle else 'real',
                                                     'players': a.players, 'modes': a.modes}, indent=2))

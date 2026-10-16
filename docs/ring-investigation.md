@@ -1,5 +1,15 @@
 ## Active review (2026-10-16)
 
+New request: visible, real-time regression playback with sound is tracked in
+`ring-validation.json` under `visual_regression_review`. The launcher is
+`tools/ring/review_gui.py`; usage and replay limits are in `tools/ring/README.md`.
+Actual X11 tiled-window, real-BIOS reviews pass for eight-player Vs. and
+five-player Grand Prix, each with 2,090 moving frames, full simulation speed,
+zero dropped PCM samples and zero measured underruns on the idle host. A
+five-player run that included desktop capture failed with one underrun per
+output and a 158 ms host stall; both observations remain recorded. This does
+not certify physical speakers or close the combined BIOS gates.
+
 Review 11 restores P1–P8 overhead labels and preserves native character kart
 colors with a separate indicator atlas. The real-BIOS detached atlas oracle
 passes 128 native layouts, including native DMA and late-object eviction.
