@@ -6,19 +6,20 @@ extern u8 col_sCpoiStartIndicesActive[128];
 extern u8 col_sCpoiStartIndicesPassive[128];
 
 #ifdef MKSC_RING
-static int firstMinimumCheckpoint(Actor** list, int first, int count) __attribute__((section(".ring_irq"), noinline));
-static int firstMinimumCheckpoint(Actor** list, int first, int count)
+/* No callbacks run during sorting. Cache the immutable checkpoint bytes on
+ * the fast system stack instead of chasing two EWRAM pointers per comparison.
+ * Swap keys with actors to preserve the native selection sort's tie order. */
+static int firstMinimumCheckpoint(const u8* keys, int first, int count) __attribute__((section(".ring_irq"), target("arm"), noinline));
+static int firstMinimumCheckpoint(const u8* keys, int first, int count)
 {
-    Actor** selected = list + first;
-    Actor** cursor = selected + 1;
-    int lowest = (*selected)->checkpointId, remaining = count - first - 1;
-    for (; remaining > 0; remaining--, cursor++)
-        if ((*cursor)->checkpointId < lowest)
+    int selected = first, lowest = keys[first], cursor;
+    for (cursor = first + 1; cursor < count; cursor++)
+        if (keys[cursor] < lowest)
         {
-            lowest = (*cursor)->checkpointId;
+            lowest = keys[cursor];
             selected = cursor;
         }
-    return selected - list;
+    return selected;
 }
 #endif
 
@@ -26,11 +27,19 @@ static void sortByCheckpoint(Actor** actorList, int actorCount, u8* cpoiStartInd
 {
     int i, j;
     int idx;
+#ifdef MKSC_RING
+    u8 checkpointKeys[64];
+    for (i = 0; i < actorCount; i++) checkpointKeys[i] = actorList[i]->checkpointId;
+#endif
     for (i = 0; i < actorCount - 1; i++)
     {
         Actor* tempActor;
 #ifdef MKSC_RING
-        idx = firstMinimumCheckpoint(actorList, i, actorCount);
+        int key;
+        idx = firstMinimumCheckpoint(checkpointKeys, i, actorCount);
+        key = checkpointKeys[idx];
+        checkpointKeys[idx] = checkpointKeys[i];
+        checkpointKeys[i] = key;
 #else
         int checkpointId = actorList[i]->checkpointId;
         idx = i;
