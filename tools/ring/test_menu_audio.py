@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Verify shared common menu effects play once, while character sounds stay local."""
-import argparse,json,subprocess
+import argparse,csv,json,subprocess
 from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__)
 for key in ('runner','rom','elf','bios','results'):p.add_argument('--'+key,required=True,type=Path)
@@ -18,11 +18,16 @@ rows.extend([(2500,a.host,256),(2515,a.host,0)])
 inputs=a.results/'inputs.csv';inputs.write_text(''.join(f'{f},{i},{k:x}\n'for f,i,k in sorted(rows)))
 outputs=[]
 for frame in (2400,2750):
- result=subprocess.run([str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(a.players),'--frames',str(frame),'--input',str(inputs),'--dump',hex(symbols['ring_audioMenuStarts']),'--dump-words','11','--barrier-before-input','--barrier-state','0x03006B40'],capture_output=True,text=True,timeout=300)
+ video=a.results/f'{frame}-video.csv'
+ result=subprocess.run([str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(a.players),'--frames',str(frame),'--input',str(inputs),'--dump',hex(symbols['ring_audioMenuStarts']),'--dump-words','11','--video-from','1700','--video-log',str(video),'--barrier-before-input','--barrier-state',hex(symbols['sRing'])],capture_output=True,text=True,timeout=300)
  (a.results/f'{frame}.json').write_text(result.stdout);(a.results/f'{frame}.stderr').write_text(result.stderr)
  assert result.returncode==0 and not result.stderr,result.stderr
  data=json.loads(result.stdout)
  assert data['collisions']==0 and all(n['barrier']['errors']==n['barrier']['timeouts']==0 for n in data['nodes'])
+ frames=[{key:int(value) for key,value in row.items()} for row in csv.DictReader(video.open())]
+ peers=[row for row in frames if row['player']!=a.host]
+ assert peers and all(not row['musicStatus'] & 65535 or row['musicStatus'] & 0x80000000 for row in peers), 'Peer menu BGM was resumed'
+ assert any(row['player']==a.host and row['musicStatus'] & 65535 and not row['musicStatus'] & 0x80000000 for row in frames), 'Host menu BGM is silent'
  outputs.append(data['nodes'])
 for before,after in zip(*outputs):
  delta=[b-a for a,b in zip(before['dump'],after['dump'])]

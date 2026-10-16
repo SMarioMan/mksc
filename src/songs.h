@@ -105,6 +105,8 @@
 #define SONG_SFX_COUNT_LO 114
 #define SONG_SFX_COUNT_HI 115
 
+#define SONG_SFX_LOW_COINS 194
+
 #define SONG_119 119
 #define SONG_120 120
 #define SONG_121 121
