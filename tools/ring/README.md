@@ -192,10 +192,11 @@ scene memory.
 
 `test_start_music.py` covers the opening fanfare before course BGM in eight-player
 Vs./Battle/GP (including a host in another physical window). Shared music waits
-for the native opening song to end, preserves common final-lap/result jingles,
+for the native countdown to request the course song, preserves common final-lap/result jingles,
 and chooses a common Star or lightning theme from every racer's effect state.
 Peers retain their own engine and voice sounds. Common menu sounds play on
-the host; shared-build effects use one quarter of their original volume.
+the host; shared-build effects use half their original volume. The repeating low-coin
+warning remains at quarter volume.
 
 `test_battle_menu.py` compares the published SNES preview graphics and palette
 with the supplied reference patch, then checks a round trip back to the GBA
@@ -283,7 +284,7 @@ python3 tools/ring/verify_release.py \
 ```
 
 This is an extensive release check, rather than a quick development smoke test.
-It covers all 44 courses in normal/shared audio, all 2–8-player game entries
+It covers all 48 courses in normal/shared audio, all 2–8-player game entries
 and complete Vs./Battle rounds, native menu/rendering/recovery regressions,
 extended audio, full GP cups, private GUI rows, native-code arithmetic oracles,
 and controlled ROM relocation. HLE starts only after every BIOS queue passes.

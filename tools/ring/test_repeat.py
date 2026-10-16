@@ -23,8 +23,9 @@ for line in subprocess.check_output([a.nm,'-n',str(a.elf)],text=True).splitlines
     f=line.split()
     if len(f)==3:symbols[f[2]]=int(f[0],16)
 a.results.mkdir(parents=True,exist_ok=True)
-dumpBase=min(symbols['sPlaces'],symbols['sWins'])
-assert max(symbols['sPlaces']+8,symbols['sWins']+16)<=dumpBase+128
+dumpBase=min(symbols['sPlaces'],symbols['sRoundScores'])
+dumpWords=(max(symbols['sPlaces']+8,symbols['sRoundScores']+16)-dumpBase+3)//4
+assert dumpWords<=4096
 b=a.rom.read_bytes();rom=a.results/(hashlib.sha256(b).hexdigest()+'.gba')
 if not rom.exists():rom.write_bytes(b)
 for n in a.players:
@@ -47,8 +48,8 @@ for n in a.players:
                          '--players',str(n),'--frames',str(min(100000,frame*2+6000)),
                          '--input',str(inputs),'--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                          '--until-scene',hex(symbols['results_main']|1),
-                         '--watch',hex(symbols['sWins']),'--until-watch-value','2',
-                         '--dump',hex(dumpBase),'--screens',str(a.results/name)],
+                         '--watch',hex(symbols['sRoundScores']),'--until-watch-value','2',
+                         '--dump',hex(dumpBase),'--dump-words',str(dumpWords),'--screens',str(a.results/name)],
                         capture_output=True,text=True,timeout=600)
     (a.results/(name+'.json')).write_text(proc.stdout)
     (a.results/(name+'.stderr')).write_text(proc.stderr)
@@ -57,8 +58,8 @@ for n in a.players:
     states=[]
     for node in data['nodes']:
         r=node['barrier'];assert r['errors']==r['timeouts']==0 and r['count']==n,(name,r)
-        raw=struct.pack('<32I',*node['dump']);places=list(raw[symbols['sPlaces']-dumpBase:symbols['sPlaces']-dumpBase+n])
-        wins=list(struct.unpack_from('<8H',raw,symbols['sWins']-dumpBase))[:n]
+        raw=struct.pack('<'+'I'*len(node['dump']),*node['dump']);places=list(raw[symbols['sPlaces']-dumpBase:symbols['sPlaces']-dumpBase+n])
+        wins=list(struct.unpack_from('<8H',raw,symbols['sRoundScores']-dumpBase))[:n]
         assert sorted(places)==list(range(n)) and places[0]==0,(name,places)
         assert wins==[2]+[0]*(n-1),(name,wins)
         states.append((r['round'],places,wins,[d['position'] for d in node['game']['drivers'][:n]]))

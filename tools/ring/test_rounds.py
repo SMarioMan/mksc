@@ -21,6 +21,7 @@ p.add_argument('--modes', nargs='+', choices=['vs','battle'], default=['vs','bat
 p.add_argument('--workers', type=int, choices=range(1,5), default=3)
 p.add_argument('--toad-150cc-retro', action='store_true', help='Reproduce host Toad finishing SNES Mario Circuit 1 at 150cc')
 p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
+p.add_argument('--shared-audio', action='store_true', help='Require a host-only common result cue after the round ends')
 a = p.parse_args()
 if any(n < 2 or n > 8 for n in a.players):
     p.error('Player counts must be 2 through 8')
@@ -74,7 +75,11 @@ def run(n,mode):
                '--input',str(inputs),'--dump',hex(dumpBase),'--dump-words',str(dumpWords),
                '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                '--until-scene',hex(symbols['results_main'] | 1),
+               '--settle-frames','30',
                '--screens',str(a.results/name)]
+    if a.shared_audio:
+        mixer=struct.unpack_from('<I',rom_data,symbols['gMPlayTable']-0x08000000)[0]
+        command += ['--keys-address',hex(mixer),'--key-slots','4']
     if a.toad_150cc_retro:command += ['--record-inputs',str(a.results/(name+'-recorded.csv'))]
     if mode == 'vs':
         command += ['--autodrive-frame','5500' if a.toad_150cc_retro else '3500','--autofire']
@@ -102,6 +107,14 @@ def run(n,mode):
         barrier = node['barrier']
         assert barrier['errors'] == barrier['timeouts'] == 0, (name,barrier)
         assert barrier['count'] == n and barrier['id'] == node['slot'], (name,barrier)
+        if a.shared_audio:
+            audio=node['menu']['heldKeys']
+            header=audio[0] | audio[1]<<16
+            status=audio[2] | audio[3]<<16
+            if node['slot']==0:
+                cue=struct.unpack_from('<I',rom_data,symbols['gSongTable']-0x08000000+5*8)[0]
+                assert header==cue and status&65535 and not status&0x80000000,(name,'Common result cue missing',header,status)
+            else:assert not status&65535 or status&0x80000000,(name,'Peer result music is audible',node['slot'])
         rounds.append(barrier['round'])
         raw = struct.pack('<'+'I'*len(node['dump']),*node['dump'])
         places = list(raw[symbols['sPlaces']-dumpBase:symbols['sPlaces']-dumpBase+n])
