@@ -12,6 +12,7 @@ bool32 ring_canPublishGraphics(void);
 bool32 ring_canPublishLateGraphics(void);
 void ring_graphicsPublished(void);
 void ring_publishIdentityPalette(void);
+void ring_publishNativeMenuPalette(void);
 void ring_restoreIdentityTiles(void);
 u32 ring_identityPublicationCost(void);
 void ring_prepareIdentityGraphics(void);
@@ -36,4 +37,8 @@ bool32 ring_finishRace(void);
 bool32 ring_preserveRaceDisplay(void);
 void ring_drawTitleOption(int y, bool32 selected);
 void ring_initTitleOption(void);
+#endif
+
+#ifdef MKSC_RING
+extern u32 ring_graphicsOverruns;
 #endif

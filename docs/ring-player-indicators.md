@@ -25,6 +25,20 @@ DMA and late-object eviction, a native P8 tile resembling an indicator tag, and
 exact restoration. `test_rendering.py` checks consecutive in-game visibility
 and native kart textures; `test_battle_moving.py` checks moving balloons/dots.
 
+Extended character-menu cursors use the same transparent-entry technique.
+Their blue/orange/cyan/purple highlight/body/shadow colors occupy fourteen
+palette-zero slots, including white and black. They no longer borrow colors
+from portraits that animate or turn gray. A frame-by-frame hardware-palette
+hash checks stability. The original 2–4-player cursor palette remains native.
+`test_cc_palette.py` compares the CC inset against unmodified four-pak menus
+at 50/100/150cc for every console, including the new count/player labels.
+
+The packed menu structures explicitly store enum-valued fields as 32-bit
+integers. This matches native assembly and agbcc; it prevents modern GCC from
+shrinking packed enum fields. Compile-time size checks protect the boundary.
+The clean ROM remains byte-identical after these declarations and the clearer
+sprite-sort names.
+
 Current performance validation remains in progress. The previous shared-audio
 build passed all 48 courses; normal audio still exposes brief slow windows on
 GBA Battle Course 3 and Snow Land. The new atlas and collision improvements

@@ -718,8 +718,8 @@
     },
     "relocation": {
       "padding_bytes": 1024,
-      "rom_functions": 1928,
-      "callbacks": 1068,
+      "rom_functions": 1931,
+      "callbacks": 1070,
       "status": "passed"
     },
     "prior_v25_course_matrix": {
@@ -735,6 +735,63 @@
       "optional restored-audio performance",
       "final combined course/player-count/GUI/audio checks",
       "5-8 player asset quality"
-    ]
+    ],
+    "modern_controller_entry": {
+      "status": "passed",
+      "players": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "modes": [
+        "vs",
+        "battle",
+        "gp"
+      ],
+      "cases": 21
+    },
+    "cc_palette_native_comparison": {
+      "status": "passed",
+      "players": [
+        2,
+        5,
+        6,
+        7,
+        8
+      ],
+      "engine_classes": [
+        50,
+        100,
+        150
+      ],
+      "console_views": 84
+    },
+    "native_confirmations_and_roulette": {
+      "status": "passed",
+      "players": [
+        2,
+        8
+      ]
+    },
+    "black_transition_flows": {
+      "status": "passed",
+      "players": [
+        2,
+        8
+      ],
+      "flows": [
+        "characters",
+        "course_menu",
+        "restart"
+      ],
+      "forced_white_frames": 0,
+      "colored_blank_frames": 0
+    },
+    "latest_builds": "review-11/builds-v26",
+    "cursor_palette_stable_frames": 2400
   }
 }

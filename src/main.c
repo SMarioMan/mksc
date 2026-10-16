@@ -157,6 +157,7 @@ bool32 main_tryPublishRingGraphics(void)
         main_publishGraphics();
         ring_graphicsPublished();
         if (gSceneState.vBlankFunc) gSceneState.vBlankFunc();
+        if (REG_VCOUNT < 160) ring_graphicsOverruns++;
         published = TRUE;
     }
     REG_IME = ime;
@@ -168,6 +169,7 @@ void main_vblankHandler(void)
 {
 #ifdef MKSC_RING
     u32 firstLine = REG_VCOUNT;
+    bool32 measureOverrun = ring_canPublishLateGraphics();
 #endif
     SceneState* sceneState = &gSceneState;
 
@@ -198,6 +200,7 @@ void main_vblankHandler(void)
 #ifdef MKSC_RING
     {
         u32 lines = REG_VCOUNT;
+        if (measureOverrun && lines < 160) ring_graphicsOverruns++;
         if (lines < firstLine) lines += 228;
         ring_frameTiming[3] = (lines - firstLine) * 1232;
     }
