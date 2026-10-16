@@ -161,7 +161,7 @@ typedef struct __attribute__((packed))
 
 typedef struct __attribute__((packed))
 {
-    enum TrackCup cup;
+    s32 cup; /* TrackCup: native menu stores a 32-bit value. */
     s32 track;
     s32 field2_0x8;
     u32 field3_0xc;
@@ -223,14 +223,14 @@ typedef struct __attribute__((packed))
 
 typedef struct __attribute__((packed)) SpmState
 {
-    enum SpmPage menuPage;
+    s32 menuPage; /* SpmPage: native menu stores a 32-bit value. */
     s32 selectedPlayerLimit;
     s32 lastPlayer; /* Controller count minus one in the native page. */
     s32 localPlayerId;
-    enum Gamemode gamemode;
-    enum RaceSpeed raceSpeed;
-    enum Character character;
-    enum TrackCup cup;
+    s32 gamemode; /* Gamemode: native menu stores a 32-bit value. */
+    s32 raceSpeed; /* RaceSpeed: native menu stores a 32-bit value. */
+    s32 character; /* Character: native menu stores a 32-bit value. */
+    s32 cup; /* TrackCup: native menu stores a 32-bit value. */
     s32 track;
     s32 lastCharacters[4];
     s32 field11_0x34;
@@ -386,6 +386,11 @@ typedef struct __attribute__((packed)) SpmState
     u32 backgroundScrollPhase;
     MenuBgData bgState;
 } SpmState;
+
+/* These packed layouts cross the agbcc/modern-GCC boundary and are also read
+ * by native assembly. Enum members above must retain their 32-bit storage. */
+typedef char SpmStateNativeSizeCheck[sizeof(SpmState) == 0x1230 ? 1 : -1];
+typedef char TrackSelectStateNativeSizeCheck[sizeof(TrackSelectState) == 0x5FC ? 1 : -1];
 
 typedef struct __attribute__((packed))
 {

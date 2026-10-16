@@ -47,7 +47,7 @@ typedef struct OamCellListEntry
 
 bool32 oam_renderCell(OamCell* cell);
 void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int scaleY, int rotation, struc_6* a6);
-OamCellListEntry* oam_802FC48(OamCellListEntry* listEntry);
+OamCellListEntry* oam_sortCellsByPriority(OamCellListEntry* listEntry);
 void oam_init(void);
 void oam_update(void);
 void oam_reset(void);
