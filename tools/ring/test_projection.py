@@ -6,6 +6,7 @@ from pathlib import Path
 p = argparse.ArgumentParser(description=__doc__)
 for key in ('runner', 'bios', 'results'):
     p.add_argument('--' + key, required=True, type=Path)
+p.add_argument('--isa', choices=('thumb', 'arm'), default='thumb', help='Benchmark the projection implementation in either instruction set')
 a = p.parse_args()
 assert hashlib.sha1(a.bios.read_bytes()).hexdigest() == '300c20df6731a33952ded8c436f7f186d25d3492'
 root = Path(__file__).resolve().parents[2]
@@ -28,6 +29,7 @@ int main(void) {
         Vec2s16 expected = {1234, -5678}, actual = expected;
         s16 expectedScale = 123, actualScale = 123;
         camera.elevation = 256 + random32() % 0x1000000;
+        if (!(test & 3)) camera.elevation = 0x1000000;
         camera.screenPos.x = random32(); camera.screenPos.y = random32(); camera.unk380 = random32();
         camera.unk38.x = random32(); camera.unk38.y = random32(); camera.unk38.z = (s32)random32() % 0x4000000;
         for (i = 0; i < 9; i++) ((s32*)camera.unk5C)[i] = (s32)random32() % 131073;
@@ -63,7 +65,7 @@ commands = [
     ['arm-none-eabi-as', '-mcpu=arm7tdmi', '--defsym', 'MKSC_RING=1', '-I', str(root), '-o', str(a.results/'native.o'), str(root/'nonmatching/camProjectActor.s')],
     ['arm-none-eabi-as', '-mcpu=arm7tdmi', '-I', str(root), '-o', str(a.results/'div.o'), str(a.results/'div.s')],
     ['arm-none-eabi-as', '-mcpu=arm7tdmi', '-o', str(a.results/'start.o'), str(root/'tools/ring-poc/start.s')],
-    *[['arm-none-eabi-gcc', '-mcpu=arm7tdmi', '-mthumb', '-mthumb-interwork', '-O3', '-DMKSC_RING=1', '-fwrapv', '-fno-strict-aliasing', '-ffreestanding', '-fno-builtin', '-I'+str(root/'src'), '-I'+str(root/'include'), '-I'+str(root/'lib'), '-c', str(src), '-o', str(a.results/name)] for src, name in [(a.results/'main.c', 'main.o'), (root/'src/ringProjection.O3.c', 'projection.o')]],
+    *[['arm-none-eabi-gcc', '-mcpu=arm7tdmi', '-m'+a.isa if name=='projection.o' else '-mthumb', '-mthumb-interwork', '-O3', '-DMKSC_RING=1', '-fwrapv', '-fno-strict-aliasing', '-ffreestanding', '-fno-builtin', '-I'+str(root/'src'), '-I'+str(root/'include'), '-I'+str(root/'lib'), '-c', str(src), '-o', str(a.results/name)] for src, name in [(a.results/'main.c', 'main.o'), (root/'src/ringProjection.O3.c', 'projection.o')]],
     ['arm-none-eabi-ld', '-T', str(root/'tools/ring-poc/link.ld'), '-o', str(a.results/'projection.elf'), *[str(a.results/k) for k in ('start.o', 'main.o', 'projection.o', 'native.o', 'div.o')], '-L'+library, '-lgcc'],
     ['arm-none-eabi-objcopy', '-O', 'binary', str(a.results/'projection.elf'), str(a.results/'projection.gba')],
     [str(root/'tools/gbafix/gbafix'), str(a.results/'projection.gba'), '-p', '-tPROJECTION', '--silent'],
@@ -75,7 +77,7 @@ proc = subprocess.run([str(a.runner), '--ring', '--rom', str(a.results/'projecti
 assert proc.returncode == 0, proc.stderr
 data = json.loads(proc.stdout)
 assert all(n['dump'][:2] == [0x600dc0de, 32768] for n in data['nodes']), data
-print('PASS projection: original assembly and Thumb C match 32768 camera/actor cases, clipped outputs, signed truncation and wrapped products', flush=True)
+print(f'PASS projection: original assembly and {a.isa} C match 32768 camera/actor cases, clipped outputs, signed truncation and wrapped products', flush=True)
 native, optimized, visible = data['nodes'][0]['dump'][6:9]
 assert visible > 1000, ('Insufficient unclipped projections', visible)
-print(f'Projection cycles per unclipped actor: native {native/visible:.1f}, Thumb C {optimized/visible:.1f}; {visible} unclipped cases', flush=True)
+print(f'Projection cycles per unclipped actor: native {native/visible:.1f}, {a.isa} C {optimized/visible:.1f}; {visible} unclipped cases', flush=True)

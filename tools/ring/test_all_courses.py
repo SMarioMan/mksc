@@ -64,6 +64,13 @@ def run(case):
   for step in range(idx):key(2300+step*40,128)
   if kind=='retro-battle':key(2600,256)
   key(3000 if kind=='retro-battle' else 2500,1);key(3300,1);key(3500,1)
+  # Battle has no race checkpoint route. Explicit human driving and item
+  # inputs exercise motion/combat rather than profiling stationary karts.
+  events.extend((5500,i,33 if i==0 else 17) for i in range(8))
+  for frame in range(5650,a.frames,120):
+   for player in range(8):
+    held=33 if player==0 else 17
+    events.extend(((frame+player*7,player,held|512),(frame+player*7+1,player,held)))
  else:
   if kind=='retro':key(2800,256)
   for step in range(idx//4):key(3000+step*40,128)
@@ -74,10 +81,11 @@ def run(case):
  video=a.results/(case+'-video.csv');profile=a.results/(case+'-profile.csv')
  command=[str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(rom),'--bios',str(a.bios),'--players','8',
  '--frames',str(70000 if a.complete and not battle else a.frames),'--input',str(inputs),
- '--autodrive-frame','5500','--autofire','--video-from','6000','--video-log',str(video),
+ '--video-from','6000','--video-log',str(video),
  '--sound-table',hex(symbols['gMPlayTable']),'--audio-state',hex(symbols['ring_audioTiming']),'--timing-state',hex(symbols['ring_frameTiming']),
  '--profile-file',str(profile),'--profile-until',str(6000+a.profile_frames),'--dump',hex(courseBase),'--dump-words',str(courseWords),
  '--barrier-before-input','--barrier-state',hex(symbols['sRing']),'--screens',str(a.results/case)]
+ if not battle:command.extend(['--autodrive-frame','5500','--autofire'])
  if a.complete and not battle:command.extend(['--until-scene',hex(symbols['results_main']|1)])
  if a.analyze_only or case in completed:
   proc=SimpleNamespace(returncode=0,stdout=(a.results/(case+'.json')).read_text(),stderr=(a.results/(case+'.stderr')).read_text())
@@ -96,6 +104,8 @@ def run(case):
   for row in csv.DictReader(f):
    if int(row['sceneMain'])==symbols['race_main']|1:peers[int(row['player'])].append({k:int(v) for k,v in row.items()})
  rates=[];windows=[];mixgaps=[]
+ movement=[len({r[f'kartPosition{i}'] for r in peers[0]}) for i in range(8)]
+ assert min(movement)>=100,(case,'A human racer did not move through the stress window',movement)
  for i,rows in enumerate(peers):
   assert len(rows)>1000,(case,i,'Insufficient moving gameplay',len(rows))
   rates.append((rows[-1]['simulationFrames']-rows[0]['simulationFrames'])/(rows[-1]['frame']-rows[0]['frame']))
@@ -110,9 +120,10 @@ def run(case):
  for row in csv.DictReader(profile.open()):
   pc=int(row['pc'],16);at=bisect.bisect_right(addresses,pc)-1;name=functions[at][1] if at>=0 else f'{pc:08x}'
   costs[name]=costs.get(name,0)+int(row['cycles'])
- summary={'course':case,'audio_policy':a.audio_policy,'profile_scheduling':data.get('profileScheduling','legacy'),'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,
+ summary={'course':case,'audio_policy':a.audio_policy,'profile_scheduling':data.get('profileScheduling','legacy'),'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,'distinct_racer_positions':movement,
  'profile_cycles':sorted(costs.items(),key=lambda x:-x[1])[:30],
  'timing':{k:{'median':statistics.median(r[k] for r in peers[0]),'p99':sorted(r[k] for r in peers[0])[int(len(peers[0])*.99)],'max':max(r[k] for r in peers[0])} for k in ('exchangeCycles','renderCycles','publishCycles','mixCycles')}}
+ summary['timing_by_player']=[{k:{'median':statistics.median(r[k] for r in rows),'p99':sorted(r[k] for r in rows)[int(len(rows)*.99)],'max':max(r[k] for r in rows)} for k in ('exchangeCycles','renderCycles','publishCycles','mixCycles')} for rows in peers]
  (a.results/(case+'-summary.json')).write_text(json.dumps(summary,indent=2))
  assert min(rates)>=.95 and min(windows)>=.95,(case,'Slow gameplay',rates,windows)
  assert max(mixgaps)==0,(case,'Skipped audio service frames',mixgaps)

@@ -12,6 +12,7 @@ static const u32 sProjectionReciprocal[] = {
 
 static s32 projectScreenCoordinate(s32 value, u32 scale)
 {
+    if (scale == 256) return value / 65536;
     u32 magnitude = value < 0 ? -(u32)value : (u32)value;
     u32 divisor = scale * 256;
     u32 quotient = umul3232H32(magnitude, sProjectionReciprocal[scale - 32]);
@@ -28,7 +29,8 @@ void cam_CalcProjectActor(Camera* camera, Actor* actor, Vec2s16* position, s16* 
 {
     s32 x, y, z, screenX, screenY, projectedZ, depth;
     const Vec3s32* matrix = camera->unk5C;
-    if (!ring_active()) { ring_stockProjectActor(camera, actor, position, scale); return; }
+    /* The arithmetic matches the native function in every game mode, so
+     * projection needs no per-actor transport-state query. */
     x = actor->posX - camera->unk38.x;
     y = actor->posY - camera->unk38.y;
     z = -camera->unk38.z;
@@ -41,7 +43,11 @@ void cam_CalcProjectActor(Camera* camera, Actor* actor, Vec2s16* position, s16* 
     projectedZ = ((matrix[0].z / 16 * x) / 32) + ((matrix[1].z / 16 * y) / 32) + ((matrix[2].z / 16 * z) / 32);
     depth = camera->elevation - projectedZ;
     if (depth <= 0) goto clipped;
-    *scale = depth < 0x200000 ? Div(depth * 256, camera->elevation) : Div(depth, camera->elevation / 256);
+    /* Native race cameras use a 256.0 focal distance. Both original divide
+     * branches then reduce exactly to this shift; preserve the BIOS path
+     * for other camera configurations instead of dividing for every actor. */
+    if (camera->elevation == 0x1000000) *scale = depth >> 16;
+    else *scale = depth < 0x200000 ? Div(depth * 256, camera->elevation) : Div(depth, camera->elevation / 256);
     if (*scale < 32 || *scale > 1024) goto clipped;
     position->x = projectScreenCoordinate(screenX, *scale) + camera->screenPos.x;
     position->y = projectScreenCoordinate(screenY, *scale) + camera->screenPos.y + camera->unk380;
