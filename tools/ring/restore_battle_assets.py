@@ -119,7 +119,10 @@ def main():
         if not path.exists() or path.read_bytes() != value:
             path.write_bytes(value)
 
-    write('courseData.bin', restore(source, restored))
+    from restore_sunset_assets import restore as restore_sunset
+    courses = restore(source, restored)
+    write('japanese-sunset-cover.bin', restore_sunset(courses, source))
+    write('courseData.bin', courses)
     definitions = []
     for index, record in enumerate((47, 45, 44, 46)):
         source_index = record - 44

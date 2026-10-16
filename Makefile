@@ -170,7 +170,7 @@ $(ASM_BUILDDIR)/%.o: $(ASM_SUBDIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 ifeq ($(RING),1)
-$(OBJ_DIR)/retro-battle.stamp: baserom.gba tools/ring/restore_battle_assets.py tools/ring/fixtures/snes-battle-restoration.bps
+$(OBJ_DIR)/retro-battle.stamp: baserom.gba tools/ring/restore_battle_assets.py tools/ring/fixtures/snes-battle-restoration.bps tools/ring/restore_sunset_assets.py tools/ring/fixtures/japanese-sunset-art.bps
 	python3 tools/ring/restore_battle_assets.py --rom baserom.gba --output $(OBJ_DIR)
 	@touch $@
 
