@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise native character confirmation and duplicate locks with 2–8 peers."""
 import argparse
+import csv
 from collections import deque
 import json
 from pathlib import Path
@@ -15,6 +16,12 @@ a = p.parse_args()
 a.results.mkdir(parents=True, exist_ok=True)
 symbols = {f[2]:int(f[0],16) for line in subprocess.check_output(
     ['arm-none-eabi-nm','-n',str(a.elf)], text=True).splitlines() if len(f:=line.split())==3}
+cursor_colors=[(20,20,31),(8,8,27),(2,2,16),(31,25,20),(27,17,8),(16,9,2),
+               (20,31,31),(8,27,27),(2,16,16),(27,20,27),(20,8,20),(11,2,11),(31,31,31),(0,0,0)]
+expected_cursor_hash=2166136261
+for red,green,blue in cursor_colors:
+    expected_cursor_hash=((expected_cursor_hash^(red|green<<5|blue<<10))*16777619)&0xFFFFFFFF
+
 rom = a.rom.read_bytes()
 nav = [struct.unpack_from('<hhbbbb',rom,symbols['_080D9274']-0x08000000+i*8)[2:] for i in range(9)]
 
@@ -53,12 +60,19 @@ for count in a.players:
                  '--frames',str(frame),'--input',str(inputs),'--watch',hex(symbols['sNativeCharactersReady']),
                  '--dump','0x0202A400','--dump-words',str(0x738//4),'--barrier-before-input','--barrier-state','0x03006B40',
                  '--screens',str(a.results/name)]
+        if count>4 and phase!='confirmed':
+            command+=['--video-log',str(a.results/(name+'-video.csv')),'--video-from',str(frame-120)]
         result=subprocess.run(command,capture_output=True,text=True,timeout=300)
         (a.results/(name+'.json')).write_text(result.stdout)
         (a.results/(name+'.stderr')).write_text(result.stderr)
         assert result.returncode==0 and not result.stderr,(name,result.stderr)
         data=json.loads(result.stdout)
         assert data['bios']=='real' and data['collisions']==0,name
+        if count>4 and phase!='confirmed':
+            with (a.results/(name+'-video.csv')).open() as stream:
+                frames=list(csv.DictReader(stream))
+            assert len(frames)>=count*120,(name,'Missing selected-portrait palette coverage')
+            assert all(int(row['cursorPaletteHash'])==expected_cursor_hash for row in frames),(name,'Portrait selection recolored an extended cursor')
         for node in data['nodes']:
             assert node['dump'][0]==page,(name,'Wrong native page',node['dump'][0])
             assert node['watch']&255==ready,(name,'Incorrect confirmation or duplicate lock',node['watch'])
