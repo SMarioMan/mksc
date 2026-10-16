@@ -36,8 +36,11 @@ for line in subprocess.check_output(['arm-none-eabi-nm','-n',str(a.elf)],text=Tr
   symbols[f[2]]=int(f[0],16)
   if f[1].lower()=='t':functions.append((int(f[0],16),f[2]))
 addresses=[x[0] for x in functions]
-courseBase=min(symbols['sCourse'],symbols['sRetro'])
-courseWords=(max(symbols['sCourse'],symbols['sRetro'])-courseBase)//4+1
+identity_symbols=[name for name in ('ring_identityOverflows','ring_identityNative8bpp','ring_identityPublishLines','ring_identityRestoreLines','ring_identityUploads','ring_identitySlowPrepares') if name in symbols]
+observed_addresses=[symbols[name] for name in ['sCourse','sRetro']+identity_symbols]
+courseBase=min(observed_addresses)
+courseWords=(max(observed_addresses)-courseBase)//4+1
+assert courseWords<=4096
 rom=a.results/(hashlib.sha256(a.rom.read_bytes()).hexdigest()+'.gba')
 if not rom.exists():rom.write_bytes(a.rom.read_bytes())
 base=[]
@@ -86,7 +89,11 @@ def run(case):
  '--profile-file',str(profile),'--profile-until',str(6000+a.profile_frames),'--dump',hex(courseBase),'--dump-words',str(courseWords),
  '--barrier-before-input','--barrier-state',hex(symbols['sRing']),'--screens',str(a.results/case)]
  if not battle:command.extend(['--autodrive-frame','5500','--autofire'])
- if a.complete and not battle:command.extend(['--until-scene',hex(symbols['results_main']|1)])
+ if not battle:
+  # A faster build can finish before a bounded performance run ends. Stop
+  # at results and release the driving keypad there instead of accidentally
+  # confirming through results into the title screen.
+  command.extend(['--until-scene',hex(symbols['results_main']|1),'--release-inputs-scene',hex(symbols['results_main']|1)])
  if a.analyze_only or case in completed:
   proc=SimpleNamespace(returncode=0,stdout=(a.results/(case+'.json')).read_text(),stderr=(a.results/(case+'.stderr')).read_text())
  else:proc=subprocess.run(command,capture_output=True,text=True,timeout=2400)
@@ -96,6 +103,11 @@ def run(case):
  if a.profile_frames:assert data.get('profileScheduling')=='quantum',(case,'Legacy profiling changed link scheduling; recapture with the current runner')
  assert all([n['dump'][(symbols['sCourse']-courseBase)//4],n['dump'][(symbols['sRetro']-courseBase)//4]]==[idx,int(kind.startswith('retro'))] for n in data['nodes']),(case,'Wrong course selected',data['nodes'][0]['dump'][:2])
  assert all(n['barrier']['errors']==n['barrier']['timeouts']==0 for n in data['nodes']),(case,'Transport failed')
+ if identity_symbols:
+  for node in data['nodes']:
+   for name in ('ring_identityOverflows','ring_identityNative8bpp'):
+    assert node['dump'][(symbols[name]-courseBase)//4]==0,(case,name,node['slot'])
+   assert all(node['game']['hud']['kartPalettesMatch']),(case,'Native kart palette overwritten',node['slot'])
  assert all(n['game']['humanCount']==8 for n in data['nodes'])
  positions=[[d['position'] for d in n['game']['drivers']] for n in data['nodes']]
  assert all(v==positions[0] for v in positions),(case,'Physics divergence')
@@ -127,6 +139,8 @@ def run(case):
  (a.results/(case+'-summary.json')).write_text(json.dumps(summary,indent=2))
  assert min(rates)>=.95 and min(windows)>=.95,(case,'Slow gameplay',rates,windows)
  assert max(mixgaps)==0,(case,'Skipped audio service frames',mixgaps)
+ if identity_symbols:
+  summary['identity_maximum_scanlines']={name:max(n['dump'][(symbols[name]-courseBase)//4] for n in data['nodes']) for name in ('ring_identityPublishLines','ring_identityRestoreLines')}
  return summary
 failures=[]
 with ThreadPoolExecutor(max_workers=a.workers) as pool:

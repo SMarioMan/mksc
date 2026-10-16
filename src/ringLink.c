@@ -322,6 +322,7 @@ void ring_newVideoFrame(void)
 
 void ring_queueGraphics(void)
 {
+    ring_prepareIdentityGraphics();
     sGraphicsReady = TRUE;
 }
 
@@ -1032,109 +1033,49 @@ bool32 ring_exchange(void)
 
 static const u16 sPlayerColors[8] = { 0x001F, 0x03E0, 0x03FF, 0x7C1F, 0x7C00, 0x021F, 0x7FE0, 0x5014 };
 
-/* The native opponent marker switch has only three entries. Reuse its OBJ
- * tile region for a diamond, with each kart's reserved identity palette. */
+/* Virtual identity tiles are mapped to unused OBJ memory at publication. */
 static const u16 sKartMarkerCells[8][4] = {
-    {1, 0x00F6, 0x01FC, 0x8532}, {1, 0x00F6, 0x01FC, 0x9532},
-    {1, 0x00F6, 0x01FC, 0xA532}, {1, 0x00F6, 0x01FC, 0xB532},
-    {1, 0x00F6, 0x01FC, 0xC532}, {1, 0x00F6, 0x01FC, 0xD532},
-    {1, 0x00F6, 0x01FC, 0xE532}, {1, 0x00F6, 0x01FC, 0xF532}
+    {1,0x40F6,0x01F8,0x07E0},{1,0x40F6,0x01F8,0x17E1},
+    {1,0x40F6,0x01F8,0x27E2},{1,0x40F6,0x01F8,0x37E3},
+    {1,0x40F6,0x01F8,0x47E4},{1,0x40F6,0x01F8,0x57E5},
+    {1,0x40F6,0x01F8,0x67E6},{1,0x40F6,0x01F8,0x77E7}
 };
-
 const u16* ring_playerMarker(unsigned id)
 {
     return sRing.enabled && id < (sGame == GP_MODE ? 8 : sRing.count) ? sKartMarkerCells[id] : 0;
 }
-
 static const u16 sBalloonCells[8][4] = {
-    {1, 0x00D7, 0x41F8, 0x849C}, {1, 0x00D7, 0x41F8, 0x949C},
-    {1, 0x00D7, 0x41F8, 0xA49C}, {1, 0x00D7, 0x41F8, 0xB49C},
-    {1, 0x00D7, 0x41F8, 0xC49C}, {1, 0x00D7, 0x41F8, 0xD49C},
-    {1, 0x00D7, 0x41F8, 0xE49C}, {1, 0x00D7, 0x41F8, 0xF49C}
+    {1,0x80D7,0x01FC,0x07E8},{1,0x80D7,0x01FC,0x17E9},
+    {1,0x80D7,0x01FC,0x27EA},{1,0x80D7,0x01FC,0x37EB},
+    {1,0x80D7,0x01FC,0x47EC},{1,0x80D7,0x01FC,0x57ED},
+    {1,0x80D7,0x01FC,0x67EE},{1,0x80D7,0x01FC,0x77EF}
 };
-extern bool32 sBalloonArtReady;
-
 const u16* ring_balloonCell(Driver* driver)
 {
     extern const u16 _0807B534[];
-    u32 id = ((u8*)driver)[0xEC];
+    unsigned id = driver->playerId;
     return sRing.enabled && id < 8 ? sBalloonCells[id] : _0807B534;
 }
-
 static const u16 sBalloonHudCells[8][4] = {
-    {1, 0x8000, 0, 0x80E8}, {1, 0x8000, 0, 0x90E8},
-    {1, 0x8000, 0, 0xA0E8}, {1, 0x8000, 0, 0xB0E8},
-    {1, 0x8000, 0, 0xC0E8}, {1, 0x8000, 0, 0xD0E8},
-    {1, 0x8000, 0, 0xE0E8}, {1, 0x8000, 0, 0xF0E8}
+    {1,0x8000,0,0x03F0},{1,0x8000,0,0x13F1},
+    {1,0x8000,0,0x23F2},{1,0x8000,0,0x33F3},
+    {1,0x8000,0,0x43F4},{1,0x8000,0,0x53F5},
+    {1,0x8000,0,0x63F6},{1,0x8000,0,0x73F7}
 };
-
 const u16* ring_balloonHudCell(unsigned id)
 {
     extern const u16 _0807B9A8[];
     if (sRing.enabled && id < 4) id = sBattleHudIds[id];
     return sRing.enabled && id < 8 ? sBalloonHudCells[id] : _0807B9A8;
 }
-
-static void tintBalloon(vu16* tiles, u32 words, const u16* palette)
+bool32 ring_showRaceIdentity(void)
 {
-    u32 used = 0, i, lightest = 0, brightness = 0;
-    for (i = 0; i < words; i++)
-    {
-        u32 bits = tiles[i], shift;
-        for (shift = 0; shift < 16; shift += 4) used |= 1 << ((bits >> shift) & 15);
-    }
-    for (i = 1; i < 16; i++)
-    {
-        u32 color = palette[i];
-        u32 value = (color & 31) + ((color >> 5) & 31) + ((color >> 10) & 31);
-        if ((used & (1 << i)) && value > brightness) { brightness = value; lightest = i; }
-    }
-    for (i = 0; i < words; i++)
-    {
-        u32 bits = tiles[i], output = 0, shift;
-        for (shift = 0; shift < 16; shift += 4)
-        {
-            u32 pixel = (bits >> shift) & 15;
-            if (pixel) output |= (pixel == lightest ? 2 : 1) << shift;
-        }
-        tiles[i] = output;
-    }
+    return sRing.enabled && sRing.inGame;
 }
-
-/* Recolor balloon art in its native slots and use the reserved identity OBJ
- * palettes. BG palette 9 and every native minimap tile remain untouched. */
-static void markerTiles(void)
+u32 ring_identityWanted(void)
 {
-    static const u16 pixels[32] = {
-        0x1000,0,0x1100,1,0x2110,0x12,0x2211,0x1122,
-        0x2110,0x12,0x1100,1,0x1000,0,0,0,
-        0x11,0,0x11,0,0,0,0,0,0,0,0,0,0,0,0,0
-    };
-    u16* palette = pltt_getBuffer(PLTT_BUFFER_OBJ);
-    u32 i;
-    if (sBattle && !sBalloonArtReady)
-    {
-        tintBalloon((vu16*)0x06011380, 64, palette + 64);
-        tintBalloon((vu16*)0x06011D00, 32, palette + 16);
-        sBalloonArtReady = TRUE;
-    }
-    CpuCopy16(pixels, (void*)0x06012640, sizeof(pixels));
-}
-
-/* Course palette animations run after HUD drawing. Restore the two identity
- * entries at publication, after their writes and graphics DMA have finished. */
-void ring_publishIdentityPalette(void)
-{
-    u16* palette;
-    u32 i;
-    if (!sRing.enabled || !sRing.inGame) return;
-    palette = pltt_getBuffer(PLTT_BUFFER_OBJ);
-    for (i = 0; i < (sGame == GP_MODE ? 8 : sRing.count); i++)
-    {
-        palette[(8 + i) * 16 + 1] = sPlayerColors[i];
-        palette[(8 + i) * 16 + 2] = (sPlayerColors[i] >> 1 & 0x3DEF) + 0x4210;
-    }
-    pltt_setDirtyFlag(TRUE);
+    u32 players = (1 << (sGame == GP_MODE ? 8 : sRing.count)) - 1;
+    return players | (sBattle ? players << 8 : 0) | players << 16;
 }
 
 void ring_stockBattleHud(RaceState* state);
@@ -1159,7 +1100,6 @@ void sub_804DCB0(RaceState* state)
             order[j] = id;
         }
         for (i = 0; i < 4; i++) sBattleHudIds[i] = order[i < sRing.count ? i : 0];
-        markerTiles();
     }
     ring_stockBattleHud(state);
 }
@@ -1179,7 +1119,6 @@ unsigned ring_battleHudRow(unsigned id)
 
 void sub_804F2C0(RaceState* state)
 {
-    if (sRing.enabled) markerTiles();
     /* The native GP path selects four portraits by current race position. */
     ring_stockVsHud(state);
 }
@@ -1203,7 +1142,7 @@ void sub_804E7EC(Driver* driver, int local)
         /* Native 8x8 marker: offset 4 plus its central pixels at 3/4.
          * Our 2x2 dot needs offset 7 for the identical pixel center. */
         cell[1] = cell[2] = 7;
-        cell[3] = 0x133 | (8 + id) << 12;
+        cell[3] = (0x3F8 + id) | id << 12;
         oam_renderCellData(cell, &position, 0, 0, 0, 0);
     }
 }

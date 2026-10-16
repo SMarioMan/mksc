@@ -3,6 +3,13 @@
 #include "ringSessionState.h"
 #include "oam.h"
 OamCellListEntry* ring_sOamCells;
+u16 ring_identityBackup[24][64], ring_identityTiles[24];
+u32 ring_identityAllocated, ring_identityOverflows, ring_identityNative8bpp;
+u32 ring_identityPublishLines, ring_identityRestoreLines;
+u16 ring_identityOldTiles[24];
+u32 ring_identityPendingRestore, ring_identityPendingUpload;
+u32 ring_identityResident[16];
+u32 ring_identityFirstTile;
 u8 sCharacters[8], sPlaces[8], sBattlePlaces[8], sBattleHudIds[4];
 u16 sRoundScores[8], sGPPoints[8];
 u8 sGPRace;
@@ -30,3 +37,7 @@ bool32 sBalloonArtReady;
 
 /* Surface samples at the eight authored Battle markers, for validation. */
 u16 ring_battleSpawnTerrain[8];
+
+#ifdef MKSC_RING
+u32 ring_identityUploads, ring_identitySlowPrepares;
+#endif

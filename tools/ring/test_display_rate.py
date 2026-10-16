@@ -41,8 +41,12 @@ for player in range(8):
     peer = [r for r in rows if int(r['player']) == player and int(r['frame']) < 6600]
     assert len(peer) == 600, (player, len(peer))
     changed = sum(x['roadProjectionHash'] != y['roadProjectionHash'] for x, y in zip(peer, peer[1:]))
-    assert changed >= 595, (player, 'Visible road projection repeats', changed)
+    # A kart can stop after a collision while simulation still advances.
+    # Judge display publication on intervals with actual world movement.
+    moving=[(x,y) for x,y in zip(peer,peer[1:]) if x[f'kartPosition{player}']!=y[f'kartPosition{player}']]
+    assert len(moving)>=500,(player,'The route fixture did not keep driving',len(moving))
+    assert all(x['roadProjectionHash']!=y['roadProjectionHash'] for x,y in moving),(player,'Visible projection repeats while the kart moves')
     assert all(r['roadDisplayBuffer'] == r['roadWriteBuffer'] == '0' for r in peer)
-    rates.append({'player': player + 1, 'changed_intervals': changed, 'intervals': 599})
+    rates.append({'player': player + 1, 'changed_intervals': changed, 'intervals': 599, 'moving_intervals':len(moving)})
 (a.results / 'rates.json').write_text(json.dumps(rates, indent=2) + '\n')
 print('PASS all eight consoles: visible road projection changes every moving video frame')

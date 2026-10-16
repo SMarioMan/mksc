@@ -87,6 +87,7 @@ for name, start in symbols.items():
 for name, following, size in (
     ('_08085294', '_08085EE0', 0x1440),
     ('_080990CC', '_08099CFC', 0x1440),
+    ('_080942E0', '_08095250', 0x1440),
     ('_08099DB4', '_0809A8CC', 0x1440),
     ('title_sDriversBgTiles2', 'title_sDriversBgTiles3', 0x1600),
 ):
@@ -106,6 +107,31 @@ for name, following, size in (
     assert produced == size and 0 <= end - cursor < 4 and not any(original[cursor:end]), (name, 'Invalid image boundary/padding')
     assert original[start:end] == shifted[start+a.padding:end+a.padding], (name, 'Compressed image changed')
     opaque.append((start, end))
+# Sunset sky 18 uses five separately compressed graphics strips. Its first
+# strip can also contain a coincidental callback value after code grows.
+sky = symbols['skyData_bin'] - 0x08000000
+sky_end = symbols['skyData_bin_end'] - 0x08000000
+sky_header = sky + struct.unpack_from('<I', original, sky + 18 * 4)[0]
+assert original[sky_header + 1] & 3 == 3, 'Expected split compressed sky'
+sky_graphics = sky_header + struct.unpack_from('<I', original, sky_header + 4)[0]
+first_strip, second_strip = struct.unpack_from('<HH', original, sky_graphics)
+start, limit = sky_graphics + first_strip, sky_graphics + second_strip
+assert sky <= sky_header < sky_graphics < start < limit <= sky_end
+assert original[start:start + 4] == bytes((0x10, 0, 8, 0))
+cursor, produced = start + 4, 0
+while produced < 0x800:
+    flags = original[cursor]; cursor += 1
+    for bit in range(7, -1, -1):
+        if produced >= 0x800: break
+        if flags >> bit & 1:
+            first, second = original[cursor:cursor+2]; cursor += 2
+            assert ((first & 15) << 8 | second) + 1 <= produced, 'Invalid sky LZ back reference'
+            produced += (first >> 4) + 3
+        else:
+            produced += 1; cursor += 1
+assert produced == 0x800 and cursor <= limit, 'Invalid sky strip boundary'
+assert original[start:cursor] == shifted[start+a.padding:cursor+a.padding], 'Compressed sky changed'
+opaque.append((start, cursor))
 checked = 0
 packed = 0
 sample_matches = 0
@@ -119,11 +145,11 @@ for offset in range(0, len(original) - 3):
         continue
     # Three bytes crossing native Thumb instructions can resemble an odd
     # function pointer after new code changes its address. This exact sequence
-    # constructs a fixed-point mask: movs r1,#imm; lsls r1,r1,#15; orrs r0,r1.
+    # constructs a fixed-point mask: movs r1,#imm; lsls r1,r1,#15/16; orrs r0,r1.
     # It also occurs in the unmodified embedded single-pak child executable.
     # Validate all three instructions, their alignment and their shifted bytes;
     # do not exempt general instruction regions or packed script tables.
-    if offset & 1 and original[offset:offset+5] == b'\x21\xc9\x03\x08\x43':
+    if offset & 1 and original[offset:offset+5] in (b'\x21\xc9\x03\x08\x43', b'\x21\x09\x04\x08\x43'):
         instruction_start = offset - 1
         moved = instruction_start + (a.padding if instruction_start >= a.start else 0)
         assert original[instruction_start:instruction_start+6] == shifted[moved:moved+6], 'Native mask instructions changed'

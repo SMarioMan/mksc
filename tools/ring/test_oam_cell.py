@@ -68,6 +68,7 @@ int main(void) {
  /* The lean queue path must populate exactly the same entry as the native
   * general path, including masks, wrapped priority and zero-scale fallback. */
  for(test=0;test<4096;test++) {
+  result[5]++;
   u16 data[4]; Vec2s16 position; struc_6 priority; OamCellListEntry wanted;
   int scaleX=random32()&2047,scaleY=random32()&2047;
   data[0]=1;data[1]=random32();data[2]=random32();data[3]=random32();
@@ -86,6 +87,7 @@ int main(void) {
  }
  /* HUD cells must also avoid the general path without changing OAM. */
  for(test=0;test<4096;test++) {
+  result[5]++;
   u16 data[16]; Vec2s16 position;
   int scaleX=(test&1)?256:0,scaleY=(test&2)?256:0;
   data[0]=test%6;
@@ -103,6 +105,32 @@ int main(void) {
   if(sBufferOffset!=nextOffset) {result[0]=0xbad00008;result[1]=test;for(;;){}}
   for(i=0;i<512;i++)if(sBuffer[i]!=expected[i]) {
    result[0]=0xbad00009;result[1]=test;result[2]=i;for(;;){}
+  }
+ }
+ /* Flat queued sprites retain native OAM output and affine words. */
+ for(test=0;test<4096;test++) {
+  result[5]++;
+  u16 data[16]; OamCellListEntry queued;
+  data[0]=test%6;
+  for(i=1;i<16;i++)data[i]=random32();
+  queued.next=queued.prev=0;
+  queued.cell.cellData=data;queued.cell.offsetX=random32();queued.cell.offsetY=random32();
+  queued.cell.attr01Bits=queued.cell.attr2Bits=0;
+  queued.cell.attr01Mask=queued.cell.attr2Mask=-1;
+  queued.cell.scaleX=queued.cell.scaleY=queued.cell.affinePa=queued.cell.affinePd=256;
+  queued.cell.affinePb=queued.cell.affinePc=0;
+  offset=test%130*4;
+  for(i=0;i<512;i++)before[i]=sBuffer[i]=random32();
+  sBufferOffset=offset;sNextAffineId=0;
+  ring_stockRenderCell(&queued.cell);
+  nextOffset=sBufferOffset;
+  for(i=0;i<512;i++)expected[i]=sBuffer[i];
+  for(i=0;i<512;i++)sBuffer[i]=before[i];
+  sBufferOffset=offset;sNextAffineId=0;sCellListHead=&queued;
+  ring_renderAllCells();
+  if(sBufferOffset!=nextOffset) {result[0]=0xbad0000a;result[1]=test;for(;;){}}
+  for(i=0;i<512;i++)if(sBuffer[i]!=expected[i]) {
+   result[0]=0xbad0000b;result[1]=test;result[2]=i;for(;;){}
   }
  }
  /* Exercise the actual queued path beyond the original 32-cell limit. */
@@ -147,8 +175,8 @@ commands = [
 for cmd in commands:
  result=subprocess.run(cmd,cwd=root,capture_output=True,text=True)
  assert result.returncode==0,(cmd,result.stderr)
-proc=subprocess.run([str(a.runner),'--rom',str(a.results/'oam.gba'),'--bios',str(a.bios),'--players','1','--frames','8000','--dump','0x02000000','--dump-words','6'],capture_output=True,text=True,timeout=600)
+proc=subprocess.run([str(a.runner),'--rom',str(a.results/'oam.gba'),'--bios',str(a.bios),'--players','1','--frames','14000','--dump','0x02000000','--dump-words','6'],capture_output=True,text=True,timeout=600)
 (a.results/'result.json').write_text(proc.stdout)
 assert proc.returncode==0,proc.stderr
 data=json.loads(proc.stdout);assert data['nodes'][0]['dump'][:2]==[0x600dc0de,16384],data
-print('PASS OAM cells: all 1024 OAM bytes, cell mutations, affine allocation and return values match original assembly across 16384 varied cells and default/custom masks; 4096 queued and 4096 direct HUD cells match the general path; native 32-cell and expanded 128-cell queues preserve every sprite',flush=True)
+print('PASS OAM cells: all 1024 OAM bytes, cell mutations, affine allocation and return values match original assembly across 16384 varied cells and default/custom masks; 4096 queued and 4096 direct HUD cells match the general path; 4096 flat queued cells match native OAM; native 32-cell and expanded 128-cell queues preserve every sprite',flush=True)

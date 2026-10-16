@@ -80,7 +80,7 @@ def gui_units():
  run('ctest-private',['ctest','--test-dir',a.mgba_build,'--output-on-failure','--parallel','1'],env)
  shutil.copyfile(a.mgba_build/'Testing/Temporary/LastTest.log',r/'ctest-private-detail.log')
  detail=(r/'ctest-private-detail.log').read_text();assert '13 passed, 0 failed, 0 skipped' in detail,'Private GUI gameplay did not execute all rows'
- for stem in ('projection','oam_cell','collision','sound_volume','sound_control','shared_themes','target','camera','animation'):
+ for stem in ('projection','oam_cell','identity_atlas','collision','sound_volume','sound_control','shared_themes','target','camera','animation'):
   test(stem,unit=True)
  for ahead in (2,3):test('audio_queue','audio-queue-'+str(ahead),unit=True,extra=('--ahead',str(ahead)))
  for stem in ('inputs','divide','projection_divide'):run(stem,['python3',root/'tools/ring'/('test_'+stem+'.py')])
