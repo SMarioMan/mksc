@@ -42,14 +42,13 @@ for group in a.sets:
         for n in a.players:
             events = []
             for f,k in base:
-                if f in (2200,2215):
-                    continue
+                if f in (2500,2515):continue
                 events.extend((f,i,k) for i in range(n if f<1500 or f in (2000,2015) else 1))
             events += [(1600,0,128),(1615,0,0)]
             if group=='retro':
-                events += [(2450,0,256),(2465,0,0)]
+                events += [(2850,0,256),(2865,0,0)]
             for j in range(arena):
-                events += [(2300+j*40,0,128),(2320+j*40,0,0)]
+                events += [(2600+j*40,0,128),(2620+j*40,0,0)]
             name = f'{group}-{arena+1}-{n}'
             inputs = a.results/(name+'.csv')
             inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(events)))

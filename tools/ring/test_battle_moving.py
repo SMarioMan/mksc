@@ -10,14 +10,14 @@ a=p.parse_args();a.results.mkdir(parents=True,exist_ok=True)
 base=[]
 for l in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=l.split(',');f=int(f)
- if int(i)==0 and f<3500 and f not in (2200,2215) and (not a.boot_ring or f>=1500):base.append((f,int(k,16)))
+ if int(i)==0 and f<3500 and f not in (2500,2515) and (not a.boot_ring or f>=1500):base.append((f,int(k,16)))
 colors=[31,992,1023,31775,31744,543,32736,20500]
 character_tiles=[0,1,7,3,5,6,2,4]
 for arena in a.arenas:
  events=[]
  for f,k in base:events.extend((f,i,k) for i in range(8 if f<1500 or f in (2000,2015) else 1))
  events.extend([(1600,0,128),(1615,0,0)])
- for step in range(arena):events.extend([(2300+step*40,0,128),(2320+step*40,0,0)])
+ for step in range(arena):events.extend([(2600+step*40,0,128),(2620+step*40,0,0)])
  events.extend((3500,i,1 if i==0 else 17) for i in range(8))
  name=f'arena-{arena+1}';inputs=a.results/(name+'.csv');video=a.results/(name+'-video.csv')
  inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(events)))

@@ -24,7 +24,7 @@ rom=a.rom.read_bytes()
 inputs=a.results/'inputs.csv';events=[]
 for l in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=l.split(',');f=int(f)
- if int(i)==0 and f<2200 and (not a.boot_ring or f>=1500):events.extend((f,j,int(k,16)) for j in range(8 if f<1500 or f in (2000,2015) else 1))
+ if int(i)==0 and f<2230 and (not a.boot_ring or f>=1500):events.extend((f,j,int(k,16)) for j in range(8 if f<1500 or f in (2000,2015) else 1))
 # Luigi Circuit reproduces the rain animation/audio contention.
 if a.gp:events.extend(((1600,0,64),(1615,0,0)))
 course_keys=((2800,256),(3200,1),(3500,1)) if a.gp else ((3000,128),(3040,128),(3400,1),(4300,1),(4600,1))

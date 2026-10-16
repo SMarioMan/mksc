@@ -55,7 +55,7 @@ original, shifted = a.rom.read_bytes(), a.shifted_rom.read_bytes()
 # or audio as pointers. Script and menu tables are deliberately not excluded.
 opaque = []
 for name, start in symbols.items():
-    if not (re.fullmatch(r'wave(?:_\d+|[0-9A-Fa-f]{8})', name) or name in ('courseData_bin', '_08089A04', '_080907B0')):
+    if not (re.fullmatch(r'wave(?:_\d+|[0-9A-Fa-f]{8})', name) or name in ('courseData_bin', '_08089A04', '_080907B0', 'ring_restoredAudioSamples')):
         continue
     end = symbols.get(name + '_end')
     if end is None or not 0x08000000 <= start < end:
@@ -115,6 +115,18 @@ for offset in range(0, len(original) - 3):
     if value not in addresses:
         continue
     if any(start <= offset and offset + 4 <= end for start, end in opaque):
+        sample_matches += 1
+        continue
+    # Three bytes crossing native Thumb instructions can resemble an odd
+    # function pointer after new code changes its address. This exact sequence
+    # constructs a fixed-point mask: movs r1,#imm; lsls r1,r1,#15; orrs r0,r1.
+    # It also occurs in the unmodified embedded single-pak child executable.
+    # Validate all three instructions, their alignment and their shifted bytes;
+    # do not exempt general instruction regions or packed script tables.
+    if offset & 1 and original[offset:offset+5] == b'\x21\xc9\x03\x08\x43':
+        instruction_start = offset - 1
+        moved = instruction_start + (a.padding if instruction_start >= a.start else 0)
+        assert original[instruction_start:instruction_start+6] == shifted[moved:moved+6], 'Native mask instructions changed'
         sample_matches += 1
         continue
     destination = offset + (a.padding if offset >= a.start else 0)

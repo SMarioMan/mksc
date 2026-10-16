@@ -37,6 +37,7 @@ def test(stem,name=None,variant='mksc-ring',extra=(),elf=True,unit=False):
  name=name or stem;cmd=['python3',root/'tools/ring'/('test_'+stem+'.py'),'--runner',runner,'--bios',bios,'--results',r/name]
  if not unit:cmd+=['--rom',build/(variant+'.gba')]
  if elf and not unit:cmd+=['--elf',build/(variant+'.elf')]
+ if stem=='sunset_art':cmd+=['--sunset-art',variants['mksc-ring'].get('sunset_art','japanese')]
  run(name,cmd+list(extra))
 def matrix(policy):
  variant='mksc-ring'+('-shared' if policy=='shared' else '')
@@ -47,7 +48,7 @@ def logic():
  try:
   test('game','entry',extra=('--players','2','3','4','5','6','7','8','--modes','vs','battle','gp'),elf=False);entryOK=True
  finally:entry.set()
- for stem,elf in [('title',True),('lobby',True),('singleplayer',True),('rendering',False),('display_rate',False),('spawns',True),('course_menu',False),('battle_menu',True),('transition',True),('character_menu',True)]:
+ for stem,elf in [('title',True),('lobby',True),('singleplayer',True),('rendering',False),('display_rate',False),('spawns',True),('course_menu',False),('battle_menu',True),('transition',True),('character_menu',True),('character_random',True)]:
   test(stem,elf=elf,extra=())
  test('lobby','lobby-shared',variant='mksc-ring-shared')
  test('gp',extra=('--players','2','3','4','5','6','7','8'))
@@ -55,6 +56,8 @@ def logic():
  test('flows',extra=('--players','2','8'))
  test('rounds',extra=('--players','2','3','4','5','6','7','8','--workers','1'))
  test('rounds','rounds-shared',variant='mksc-ring-shared',extra=('--players','2','3','4','5','6','7','8','--workers','1','--shared-audio'))
+ test('rounds','results-sustained',extra=('--players','2','8','--workers','1','--results-frames','900'))
+ test('rounds','results-sustained-shared',variant='mksc-ring-shared',extra=('--players','2','8','--workers','1','--results-frames','900','--shared-audio'))
  test('repeat',extra=('--players','2','8','--baseline',r/'rounds'))
  test('menu_audio',variant='mksc-ring-shared',extra=('--host','3'))
  test('start_music',variant='mksc-ring-boot-shared',extra=('--boot-ring','--host','3','--reference-rom',build/'mksc-ring-boot.gba','--reference-elf',build/'mksc-ring-boot.elf'))

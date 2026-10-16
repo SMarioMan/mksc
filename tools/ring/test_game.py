@@ -46,7 +46,7 @@ for n in a.players:
     for mode in a.modes:
         events = []
         for frame, keys in base:
-            if (mode == 'gp' and frame in (2500, 2515)) or (mode == 'battle' and frame in (2200, 2215)):
+            if mode in ('gp','battle') and frame in (2500, 2515):
                 continue
             shared = frame < 1500 or frame in (2000, 2015)
             for slot in range(n if shared else 1):
@@ -56,7 +56,7 @@ for n in a.players:
         if mode == 'battle':
             events.extend([(1600, a.host, 128), (1615, a.host, 0)])
             for step in range(a.arena):
-                events.extend([(2300 + step * 40, a.host, 128), (2320 + step * 40, a.host, 0)])
+                events.extend([(2600 + step * 40, a.host, 128), (2620 + step * 40, a.host, 0)])
         events.extend((3500, slot, HELD[(slot + n - a.host) % n]) for slot in range(n))
         name = f'{mode}-{n}'
         inputs = a.results / f'{name}.csv'

@@ -31,9 +31,9 @@ for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitline
 for case in ('menu', 'vs', 'battle'):
     rows = []
     for frame, keys in base:
-        if case == 'menu' and frame >= 1950:
+        if case == 'battle' and frame in (2500,2515):
             continue
-        if case == 'battle' and frame in (2200, 2215):
+        if case == 'menu' and frame >= 1950:
             continue
         shared = frame < 1500 or frame in (2000, 2015)
         rows.extend((frame, slot, keys) for slot in range(8 if shared else 1))

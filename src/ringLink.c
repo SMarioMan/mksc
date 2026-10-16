@@ -442,6 +442,19 @@ void ring_serviceRenderAudio(void)
 #endif
 
 static bool32 results_main(void);
+
+bool32 ring_preserveRaceDisplay(void)
+{
+    return sRing.enabled && gSceneState.sceneMainFunc == results_main;
+}
+/* Background driver updates may finish the last racer after the page opens.
+ * Those native race cues must not replace the results theme. */
+bool32 ring_resultsAudioBlocked(struct MusicPlayerInfo* player, struct SongHeader* song)
+{
+    extern const struct Song gSongTable[];
+    return ring_preserveRaceDisplay() && player == gMPlayTable[0].info &&
+        song != gSongTable[sGame == GP_MODE ? SONG_014 : SONG_017].header;
+}
 static bool32 connectionError_main(void);
 
 
@@ -1243,7 +1256,7 @@ static void menuPixel(int x, int y, u32 color)
 static u32 menuColor(u16 color)
 {
     u32 i;
-    for (i = 0; i < 8; i++) if (color == sPlayerColors[i]) return i;
+    for (i = 0; i < 8; i++) if (color == sPlayerColors[i]) return 16 + i;
     return color == 0x7FFF ? 10 : 11;
 }
 
@@ -1329,7 +1342,7 @@ void ring_initTitleOption(void)
     /* Include each glyph's outline, excluding the adjacent E/L columns.
      * The former crops picked up the preceding E beside R and the following
      * L beside ING, producing stray edges when the fragments were joined. */
-    static const s16 slices[3][4] = { {0,32,7,3}, {0,-33,18,10}, {5,25,25,33} };
+    static const s16 slices[3][4] = { {0,32,6,3}, {0,-33,18,10}, {5,25,25,33} };
     u16 tiles[256];
     int i, row, col, x, offset;
     for (i = 0; i < 256; i++) tiles[i] = 0;
@@ -1439,6 +1452,8 @@ typedef struct NativeMenuExtras
     u32 nativeMarkerTiles[128];
     u16 extendedCursorTiles[1024];
     bool32 extendedCursorReady;
+    u8 randomCharacters;
+    bool32 randomPortraitsDone;
 } NativeMenuExtras;
 
 static unsigned nativeLabelPixel(const u8* tiles, int width, int x, int y)
@@ -1609,17 +1624,76 @@ void ring_restoreNativeMenuKeys(void)
 }
 
 
-/* Transport commits a complete input vector. The native character page
- * renders one local view; this coordinator owns all eight independent picks
- * and publishes confirmation only when every participant has a unique pick.
- * No native four-controller array is enlarged into adjacent menu widgets. */
+/* Every console retains the native local animation slot. The ring roster
+ * extends confirmation/duplicate checks to eight players, while the original
+ * chooser owns selection voices, portrait fades, roulette and the host OK. */
+typedef struct
+{
+    u8 flags, dirty;
+    u16 animation, frame, selectedStyle;
+    u8 remaining[12];
+} NativeCharacterPortrait;
+
 void ring_switchNativeBattlePage(SpmState* menu);
+
+int ring_nativeCharactersPending(int pending)
+{
+    if (!sNativeCharacterMenu) return pending;
+    return sNativeCharactersReady != (1 << sRing.count) - 1;
+}
+
+int ring_nativeRandomCharacter(int original)
+{
+    return sNativeCharacterMenu ? sNativeCharacterChoices[sRing.id] : original;
+}
+
+static void ring_selectRandomCharacters(void)
+{
+    u32 i, j, used = 0;
+    sNativeMenuExtras->randomCharacters = 0;
+    for (i = 0; i < sRing.count; i++)
+        if (sNativeCharacterChoices[i] != 4) used |= 1 << sNativeCharacterChoices[i];
+    for (i = 0; i < sRing.count; i++)
+        if (sNativeCharacterChoices[i] == 4)
+        {
+            u32 first = (sRing.rounds + i * 3) & 7;
+            for (j = 0; j < 8; j++)
+            {
+                u32 candidate = (first + j) & 7;
+                candidate += candidate >= 4;
+                if (!(used & (1 << candidate)))
+                {
+                    sNativeCharacterChoices[i] = candidate;
+                    used |= 1 << candidate;
+                    break;
+                }
+            }
+            sNativeMenuExtras->randomCharacters |= 1 << i;
+        }
+}
+
+static void ring_animateRemoteConfirmation(unsigned id, bool32 selected)
+{
+    extern const u16 _080D92D6[9];
+    NativeCharacterPortrait* portraits = (NativeCharacterPortrait*)((u8*)sNativeCharacterMenu + 0x5E4);
+    u32 choice = sNativeCharacterChoices[id];
+    if (choice == 4 || id == sRing.id) return;
+    portraits[choice].dirty = 1;
+    portraits[choice].animation = selected ? 1 : 2;
+    portraits[choice].selectedStyle = selected ? 1 : 0;
+#ifndef MKSC_RING_MUSIC_SHARED
+    m4aSongNumStart(selected ? _080D92D6[choice] : 0x90);
+#endif
+    /* Shared mixing gets this voice from the selecting console's native
+     * local animation, rather than duplicating it on every remote screen. */
+}
 
 void ring_nativeMenuFrame(void)
 {
     extern u16 gKeyBuf[8], gKeyTriggerBuf[8], gKeyRepeatTriggerBuf[8];
-    u16 held;
-    u32 i, j;
+    u16 held, localTrigger;
+    u32 i, j, readyBefore, allReady;
+    int phase;
     if (!sNativeCharacterMenu && !sNativeCourseMenu) return;
     sNativeHostKeys[0] = gKeyBuf[0];
     sNativeHostKeys[1] = gKeyTriggerBuf[0];
@@ -1637,6 +1711,10 @@ void ring_nativeMenuFrame(void)
         return;
     }
     held = gKeyBuf[sRing.id];
+    localTrigger = gKeyTriggerBuf[sRing.id];
+    readyBefore = sNativeCharactersReady;
+    allReady = (1 << sRing.count) - 1;
+    phase = sNativeCharacterMenu->characterPhases[0];
     if (!sNativeCharacterConfirm && !sNativeCharacterBack)
     {
         for (i = 0; i < sRing.count; i++)
@@ -1646,6 +1724,7 @@ void ring_nativeMenuFrame(void)
             if (input & B_BUTTON)
             {
                 if (!i && !(sNativeCharactersReady & 1)) sNativeCharacterBack = TRUE;
+                if (sNativeCharactersReady & (1 << i)) ring_animateRemoteConfirmation(i, FALSE);
                 sNativeCharactersReady &= ~(1 << i);
             }
             if (!(sNativeCharactersReady & (1 << i)))
@@ -1655,40 +1734,31 @@ void ring_nativeMenuFrame(void)
                            direction & DPAD_DOWN ? choice->down :
                            direction & DPAD_LEFT ? choice->left :
                            direction & DPAD_RIGHT ? choice->right : sNativeCharacterChoices[i];
-                sNativeCharacterChoices[i] = next;
-                if (input & A_BUTTON)
+                if (next >= 0) sNativeCharacterChoices[i] = next;
+                if (input & (A_BUTTON | START_BUTTON))
                 {
-                    if (next == 4)
-                    {
-                        /* Random uses the common input round, never a local
-                         * hardware timer, so all peers choose the same roster. */
-                        next = sRing.rounds & 7;
-                        for (j = 0; j < 8; j++)
-                        {
-                            u32 other;
-                            u8 candidate = (next + j) & 7;
-                            candidate += candidate >= 4;
-                            for (other = 0; other < sRing.count; other++)
-                                if (other != i && (sNativeCharactersReady & (1 << other)) &&
-                                    sNativeCharacterChoices[other] == candidate) break;
-                            if (other == sRing.count) { next = candidate; break; }
-                        }
-                        sNativeCharacterChoices[i] = next;
-                    }
+                    /* Multiple players may reserve Random. Resolve the
+                     * common permutation only after the host accepts OK. */
                     for (j = 0; j < sRing.count; j++)
-                        if (j != i && (sNativeCharactersReady & (1 << j)) &&
+                        if (next != 4 && j != i && (sNativeCharactersReady & (1 << j)) &&
                             sNativeCharacterChoices[j] == next) break;
-                    if (j == sRing.count) sNativeCharactersReady |= 1 << i;
+                    if (j == sRing.count)
+                    {
+                        sNativeCharactersReady |= 1 << i;
+                        ring_animateRemoteConfirmation(i, TRUE);
+                    }
                 }
             }
         }
-        if (sNativeCharactersReady == (1 << sRing.count) - 1)
-            sNativeCharacterConfirm = TRUE;
-    }
-    /* Let the original page animate the common picks. Writing its one local
-     * cursor also makes Random's shared choice use the native portrait/name. */
-    if (sNativeCharacterMenu->characterPhases[0] == 2)
+        if (readyBefore == allReady && sNativeCharactersReady == allReady &&
+            (gKeyTriggerBuf[0] & (A_BUTTON | START_BUTTON)))
         {
+            ring_selectRandomCharacters();
+            sNativeCharacterConfirm = TRUE;
+        }
+    }
+    if (phase == 2)
+    {
         int choice = sNativeCharacterChoices[sRing.id];
         if (sNativeCharacterMenu->characterCells[0] != choice)
         {
@@ -1702,17 +1772,39 @@ void ring_nativeMenuFrame(void)
             m4aSongNumStart(0x8D);
         }
     }
-    gKeyBuf[0] = held & ~(A_BUTTON | B_BUTTON);
-    gKeyTriggerBuf[0] = gKeyTriggerBuf[sRing.id] & (L_BUTTON | R_BUTTON);
-    gKeyRepeatTriggerBuf[0] = 0;
-    if (sNativeCharacterMenu->characterPhases[0] == 2 ||
-        sNativeCharacterMenu->characterPhases[0] == 4)
+    if (phase >= 7 && sNativeCharacterConfirm && !sNativeMenuExtras->randomPortraitsDone)
     {
-        if (sNativeCharacterBack) gKeyTriggerBuf[0] = B_BUTTON;
-        else if (sNativeCharacterConfirm) gKeyTriggerBuf[0] = A_BUTTON;
+        for (i = 0; i < sRing.count; i++)
+            if (sNativeMenuExtras->randomCharacters & (1 << i)) ring_animateRemoteConfirmation(i, TRUE);
+        sNativeMenuExtras->randomPortraitsDone = TRUE;
     }
-    /* The common coordinator already applied navigation. The native page
-     * must not apply the same edge a second time after the cursor update. */
+    gKeyBuf[0] = held & ~(A_BUTTON | B_BUTTON | START_BUTTON);
+    gKeyTriggerBuf[0] = localTrigger & (L_BUTTON | R_BUTTON | SELECT_BUTTON);
+    gKeyRepeatTriggerBuf[0] = 0;
+    if (phase == 2 && (sNativeCharactersReady & (1 << sRing.id))) gKeyTriggerBuf[0] |= A_BUTTON;
+    if ((phase == 3 || phase == 4) && (readyBefore & (1 << sRing.id)) &&
+        !(sNativeCharactersReady & (1 << sRing.id))) gKeyTriggerBuf[0] |= B_BUTTON;
+    if (phase == 4 && sNativeCharacterConfirm) gKeyTriggerBuf[0] |= A_BUTTON;
+    if (sNativeCharacterBack)
+    {
+        sNativeCharacterMenu->characterPhases[0] = 2;
+        gKeyTriggerBuf[0] = B_BUTTON;
+    }
+}
+
+static unsigned ring_animatedNativeCharacter(unsigned id)
+{
+    extern const u8 _080D947C[9];
+    unsigned choice = sNativeCharacterChoices[id];
+    if (sNativeCharacterMenu->characterPhases[0] == 6 &&
+        (sNativeMenuExtras->randomCharacters & (1 << id)))
+    {
+        /* Each console runs the original local roulette slot. Use its
+         * native step counter to animate the other confirmed markers too. */
+        unsigned steps = *(u32*)((u8*)sNativeCharacterMenu + 0x6C0);
+        if (steps < 25) while (steps--) choice = _080D947C[choice];
+    }
+    return choice;
 }
 
 /* Reuse the original multipak cursor frames and confirmed-player badges.
@@ -1798,8 +1890,8 @@ bool32 ring_drawNativeCharacterCursor(SpmState* menu, int slot, int x, int y)
     for (i = 0; i < sRing.count; i++)
     {
         const NativeCharacterNavigation* choice;
-        if (!(sNativeCharactersReady & (1 << i))) continue;
-        choice = &_080D9274[sNativeCharacterChoices[i]];
+        if (i == sRing.id || !(sNativeCharactersReady & (1 << i))) continue;
+        choice = &_080D9274[ring_animatedNativeCharacter(i)];
         position.x = choice->x + offsets[i][0];
         position.y = choice->y + offsets[i][1];
         if (i < 4) oam_renderCellData(_080D93B8[i], &position, 0, 0, 0, 0);
@@ -1831,7 +1923,7 @@ static int ring_chooseNativeCharacters(u8* characters, int mode, int engine)
     menu->localPlayerId = 0;
     menu->playerCount = sRing.count;
     menu->gamemode = mode == GP_MODE ? GAMEMODE_GP : mode == BATTLE_MODE ? GAMEMODE_BATTLE : GAMEMODE_VS;
-    menu->raceSpeed = engine;
+    menu->raceSpeed = mode == BATTLE_MODE ? RACE_SPEED_UNSET : engine;
     menu->character = characters[sRing.id];
     menu->cup = menu->track = -1;
     menu->reenteringLinkMenu = 1;
@@ -1867,6 +1959,8 @@ static int ring_chooseNativeCharacters(u8* characters, int mode, int engine)
         }
     }
     sNativeMenuExtras->extendedCursorReady = FALSE;
+    sNativeMenuExtras->randomCharacters = 0;
+    sNativeMenuExtras->randomPortraitsDone = FALSE;
     *(u8*)0x03000019 = sNativeCharacterChoices[sRing.id];
     sNativeCharactersReady = sNativeCharacterConfirm = sNativeCharacterBack = 0;
     sNativeCharacterMenu = menu;
@@ -1984,7 +2078,7 @@ static int ring_chooseNativeCourse(int mode, int engine, int character,
     menu->lastPlayer = menu->localPlayerId = 0;
     menu->playerCount = sRing.count;
     menu->gamemode = mode == GP_MODE ? GAMEMODE_GP : mode == BATTLE_MODE ? GAMEMODE_BATTLE : GAMEMODE_VS;
-    menu->raceSpeed = engine;
+    menu->raceSpeed = mode == BATTLE_MODE ? RACE_SPEED_UNSET : engine;
     menu->character = character;
     menu->cup = mode == BATTLE_MODE ? 0 : *course / 4;
     menu->track = mode == BATTLE_MODE ? *course : *course % 4;
@@ -2030,7 +2124,9 @@ bool32 ring_main(void)
     sNativeMenuContext = sNativeCourseMenu = sNativeCharacterMenu = 0;
     if (sResume && ring_active())
     {
-        REG_DISPCNT = 0x80;
+        pltt_getBuffer(PLTT_BUFFER_BG)[0] = 0;
+        ((vu16*)PLTT)[0] = 0;
+        REG_DISPCNT = 0;
         scene_setVBlankFunc(0);
         DmaStop(0);
         vcount_reset();
@@ -2289,13 +2385,15 @@ static void resetMenuDisplay(void)
     extern const u16 _08062774[];
     u16* palette = pltt_getBuffer(0);
     u32 i;
-    REG_DISPCNT = 0x80;
+    ((vu16*)PLTT)[0] = 0;
+    REG_DISPCNT = 0;
     sMenuReady = FALSE;
     scene_setVBlankFunc(0);
     DmaStop(0);
     vcount_reset();
-    REG_DISPCNT = 0x80;
-    for (i = 0; i < 8; i++) palette[i] = sPlayerColors[i];
+    REG_DISPCNT = 0;
+    palette[0] = 0;
+    for (i = 0; i < 8; i++) palette[16 + i] = sPlayerColors[i];
     palette[8] = 0x7FA0;
     palette[9] = 0x4108;
     palette[10] = 0x7FFF;
@@ -2346,13 +2444,52 @@ static bool32 connectionError_main(void)
     return TRUE;
 }
 
+/* Keep the original world/driver update sequence behind the native rows.
+ * HUD and finish-page coordinators are omitted: their four-controller
+ * presentation storage is replaced by the original eight-racer row builder. */
+static void ring_updateResultsBackground(void)
+{
+    RaceState* state = &gSceneState.raceState;
+    extern void sub_804978C(RaceState*), sub_804AEFC(RaceState*);
+    extern void sub_8049850(RaceState*), sub_804C0A8(RaceState*);
+    extern void sub_8049B0C(RaceState*), sub_8049D78(RaceState*);
+    extern void sub_8051014(void), sub_80484E0(void);
+    extern int sub_8043840(void);
+    gSceneState.field10++;
+    sub_8043840();
+    sub_804978C(state);
+    sub_804AEFC(state);
+    sub_8051014();
+    sub_80484E0();
+    sub_8049850(state);
+    sub_804C0A8(state);
+    sub_8049B0C(state);
+    sub_8049D78(state);
+}
+
+static void ring_loadResultsHeading(void)
+{
+    u32 row, column;
+    if (!sBattle) return;
+    {
+        extern const u32 gBattleCup[4];
+        const TrackDef* course = gTrackDefTable[gBattleCup[sCourse]];
+        u16* map = map_getBufferPtr(0);
+        /* GP's cup and class widgets do not belong on a Battle result page.
+         * Both arena sets share the native Battle Course 1..4 lettering. */
+        for (row = 0; row < 3; row++)
+            for (column = 0; column < 18; column++) map[row * 32 + column] = 0;
+        LZ77UnCompVram((const u32*)course->trackNameText, (void*)0x06000400);
+    }
+}
+
 static bool32 results_main(void)
 {
     extern u16 gKeyTriggerBuf[8];
     extern void results_loadStandingsGraphics(void);
     extern void results_drawStandingRow(int row, NativeResultRow* result, int kind, u16* map);
     NativeResultRow* rows = sub_800EDDC()->rows.results;
-    u32 i;
+    u32 i, entryRound = sRing.rounds;
     if (sGame == GP_MODE)
     {
         extern void results_buildStandings(void);
@@ -2377,31 +2514,40 @@ static bool32 results_main(void)
         rows[i].previousPoints = sRoundScores[id];
         rows[i].awardedPoints = 0;
     }
-    scene_setVBlankFunc(0);
-    DmaStop(0);
-    vcount_reset();
-    REG_DISPCNT = 0x80;
-    oam_802FE4C(FALSE);
+    /* Native post-race coasting uses the CPU controller for every kart.
+     * Leave the already-captured human standings and scores untouched. */
+    if (!sBattle)
+        for (i = 0; i < gSceneState.raceState.driverCount; i++)
+            gSceneState.raceState.drivers[i]->field_48 =
+                (gSceneState.raceState.drivers[i]->field_48 & ~0x8000) | 0x2000;
+    sRing.inGame = TRUE;
+#ifdef MKSC_RING_MUSIC_SHARED
+    sMusicRacing = FALSE;
+#endif
     results_loadStandingsGraphics();
+    ring_loadResultsHeading();
     for (i = 0; i < (sGame == GP_MODE ? 8 : sRing.count); i++)
         results_drawStandingRow(i, &rows[i], 2, map_getBufferPtr(0));
     map_setBufferDestination(0, (void*)0x06003800);
     map_setBufferDirty(1);
     REG_BG0CNT = 0x0700;
-    REG_BG0HOFS = REG_BG0VOFS = 0;
+    /* Both offsets are write-only. A chained assignment makes agbcc read
+     * VOFS back as open bus and scrolls/crops the result heading. */
+    REG_BG0HOFS = 0;
+    REG_BG0VOFS = 0;
     REG_BLDCNT = 0;
     REG_WININ = REG_WINOUT = 0x3F3F;
-    REG_DISPCNT = 0x100;
-#ifdef MKSC_RING_MUSIC_SHARED
-    /* Local finish cues are suppressed while others race. Start the common
-     * result cue here even when the host was the last unfinished racer. */
-    m4aSongNumStartOrChange(SONG_RACE_END_JINGLE_SUCCESS);
-#endif
+    REG_DISPCNT = (REG_DISPCNT & ~0x80) | 0x101;
+    /* The finite finish jingle is followed by the native looping result
+     * theme, rather than leaving the mixer stopped after that jingle. */
+    m4aSongNumStartOrChange(sGame == GP_MODE ? SONG_014 : SONG_017);
     while (1)
     {
+        oam_update();
         main_frameProc();
+        ring_updateResultsBackground();
         if (!ring_active()) { scene_setMainFunc(connectionError_main); return TRUE; }
-        if (gKeyTriggerBuf[0] & A_BUTTON)
+        if (sRing.rounds - entryRound >= 120 && (gKeyTriggerBuf[0] & A_BUTTON))
         {
             if (sGame == GP_MODE && sGPRace < 3)
             {
@@ -2409,11 +2555,12 @@ static bool32 results_main(void)
                 prepareRace(sCharacters, GP_MODE, sEngine, sCourse + 1, sRetro);
                 return TRUE;
             }
+            sRing.inGame = FALSE;
             sResume = sBattle ? ARENA : sGame == GP_MODE ? CUP : COURSE;
             scene_setMainFunc(ring_main);
             return TRUE;
         }
-        if (gKeyTriggerBuf[0] & B_BUTTON)
+        if (sRing.rounds - entryRound >= 120 && (gKeyTriggerBuf[0] & B_BUTTON))
         {
             sSession = FALSE;
             ring_stop();

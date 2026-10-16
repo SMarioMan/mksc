@@ -12,7 +12,7 @@ from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__)
 for key in ('runner','rom','elf','bios','results'):p.add_argument('--'+key,required=True,type=Path)
 p.add_argument('--workers',type=int,default=3,choices=range(1,5))
-p.add_argument('--courses',nargs='+',default=[f'{s}-{i}' for s in ('super','retro') for i in range(20)]+[f'{s}-{i}' for s in ('battle','retro-battle') for i in range(4)])
+p.add_argument('--courses',nargs='+',default=[f'{s}-{i}' for s in ('battle','retro-battle') for i in range(4)]+[f'{s}-{i}' for s in ('super','retro') for i in range(20)])
 p.add_argument('--frames',type=int,default=18000)
 p.add_argument('--profile-frames',type=int,default=300)
 p.add_argument('--analyze-only',action='store_true',help='Recheck existing captured JSON/video/profile files')
@@ -43,7 +43,7 @@ if not rom.exists():rom.write_bytes(a.rom.read_bytes())
 base=[]
 for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=line.split(',')
- if int(i)==0 and int(f)<2200:base.append((int(f),int(k,16)))
+ if int(i)==0 and int(f)<2230:base.append((int(f),int(k,16)))
 reports={};completed={}
 if a.resume and (a.results/'summary.json').exists():
  previous=json.loads((a.results/'summary.json').read_text())
@@ -61,9 +61,9 @@ def run(case):
  def key(f,k):events.extend([(f,0,k),(f+15,0,0)])
  if battle:
   key(1600,128)
-  for step in range(idx):key(2300+step*40,128)
-  if kind=='retro-battle':key(2600,256)
-  key(3000 if kind=='retro-battle' else 2500,1);key(3300,1);key(3500,1)
+  for step in range(idx):key(2600+step*40,128)
+  if kind=='retro-battle':key(2900,256)
+  key(3300 if kind=='retro-battle' else 3000,1);key(3700,1);key(3900,1)
   # Battle has no race checkpoint route. Explicit human driving and item
   # inputs exercise motion/combat rather than profiling stationary karts.
   events.extend((5500,i,33 if i==0 else 17) for i in range(8))

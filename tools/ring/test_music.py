@@ -30,7 +30,7 @@ for f,k in base:
  rows.extend((f,i if f<1500 or f in (2000,2015) else a.host,k) for i in range(a.players if f<1500 or f in (2000,2015) else 1))
 if a.gp:rows.extend([(1600,a.host,64),(1615,a.host,0)])
 if a.retro:
- rows=[r for r in rows if r[0]<2200]
+ rows=[r for r in rows if r[0]<2230]
  rows.extend((f,a.host,k) for f,k in ((2800,256),(2815,0),(3200,1),(3215,0),(3500,1),(3515,0)))
  if not a.gp:rows.extend((f,a.host,k) for f,k in ((4000,1),(4015,0),(4300,1),(4315,0)))
 inputs=a.results/'inputs.csv';inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
@@ -59,6 +59,13 @@ finalLap=5 if a.gp and a.retro else 3
 game=[r for r in frames if r['dispcnt']&7==1 and r['simulationFrames']>=80 and r['sceneMain']==symbols['race_main']|1]
 peers=[r for r in game if r['player']!=a.host]
 assert peers and all(not r['musicStatus']&65535 or r['musicStatus']&0x80000000 for r in peers),'Peer BGM player is audible'
+owner=[r for r in game if r['player']==a.host]
+# Race physics begins before GO. Keep the stronger start-music test as the
+# fanfare/countdown timing oracle, and start the in-race policy check only
+# when the first real course track is audible. Peer muting above covers both.
+started=[r['frame'] for r in owner if r['musicHeader']==course and r['musicStatus']&65535 and not r['musicStatus']&0x80000000]
+assert started, 'The host never started the course track'
+game=[r for r in game if r['frame']>=min(started)]
 owner=[r for r in game if r['player']==a.host]
 # A stopped player can retain a different song header. Physics also starts
 # while the finite native opening fanfare is still audible; this must finish

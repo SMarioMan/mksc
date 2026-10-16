@@ -43,14 +43,15 @@ for count in a.players:
     for start, path in ((2100,route(initial,0)),(2600,route(0,initial))):
         for step, key in enumerate(path):
             rows += [(start+step*40,count-1,key),(start+step*40+15,count-1,0)]
-    rows += [(2450,count-1,1),(2465,count-1,0),(3000,count-1,1),(3015,count-1,0)]
+    rows += [(2450,count-1,1),(2465,count-1,0),(3000,count-1,1),(3015,count-1,0),
+             (3600,0,1),(3615,0,0)]
     inputs = a.results/f'characters-{count}.csv'
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
-    for phase, frame, page, ready in [('locked',2500,1,(1<<(count-1))-1),('confirmed',3450,2,(1<<count)-1)]:
+    for phase, frame, page, ready in [('locked',2500,1,(1<<(count-1))-1),('await-host-ok',3450,1,(1<<count)-1),('confirmed',4100,2,(1<<count)-1)]:
         name=f'{count}-{phase}'
         command=[str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(a.rom),'--bios',str(a.bios),'--players',str(count),
                  '--frames',str(frame),'--input',str(inputs),'--watch',hex(symbols['sNativeCharactersReady']),
-                 '--dump','0x0202A400','--dump-words','32','--barrier-before-input','--barrier-state','0x03006B40',
+                 '--dump','0x0202A400','--dump-words',str(0x738//4),'--barrier-before-input','--barrier-state','0x03006B40',
                  '--screens',str(a.results/name)]
         result=subprocess.run(command,capture_output=True,text=True,timeout=300)
         (a.results/(name+'.json')).write_text(result.stdout)
@@ -62,4 +63,6 @@ for count in a.players:
             assert node['dump'][0]==page,(name,'Wrong native page',node['dump'][0])
             assert node['watch']&255==ready,(name,'Incorrect confirmation or duplicate lock',node['watch'])
             assert node['barrier']['errors']==node['barrier']['timeouts']==0,name
+            if phase=='await-host-ok':
+                assert node['dump'][0x4FC//4]==4,(name,'Native confirmation did not wait for host OK',node['slot'])
         print(f'PASS {name}: native page {page}, common ready mask {ready:02x}',flush=True)
