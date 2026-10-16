@@ -23,6 +23,8 @@ s32 ring_spriteDivide(s32 n, s32 d) { return Div(n,d); }
 static u32 state;
 static u32 random32(void) { state^=state<<13;state^=state>>17;state^=state<<5;return state; }
 static u16 before[512], expected[512];
+static OamCellListEntry sortEntries[128];
+static int sortOrder[128];
 int main(void) {
  volatile u32* result=(volatile u32*)0x02000000;
  int test,i,offset,affine,nextOffset,nextAffine,nativeResult,actualResult;
@@ -133,6 +135,30 @@ int main(void) {
    result[0]=0xbad0000b;result[1]=test;result[2]=i;for(;;){}
   }
  }
+ /* Signed priority, tie-breaking and stable equal-key order at every size. */
+ for(test=0;test<1024;test++) {
+  int count=test%129,at,j;
+  OamCellListEntry* cursor;
+  for(i=0;i<count;i++) {
+   sortEntries[i].next=i+1<count?&sortEntries[i+1]:0;
+   sortEntries[i].field8.priority=test&1?(s32)random32():(s32)(random32()%7)-3;
+   sortEntries[i].field8.field0=test&2?(s32)random32():(s32)(random32()%5)-2;
+   at=i;
+   for(j=i;j>0;j--) {
+    OamCellListEntry* prev=&sortEntries[sortOrder[j-1]];
+    if(prev->field8.priority<sortEntries[i].field8.priority ||
+       (prev->field8.priority==sortEntries[i].field8.priority && prev->field8.field0<=sortEntries[i].field8.field0))break;
+    sortOrder[j]=sortOrder[j-1];at=j-1;
+   }
+   sortOrder[at]=i;
+  }
+  cursor=oam_sortCellsByPriority(count?sortEntries:0);
+  for(i=0;i<count;i++) {
+   if(cursor!=&sortEntries[sortOrder[i]]) {result[0]=0xbad0000c;result[1]=test;result[2]=i;for(;;){}}
+   cursor=cursor->next;
+  }
+  if(cursor) {result[0]=0xbad0000d;result[1]=test;for(;;){}}
+ }
  /* Exercise the actual queued path beyond the original 32-cell limit. */
  for (test=0;test<2;test++) {
   Vec2s16 position={120,80}; struc_6 priority;
@@ -179,4 +205,4 @@ proc=subprocess.run([str(a.runner),'--rom',str(a.results/'oam.gba'),'--bios',str
 (a.results/'result.json').write_text(proc.stdout)
 assert proc.returncode==0,proc.stderr
 data=json.loads(proc.stdout);assert data['nodes'][0]['dump'][:2]==[0x600dc0de,16384],data
-print('PASS OAM cells: all 1024 OAM bytes, cell mutations, affine allocation and return values match original assembly across 16384 varied cells and default/custom masks; 4096 queued and 4096 direct HUD cells match the general path; 4096 flat queued cells match native OAM; native 32-cell and expanded 128-cell queues preserve every sprite',flush=True)
+print('PASS OAM cells: all 1024 OAM bytes, cell mutations, affine allocation and return values match original assembly across 16384 varied cells and default/custom masks; 4096 queued and 4096 direct HUD cells match the general path; 4096 flat queued cells match native OAM; 1024 signed-priority stable-sort fixtures pass; native 32-cell and expanded 128-cell queues preserve every sprite',flush=True)

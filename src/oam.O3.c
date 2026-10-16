@@ -28,9 +28,9 @@ static bool32 oam_300218C;
 bool32 oam_renderCell(OamCell* cell);
 void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int scaleY, int rotation, struc_6* a6);
 #ifdef MKSC_RING
-OamCellListEntry* oam_802FC48(OamCellListEntry* a1) __attribute__((section(".ring_irq")));
+OamCellListEntry* oam_sortCellsByPriority(OamCellListEntry* a1) __attribute__((section(".ring_irq")));
 #else
-OamCellListEntry* oam_802FC48(OamCellListEntry* a1);
+OamCellListEntry* oam_sortCellsByPriority(OamCellListEntry* a1);
 #endif
 void oam_init(void);
 void oam_update(void);
@@ -597,68 +597,68 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
     }
 }
 
-OamCellListEntry* oam_802FC48(OamCellListEntry* listEntry)
+OamCellListEntry* oam_sortCellsByPriority(OamCellListEntry* listEntry)
 {
-    OamCellListEntry* v2;
-    OamCellListEntry* v4;
-    OamCellListEntry* v5;
-    OamCellListEntry* v7;
-    OamCellListEntry* v6;
-    OamCellListEntry* v8;
-    OamCellListEntry* v9;
-    OamCellListEntry entry;
+    OamCellListEntry* fast;
+    OamCellListEntry* midpoint;
+    OamCellListEntry* rightHead;
+    OamCellListEntry* left;
+    OamCellListEntry* unused;
+    OamCellListEntry* right;
+    OamCellListEntry* tail;
+    OamCellListEntry merged;
     if ((!listEntry) || (!listEntry->next))
     {
         return listEntry;
     }
 
-    v4 = listEntry;
-    v2 = v4->next;
-    while (v2)
+    midpoint = listEntry;
+    fast = midpoint->next;
+    while (fast)
     {
-        v2 = v2->next;
-        if (!v2)
+        fast = fast->next;
+        if (!fast)
         {
             break;
         }
 
-        v4 = v4->next;
-        v2 = v2->next;
+        midpoint = midpoint->next;
+        fast = fast->next;
     }
 
-    v5 = v4->next;
-    v4->next = 0;
-    v7 = oam_802FC48(listEntry);
-    v8 = oam_802FC48(v5);
-    v9 = &entry;
-    while (v7 && v8)
+    rightHead = midpoint->next;
+    midpoint->next = 0;
+    left = oam_sortCellsByPriority(listEntry);
+    right = oam_sortCellsByPriority(rightHead);
+    tail = &merged;
+    while (left && right)
     {
-        if ((v7->field8.priority > v8->field8.priority) ||
-            ((v7->field8.priority == v8->field8.priority) && (v7->field8.field0 > v8->field8.field0)))
+        if ((left->field8.priority > right->field8.priority) ||
+            ((left->field8.priority == right->field8.priority) && (left->field8.field0 > right->field8.field0)))
         {
-            v9->next = v8;
-            v9 = v8;
-            v8 = v8->next;
+            tail->next = right;
+            tail = right;
+            right = right->next;
         }
         else
         {
-            v9->next = v7;
-            v9 = v7;
-            v7 = v7->next;
+            tail->next = left;
+            tail = left;
+            left = left->next;
         }
     }
 
-    if (!v7)
+    if (!left)
     {
-        v5 = v8;
-        v9->next = v5;
+        rightHead = right;
+        tail->next = rightHead;
     }
     else
     {
-        v9->next = v7;
+        tail->next = left;
     }
 
-    return entry.next;
+    return merged.next;
 }
 
 void oam_init(void)
@@ -691,7 +691,7 @@ void oam_update(void)
     if (!oam_3002188 || !sCopyDisabled)
         return;
     oam_300218C = 1;
-    sCellListHead = oam_802FC48(sCellListHead);
+    sCellListHead = oam_sortCellsByPriority(sCellListHead);
     oam_renderAllCells();
     sCopyDisabled = 0;
     oam_300218C = 0;
