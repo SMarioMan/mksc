@@ -298,3 +298,47 @@ Replacement menu art specifications and the private-reference export command are
 Sunset Wilds art is optional (`--sunset-art japanese`; default `original`).
 The supplied higher-quality audio is optional through
 `--music-restoration-ips PATH`. See [the audio import and validation notes](../../docs/ring-restored-audio.md).
+
+## Watch a regression on your desktop
+
+Configure modified mGBA with `-DBUILD_QT=ON -DBUILD_SUITE=ON` and the Qt
+Test/Multimedia development modules, then build the GUI test target
+(`cmake --build BUILD --target test-qt-ring_gui`).
+Then, from this checkout:
+
+```sh
+python3 tools/ring/build.py --shared-music
+python3 tools/ring/review_gui.py --gui-test ../mgba/BUILD/qt/test-qt-ring_gui \
+  --rom mksc-ring.gba --bios /path/to/gba.bin \
+  --mode battle --players 8 --seconds 120 --log visual-battle.log
+```
+
+On Windows use the target's `test-qt-ring_gui.exe` path. Python 3 is required.
+Use a normal-boot ring ROM, not a `--boot-ring` build. The real BIOS is required.
+The launcher exports the **same** input fixtures as `test_game.py`, opens and tiles
+2–8 actual Qt windows in player order, and enables real-time synchronization and
+Qt audio. Modes are `vs`, `battle`, and `gp`. It watches 35–300 seconds of moving
+gameplay after BIOS boot and menu entry, then performs the regression's ordinary
+state/audio/lifecycle checks. A nonzero exit code remains a test failure. Window
+settings and save outputs are temporary; your normal GUI settings are preserved.
+
+Use the normal Pause command to pause/resume all consoles for inspection.
+Ctrl+C stops the review. Keep other CPU-heavy test/build jobs stopped while
+judging sound or wall-clock performance. The test reports native updates per
+video frame, wall-clock FPS, audio underruns, and dropped PCM samples.
+
+To inspect an existing scenario, add `--fixture /path/to/battle-8.csv` and select
+its expected final mode/player count. Input rows are `frame,player,hex-key-mask`,
+with zero-based players and the native GBA keypad bits. Measurement waits until
+after the complete CSV. Only recorded keypad actions replay: headless debugger
+memory edits, cable-fault injection, and dynamically generated autodriving are
+not encoded in these CSVs. Headless committed-input barriers and GUI scheduling
+can also differ; retain the headless result for strict synchronization checks.
+The visual run is an additional graphics/sound review, not a replacement for it.
+
+Fixture export without running an emulator is also available:
+
+```sh
+python3 tools/ring/test_game.py --inputs-only --results visual-inputs \
+  --players 2 3 4 5 6 7 8 --modes vs battle gp
+```

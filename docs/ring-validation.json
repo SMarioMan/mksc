@@ -41,7 +41,7 @@
       "rom_build": "builds-v8",
       "crash_reproduced": false
     },
-    "extended_check": "Targeted five-minute Qt/SDL checks passed; final combined V23 verification is running.",
+    "extended_check": "Historical extended checks below; latest V26 Qt/V27 SDL five-minute runs passed in review-11. The combined V27 BIOS suite still fails strict gates (review_12).",
     "extended_current": {
       "build": "builds-v22",
       "backend": "Qt/PulseAudio",
@@ -793,5 +793,186 @@
     },
     "latest_builds": "review-11/builds-v26",
     "cursor_palette_stable_frames": 2400
+  },
+  "visual_regression_review": {
+    "requested": true,
+    "status": "implemented_smoke_validated",
+    "launcher": "tools/ring/review_gui.py",
+    "players": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "modes": [
+      "vs",
+      "battle",
+      "gp"
+    ],
+    "real_bios": true,
+    "real_time": true,
+    "audible": true,
+    "same_entry_fixtures": true,
+    "custom_keypad_csv": true,
+    "limitations": [
+      "Headless memory edits, cable faults and generated autodriving are not CSV keypad actions.",
+      "Desktop inspection and physical audio cannot be certified by offscreen automation."
+    ],
+    "validation": {
+      "evidence": "/workspace/.setup/results/review-13",
+      "display": "X11/Xvfb 1600x1000; actual visible Qt windows, not the offscreen plugin",
+      "audio": "Qt/PulseAudio private null sink; no physical speaker inspection",
+      "vs_8": {
+        "status": "passed",
+        "moving_video_frames": 2090,
+        "simulation_updates_per_video_frame": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "wall_fps": [
+          60.06,
+          60.06,
+          60.06,
+          60.06,
+          60.06,
+          60.06,
+          60.06,
+          60.06
+        ],
+        "underrun_events": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dropped_pcm_samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "gp_5": {
+        "status": "passed_idle_repeat",
+        "moving_video_frames": 2090,
+        "simulation_updates_per_video_frame": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "wall_fps": [
+          59.98,
+          59.98,
+          59.98,
+          59.98,
+          59.98
+        ],
+        "underrun_events": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dropped_pcm_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "fixture_exports": "All 21 exported 2-8 player Vs/Battle/GP CSVs match BIOS entry regression fixtures byte for byte",
+      "gp_5_with_desktop_capture": {
+        "status": "failed_audio_gate",
+        "simulation_updates_per_video_frame": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "wall_fps": [
+          59.8,
+          59.8,
+          59.8,
+          59.8,
+          59.8
+        ],
+        "underrun_events": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "dropped_pcm_samples": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "maximum_host_frame_gap_ms": 158.19,
+        "note": "A whole-desktop XGetImage capture occurred during this measurement. Idle repeat passed all zero-underrun gates. Capture causation is not established; retain both observations."
+      },
+      "runtime_fingerprints": {
+        "/workspace/.setup/mgba-qt/qt/test-qt-ring_gui": "6b5fbc62fd633dd04d362a0ff6961c2ad5f598bf7c250911cb5a3868e991fd95",
+        "/workspace/.setup/mgba-qt/libmgba.so.0.11.0": "7e5995aaee6efdd46c91191b614ff1cfec73c8d33bc8b47540b7ba5ee4c11e63",
+        "/workspace/.setup/results/review-11/builds-v27/mksc-ring-shared.gba": "1ac49aabe306c8530d3a2975a1cb83ac5a5a39bad0ff48fee20dfb3eb72d5032"
+      }
+    }
+  },
+  "review_12": {
+    "status": "failed",
+    "build": "review-11/builds-v27",
+    "evidence": "/workspace/.setup/results/review-12",
+    "real_bios": true,
+    "entry_cases": 21,
+    "entry_modes": [
+      "vs",
+      "battle",
+      "gp"
+    ],
+    "entry_players": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "normal_courses_passed": 47,
+    "normal_failures": [
+      "battle-2 worst 300-frame window 0.9367"
+    ],
+    "shared_courses_passed": 46,
+    "shared_failures": [
+      "battle-2 worst 300-frame window 0.9400",
+      "super-15 results scene not reached within 70000 frames"
+    ],
+    "spawns": "All authored GBA/SNES battle-course spawns pass at every player count",
+    "logic_failure": "Vs.-to-Battle transition regression stays in Vs.; delaying Pause by 2000 frames did not resolve it. Investigation remains open.",
+    "hle": "not run; BIOS gates remain open"
   }
 }
