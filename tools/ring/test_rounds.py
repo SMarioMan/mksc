@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Complete real-input ring rounds and verify all consoles' rankings and wins.
+"""Complete real-input ring rounds and verify all consoles' rankings and scores.
 
 Vs. follows native route coordinates using only the keypad and periodically
-uses items. Battle drives all but player one around arena four until eliminated.
+uses items. Battle drives all but player one around Shy Guy Desert's pits.
 Snapshots stop at the same committed-input barrier in the results scene.
 """
 import argparse
@@ -32,8 +32,9 @@ for line in subprocess.check_output([a.nm,'-n',str(a.elf)], text=True).splitline
     if len(fields) == 3:
         symbols[fields[2]] = int(fields[0],16)
 a.results.mkdir(parents=True, exist_ok=True)
-dumpBase=min(symbols['sPlaces'],symbols['sWins'])
-assert max(symbols['sPlaces']+8,symbols['sWins']+16)<=dumpBase+128
+dumpBase=min(symbols['sPlaces'],symbols['sRoundScores'])
+dumpWords=(max(symbols['sPlaces']+8,symbols['sRoundScores']+16)-dumpBase+3)//4
+assert dumpWords<=4096
 rom_data = a.rom.read_bytes()
 rom = a.results / (hashlib.sha256(rom_data).hexdigest()+'.gba')
 if not rom.exists():
@@ -70,7 +71,7 @@ def run(n,mode):
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
     command = [str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(rom),'--bios',str(a.bios),
                '--players',str(n),'--frames',str(50000 if mode == 'vs' else 30000),
-               '--input',str(inputs),'--dump',hex(dumpBase),
+               '--input',str(inputs),'--dump',hex(dumpBase),'--dump-words',str(dumpWords),
                '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                '--until-scene',hex(symbols['results_main'] | 1),
                '--screens',str(a.results/name)]
@@ -102,19 +103,25 @@ def run(n,mode):
         assert barrier['errors'] == barrier['timeouts'] == 0, (name,barrier)
         assert barrier['count'] == n and barrier['id'] == node['slot'], (name,barrier)
         rounds.append(barrier['round'])
-        raw = struct.pack('<32I',*node['dump'])
+        raw = struct.pack('<'+'I'*len(node['dump']),*node['dump'])
         places = list(raw[symbols['sPlaces']-dumpBase:symbols['sPlaces']-dumpBase+n])
-        wins = list(struct.unpack_from('<8H',raw,symbols['sWins']-dumpBase))[:n]
+        scores = list(struct.unpack_from('<8H',raw,symbols['sRoundScores']-dumpBase))[:n]
         assert sorted(places) == list(range(n)), (name,places)
-        assert sum(wins) == 1 and wins[places[0]] == 1, (name,places,wins)
         if mode == 'battle':
+            assert sum(scores) == 1 and scores[places[0]] == 1, (name,places,scores)
+        else:
+            awards = rom_data[symbols['_080DB0A8'] - 0x08000000 + 1:][:n]
+            assert [scores[player] for player in places] == list(awards), (name,places,scores, list(awards))
+        if mode == 'battle':
+            arena=struct.unpack_from('<I',rom_data,symbols['gBattleCup']-0x08000000+12)[0]
+            assert node['game']['headerIndex']==arena,(name,'Wrong Battle completion arena')
             assert places[0] == 0, (name,places)
             assert [r['balloons'] for r in node['game']['drivers'][:n]] == [3]+[0]*(n-1), (name,node['game'])
         else:
             assert sum(r['lap'] >= 4 for r in node['game']['drivers'][:n]) >= n-1, (name,node['game'])
-        states.append((places,wins,[r['position'] for r in node['game']['drivers'][:n]]))
+        states.append((places,scores,[r['position'] for r in node['game']['drivers'][:n]]))
     assert len(set(rounds)) == 1 and all(s == states[0] for s in states), (name,rounds,states)
-    return f'PASS {name}: complete round, {n} ranked players, matching positions and win counts'
+    return f'PASS {name}: complete round, {n} ranked players, matching positions and '+('win counts' if mode=='battle' else 'GP point awards')
 with ThreadPoolExecutor(max_workers=a.workers) as pool:
     futures = [pool.submit(run,n,mode) for n in a.players for mode in a.modes]
     failures = []

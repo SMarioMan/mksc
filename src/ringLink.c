@@ -108,7 +108,7 @@ void ring_profileRender(void)
 }
 
 #ifdef MKSC_RING_MUSIC_SHARED
-static u8 sMusicRacing, sSharedSong, sSharedFinalLap;
+static u8 sMusicRacing, sSharedSong, sSharedFinalLap, sCourseMusicStarted;
 int ring_sharedMusicActive(void)
 {
     return sRing.enabled && sRing.inGame && sMusicRacing;
@@ -128,6 +128,16 @@ int ring_sharedAudioMuted(struct MusicPlayerInfo* player, struct SongHeader* son
     u32 i, character;
     Driver* local;
     if (!sRing.enabled) return FALSE;
+    if (player == gMPlayTable[0].info && ring_sharedMusicActive() && !sBattle &&
+        (song == gSongTable[5].header || song == gSongTable[6].header || song == gSongTable[7].header))
+    {
+        RaceState* state = &gSceneState.raceState;
+        u32 finished = 0;
+        for (i = 0; i < state->driverCount; i++)
+            if (state->drivers[i]->lap >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
+        /* One console finishing must not replace the other racers' music. */
+        return finished < state->driverCount - 1;
+    }
     if (!sRing.inGame)
     {
         /* Mode, course and results pages replay the same host input on all
@@ -160,10 +170,28 @@ int ring_sharedAudioMuted(struct MusicPlayerInfo* player, struct SongHeader* son
 
 u16 ring_sharedMusicSong(u16 song)
 {
+    /* Let the native countdown request the first course song. Physics and
+     * the introductory fanfare both begin before Lakitu gives the start. */
+    if (ring_sharedMusicActive() &&
+        song == (sBattle ? SONG_BATTLE : track_getRaceMusic(&gSceneState.raceState)))
+        sCourseMusicStarted = TRUE;
     return ring_sharedMusicActive() && song >= 5 && song <= 7 ? 5 : song;
 }
+
+int ring_keepSharedRaceMusic(void)
+{
+    RaceState* state = &gSceneState.raceState;
+    u32 i, finished = 0;
+    if (!ring_sharedMusicActive() || ring_sharedMusicMuted() || !sCourseMusicStarted || sBattle ||
+        (((u8*)state)[0x7D4] & 0x40)) return FALSE;
+    for (i = 0; i < state->driverCount; i++)
+        if (state->drivers[i]->lap >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
+    /* Native local-finish cleanup stops the BGM before requesting a result
+     * song. Preserve its playback position while other humans are racing. */
+    return finished && finished < state->driverCount - 1;
+}
 /* Derive BGM from the whole race, including shared power-up themes. Native
- * final-lap flag is bit 3; finished drivers keep it set, so tempo never drops. */
+ * final-lap flag is bit 3. Latch it: finish/spectator setup may clear it. */
 static void ring_updateSharedMusic(void)
 {
     extern void m4aMPlayTempoControl(struct MusicPlayerInfo*, u16);
@@ -178,6 +206,8 @@ static void ring_updateSharedMusic(void)
         return;
     }
     if (!ring_sharedMusicActive()) { sSharedSong = 0; sSharedFinalLap = 0; return; }
+    if (!sCourseMusicStarted) return;
+    if (((u8*)state)[0x7D4] & 0x40) return;
     /* Physics begins during the native opening fanfare. Do not treat its
      * first tick as permission to replace a still-playing start song. Both
      * GP and linked races use player zero for this finite introductory cue. */
@@ -194,7 +224,7 @@ static void ring_updateSharedMusic(void)
     }
     /* Preserve the common result jingle during native end-of-race cleanup. */
     if ((!sBattle && finished >= state->driverCount - 1) || (sBattle && alive <= 1)) return;
-    if (sBattle) fast = 0;
+    fast = sBattle ? 0 : fast || sSharedFinalLap;
     music = sBattle ? 18 : track_getRaceMusic(state);
     if (music == 36) music = 28;
     /* Native timers belong to every racer, including CPUs. Star takes
@@ -226,7 +256,7 @@ static void ring_updateSharedMusic(void)
 bool32 ring_ignoreLocalMusic(void)
 {
 #ifdef MKSC_RING_MUSIC_SHARED
-    return ring_sharedMusicActive();
+    return ring_sharedMusicActive() && sCourseMusicStarted;
 #else
     return FALSE;
 #endif
@@ -1351,7 +1381,7 @@ static void prepareRace(const u8* characters, int mode, int engine, int course, 
     sBalloonArtReady = FALSE;
     sGpBannersInitialized = FALSE;
 #ifdef MKSC_RING_MUSIC_SHARED
-    sMusicRacing = sSharedSong = sSharedFinalLap = FALSE;
+    sMusicRacing = sSharedSong = sSharedFinalLap = sCourseMusicStarted = FALSE;
 #endif
     sTickEpochStarted = FALSE;
     sGame = mode; sBattle = mode == BATTLE_MODE; sEngine = engine; sCourse = course; sRetro = retro;
@@ -2010,7 +2040,7 @@ bool32 ring_main(void)
     }
     resetMenuDisplay();
     sSession = TRUE;
-    for (i = 0; i < 8; i++) sWins[i] = 0;
+    for (i = 0; i < 8; i++) sRoundScores[i] = 0;
     screen("RING LINK");
     text(12, 42, "CONNECT ALL GBAS IN A RING", 0x7FFF);
     text(12, 60, "PRESS START ON ONE CONSOLE", 0x03FF);
@@ -2239,7 +2269,16 @@ bool32 ring_finishRace(void)
             for (i = 0; i < 8; i++) if (sPlaces[i] < 8) sGPPoints[sPlaces[i]] += _080DB0A8[i + 1];
             if (sGPRace == 3) sGPCupComplete = 1;
         }
-        else if (sPlaces[0] < sRing.count) sWins[sPlaces[0]]++;
+        else if (sBattle)
+        {
+            if (sPlaces[0] < sRing.count) sRoundScores[sPlaces[0]]++;
+        }
+        else
+        {
+            extern const u8 _080DB0A8[];
+            for (i = 0; i < sRing.count; i++)
+                sRoundScores[sPlaces[i]] += _080DB0A8[i + 1];
+        }
         scene_setMainFunc(results_main);
     }
     return TRUE;
@@ -2335,7 +2374,7 @@ static bool32 results_main(void)
         u32 id = sPlaces[i];
         rows[i].place = i;
         rows[i].menuCharacter = sCharacters[id];
-        rows[i].previousPoints = sWins[id];
+        rows[i].previousPoints = sRoundScores[id];
         rows[i].awardedPoints = 0;
     }
     scene_setVBlankFunc(0);

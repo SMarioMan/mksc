@@ -13,7 +13,11 @@ for key in ('runner', 'rom', 'elf', 'bios', 'results'):
 p.add_argument('--players', type=int, choices=range(2, 9), default=8)
 p.add_argument('--host', type=int, default=0)
 p.add_argument('--boot-ring', action='store_true')
+p.add_argument('--reference-rom', type=Path, help='Normal-audio build used as the native countdown timing oracle')
+p.add_argument('--reference-elf', type=Path)
 a = p.parse_args()
+if bool(a.reference_rom) != bool(a.reference_elf):
+    p.error('Supply both native reference files')
 if not 0 <= a.host < a.players:
     p.error('The host must exist in the session')
 a.results.mkdir(parents=True, exist_ok=True)
@@ -39,10 +43,11 @@ for mode in ('vs', 'battle', 'gp'):
     inputs = a.results / (mode + '-inputs.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(rows)))
     video = a.results / (mode + '-video.csv')
-    proc = subprocess.run([str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(a.rom), '--bios', str(a.bios),
+    command = [str(a.runner), '--ring', '--ring-quantum', '2048', '--rom', str(a.rom), '--bios', str(a.bios),
                            '--players', str(a.players), '--frames', '4000', '--input', str(inputs),
                            '--video-from', '2000', '--video-log', str(video), '--barrier-before-input',
-                           '--barrier-state', hex(symbols['sRing'])], capture_output=True, text=True, timeout=120)
+                           '--barrier-state', hex(symbols['sRing'])]
+    proc = subprocess.run(command, capture_output=True, text=True, timeout=300)
     (a.results / (mode + '.json')).write_text(proc.stdout)
     (a.results / (mode + '.stderr')).write_text(proc.stderr)
     assert proc.returncode == 0 and not proc.stderr, (mode, proc.stderr[:1000])
@@ -57,6 +62,24 @@ for mode in ('vs', 'battle', 'gp'):
     assert not opening[-1]['musicStatus'] & 65535 or opening[-1]['musicStatus'] & 0x80000000, (mode, 'Opening song interrupted', opening[-1])
     course = song(18) if mode == 'battle' else song(25)
     assert any(r['musicHeader'] == course and r['frame'] > opening[-1]['frame'] for r in owner), (mode, 'Course BGM never resumed')
+    if a.reference_rom:
+        reference_symbols = {f[2]: int(f[0], 16) for line in subprocess.check_output(
+            ['arm-none-eabi-nm', '-n', str(a.reference_elf)], text=True).splitlines() if len(f := line.split()) == 3}
+        reference_video = a.results / (mode + '-native-video.csv')
+        reference_command = command.copy()
+        reference_command[reference_command.index('--rom') + 1] = str(a.reference_rom)
+        reference_command[reference_command.index('--video-log') + 1] = str(reference_video)
+        reference_command[reference_command.index('--barrier-state') + 1] = hex(reference_symbols['sRing'])
+        reference = subprocess.run(reference_command, capture_output=True, text=True, timeout=300)
+        (a.results / (mode + '-native.json')).write_text(reference.stdout)
+        (a.results / (mode + '-native.stderr')).write_text(reference.stderr)
+        assert reference.returncode == 0 and not reference.stderr, reference.stderr
+        reference_rom = a.reference_rom.read_bytes()
+        reference_course = struct.unpack_from('<I', reference_rom, reference_symbols['gSongTable'] - 0x08000000 + (18 if mode == 'battle' else 25) * 8)[0]
+        native_frames = [{k: int(v) for k, v in r.items()} for r in csv.DictReader(reference_video.open())]
+        native_start = next(r for r in native_frames if r['player'] == a.host and r['musicHeader'] == reference_course and r['sceneMain'] == reference_symbols['race_main'] | 1)
+        shared_start = next(r for r in owner if r['musicHeader'] == course)
+        assert abs(shared_start['simulationFrames'] - native_start['simulationFrames']) <= 1, (mode, 'Course music differs from native countdown timing', shared_start, native_start)
     peers = [r for r in race if r['player'] != a.host]
     assert peers and all(not r['musicStatus'] & 65535 or r['musicStatus'] & 0x80000000 for r in peers), (mode, 'Peer BGM audible')
     print(f'PASS {mode}-{a.players}: native opening completes, then host-only course music starts', flush=True)

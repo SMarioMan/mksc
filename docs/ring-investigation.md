@@ -590,3 +590,31 @@ The runner rejects unsupported BIOS calls and confirms that no external BIOS
 was loaded. Recovery/replay and the intermediate player counts retain the
 real-BIOS coverage described above. Do not describe untested hardware, every possible
 course/item combination, or a complete C menu decompilation as verified.
+
+### Follow-up: shared audio and Japanese Sunset Wilds
+
+The mod now imports the supplied Japanese Sunset Wilds course artwork and
+preview through a CRC-verified asset delta; see `ring-japanese-sunset.md` for
+provenance and reproduction. Native preview VRAM matches on 2 and 8 consoles.
+The clean US build still matches SHA-1
+`9d327c030c3e2d9007990518594f70c3340ac56f`.
+
+Shared BGM waits for the stock countdown's first course-song request. The
+opening test can compare that first request's simulation tick against a normal
+audio build, instead of treating completion of the introductory song as the
+start signal. Raw song continuation now enforces host ownership too. Shared
+non-music effects use half gain; the stock repeating low-coin warning (song
+194) retains quarter gain. Normal audio builds retain their native gain.
+
+The native local-finish routine clears the final-lap bit and stops BGM before
+starting an individual result cue. While the shared round is still running,
+preserve the music's playback position and latch final-lap tempo. Native pause
+and the common round-ending result cue remain available. A dedicated real-BIOS
+regression drives only P1, then only P2, through a three-human race with the
+other two parked on lap one. Both finish cases retain fast course music and
+play exactly one final-lap jingle.
+
+Vs. now accumulates the original GP table's 9/6/3/1/0/0/0/0 awards instead of
+counting the winner's victories. Battle retains one win per round. The shared
+session field is named `sRoundScores`, and score tests compute dump ranges from
+symbols so renaming/reordering globals does not invalidate the checks.

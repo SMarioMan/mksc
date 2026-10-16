@@ -6,7 +6,7 @@
 struct SpmState;
 struct NativeMenuExtras;
 extern u8 sCharacters[8], sPlaces[8], sBattlePlaces[8], sBattleHudIds[4];
-extern u16 sWins[8], sGPPoints[8];
+extern u16 sRoundScores[8], sGPPoints[8];
 extern u8 sGPRace;
 extern u32 sGPCupComplete;
 extern struct SpmState *sNativeMenuContext, *sNativeCharacterMenu, *sNativeCourseMenu;

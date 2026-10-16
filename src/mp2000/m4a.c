@@ -4,11 +4,13 @@
 extern void ring_noteAudioStart(struct MusicPlayerInfo*);
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
+#include "../songs.h"
 extern int ring_sharedMusicActive(void);
 extern bool32 ring_active(void);
 extern int ring_sharedMusicMuted(void);
 extern int ring_sharedAudioMuted(struct MusicPlayerInfo*, struct SongHeader*);
 extern u16 ring_sharedMusicSong(u16 song);
+extern int ring_keepSharedRaceMusic(void);
 #endif
 
 extern const u8 gCgb3Vol[];
@@ -49,6 +51,10 @@ void UnusedDummyFunc(void)
 
 void MPlayContinue(struct MusicPlayerInfo* mplayInfo)
 {
+#ifdef MKSC_RING_MUSIC_SHARED
+    /* All song-number resume helpers eventually use this entry point. */
+    if (mplayInfo == gMPlayTable[0].info && ring_sharedMusicMuted()) return;
+#endif
     if (mplayInfo->ident == ID_NUMBER)
     {
         mplayInfo->ident++;
@@ -666,6 +672,10 @@ void m4aMPlayStop(struct MusicPlayerInfo* mplayInfo)
     s32 i;
     struct MusicPlayerTrack* track;
 
+#ifdef MKSC_RING_MUSIC_SHARED
+    if (mplayInfo == gMPlayTable[0].info && ring_keepSharedRaceMusic()) return;
+#endif
+
     if (mplayInfo->ident != ID_NUMBER)
         return;
 
@@ -767,7 +777,12 @@ void TrkVolPitSet(struct MusicPlayerInfo* mplayInfo, struct MusicPlayerTrack* tr
 
         x = (u32)(track->vol * track->volX) >> 5;
 #ifdef MKSC_RING_MUSIC_SHARED
-        if (ring_active() && mplayInfo != gMPlayTable[0].info) x /= 4;
+        if (ring_active() && mplayInfo != gMPlayTable[0].info)
+        {
+            /* Native coin-warning sequence 194 repeats frequently. Keep its
+             * former quarter gain while all other effects use half gain. */
+            x /= mplayInfo->songHeader == gSongTable[SONG_SFX_LOW_COINS].header ? 4 : 2;
+        }
 #endif
 
         if (track->modT == 1)
