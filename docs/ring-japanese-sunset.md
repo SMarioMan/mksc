@@ -23,6 +23,9 @@ The imported record is appended to the mod's course data and its directory
 offset updated. Internal relative pointers remain intact. Other course records
 and the English course name are preserved. A symbolic preview pointer supports
 shifted builds.
+The importer also checks that all data outside the changed sprite/cell stream
+matches the US record, after adjusting its five displaced relative pointers.
+Terrain, checkpoints, object placements and gameplay palettes remain identical.
 
 `test_sunset_art.py` checks the linked record and preview against the verified
 asset delta, then selects Sunset Wilds through the native menus with keypad

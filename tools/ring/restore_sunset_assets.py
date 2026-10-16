@@ -30,11 +30,29 @@ def source_assets(rom):
     return course_record(rom) + compressed_asset(rom, 0x91718)
 
 
+def verify_art_only(original, japanese):
+    start = struct.unpack_from('<I', original, 0xE4)[0]
+    old_end = struct.unpack_from('<I', original, 0x8C)[0]
+    new_end = struct.unpack_from('<I', japanese, 0x8C)[0]
+    assert struct.unpack_from('<I', japanese, 0xE4)[0] == start
+    prefix = bytearray(japanese[:start])
+    # Only pointers following the longer sprite/cell stream move. Map,
+    # terrain, palettes, checkpoints and object placements stay unchanged.
+    for field in (0x8C, 0x90, 0x94, 0x98, 0xE8):
+        before = struct.unpack_from('<I', original, field)[0]
+        after = struct.unpack_from('<I', japanese, field)[0]
+        assert after - before == new_end - old_end
+        struct.pack_into('<I', prefix, field, before)
+    assert prefix == original[:start]
+    assert japanese[new_end:] == original[old_end:]
+
+
 def restore(course_data, source):
     assets = apply_bps(source_assets(source), FIXTURE.read_bytes())
     size = struct.unpack_from('<I', assets)[0]
     course, cover = assets[4:4 + size], assets[4 + size:]
     assert len(course) == 0xA88C and len(cover) == 3836
+    verify_art_only(course_record(source), course)
     destination = len(course_data)
     course_data += course
     struct.pack_into('<I', course_data, COURSE * 4, destination)
@@ -81,6 +99,7 @@ def main():
     assert hashlib.sha1(us).hexdigest() == US_SHA1
     assert hashlib.sha1(japanese).hexdigest() == JAPANESE_SHA1
     course = course_record(japanese)
+    verify_art_only(course_record(us), course)
     # Japanese TrackDef for Sunset Wilds (preview graphics, same palette).
     cover = compressed_asset(japanese, 0xAD03C)
     assert compressed_asset(us, 0x91660) == compressed_asset(japanese, 0xACF84)
