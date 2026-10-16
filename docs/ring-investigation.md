@@ -1,22 +1,30 @@
 ## Active review (2026-10-16)
 
-Review 9 adds native per-player portrait confirmation, host OK/wait behavior
-and the native Random roulette. Targeted 2/8-player Vs./Battle/GP checks pass.
-Results now preserve road display callbacks and update racers behind the
-native standings; late finishers cannot interrupt the looping results song.
-Sustained two/eight-player results checks and full Retro GP cups pass.
-The clean build remains byte-identical. Japanese Sunset art defaults off;
-the supplied restored audio samples are also optional. See
-`ring-japanese-sunset.md` and `ring-restored-audio.md` for build options.
+Review 11 restores P1–P8 overhead labels and preserves native character kart
+colors with a separate indicator atlas. The real-BIOS detached atlas oracle
+passes 128 native layouts, including native DMA and late-object eviction.
+Consecutive native-menu, eight-kart Vs. and Battle rendering checks pass.
+Sustained two/eight-player Vs./Battle results retain the live course and
+looping results theme. See `ring-player-indicators.md` for the graphics design.
 
-A smaller unrotated sprite queue path passes native OAM equivalence checks.
-On identical Battle Course 3 inputs its measured worst 300-frame window rises
-from 0.936667 to 0.986667 updates/video frame (shared audio, 11,000-frame run).
-The subsequent direct-HUD refinement has passed the same native equivalence
-oracle but still needs the course matrix. Restored samples add mixing cost;
-that optional build has not yet passed the strict Battle performance gate.
-Artwork, character kart palettes, transition captures and final combined gates
-remain open. New evidence is under `/workspace/.setup/results/review-9`.
+The clean ROM still matches SHA1 `9d327c030c3e2d9007990518594f70c3340ac56f`.
+The controlled 0x400-byte shift passes the pointer audit. Several new byte
+matches were verified as exact compressed image streams or native Thumb mask
+instructions, rather than changed or exempted without inspection.
+
+Review 10's previous shared-audio candidate passed all 48 courses. Normal
+audio failed brief performance windows on GBA Battle Course 3 and Snow Land.
+The current work reduces indicator traversal and collision-sort memory traffic;
+strict performance checks remain open. The display-rate test now measures
+actual moving intervals, avoiding false failures when a kart briefly stops.
+Bounded course runs stop at results so held driving inputs cannot dismiss the
+results and invalidate the final synchronization snapshot.
+
+Native character confirmation/roulette and host OK/wait, optional Japanese
+Sunset art, optional restored audio samples and native results were committed
+in the preceding review. Optional restored audio still needs performance work.
+Art for players 5–8 and final combined BIOS/GUI/audio gates remain open. Private
+evidence is under `/workspace/.setup/results/review-11`.
 
 
 The sections below describe the previous release and are historical evidence,

@@ -50,6 +50,8 @@ link = link.replace('        data/characterTiles.o(.rodata*);', '''        data/
         src/ringProjection.O3.o(.text);
         src/ringProjection.O3.o(.rodata*);
         src/ringSoundControl.O3.o(.text);
+        src/ringIdentity.O3.o(.text);
+        src/ringIdentity.O3.o(.rodata*);
         src/ringLink.o(.rodata);
         asm/ringBattleData.o(.rodata);
         asm/ringRestoredAudio.o(.rodata);''')

@@ -91,6 +91,9 @@ void AgbMain(void)
     {
         if (!gSceneState.sceneMainFunc)
             break;
+#ifdef MKSC_RING
+        ring_restoreIdentityTiles();
+#endif
         if (!gSceneState.sceneMainFunc())
             break;
 #ifdef MKSC_RING
@@ -105,13 +108,16 @@ void AgbMain(void)
 
 static inline void main_publishGraphics(void)
 {
+#ifdef MKSC_RING
+    ring_beginIdentityPublication();
+#endif
     oam_dmaCopyToHw();
     oam_reset();
     dmaq_process(dmaq_getVBlankDmaQueue());
+    pltt_copyBufferToHw();
 #ifdef MKSC_RING
     ring_publishIdentityPalette();
 #endif
-    pltt_copyBufferToHw();
     map_copyBuffersToHw();
 }
 
@@ -119,7 +125,7 @@ static inline void main_publishGraphics(void)
 static bool32 main_ringPublicationFits(u32 line)
 {
     DmaQueueEntry* entry = (DmaQueueEntry*)dmaq_getVBlankDmaQueue()->list.head;
-    u32 cycles = 8000;
+    u32 cycles = 8000 + ring_identityPublicationCost();
     /* Conservative DMA cost plus chunk setup. Leave eight complete scanlines
      * for the native callback/IRQ tail. Large texture uploads keep an early
      * deadline; small Battle updates can use more of the blanking interval. */

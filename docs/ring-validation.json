@@ -679,5 +679,62 @@
       "Optional sample-build Battle performance",
       "Final GUI/audio and BIOS gates; HLE remains last"
     ]
+  },
+  "review_11": {
+    "status": "in_progress",
+    "evidence": "/workspace/.setup/results/review-11",
+    "real_bios": true,
+    "stock_sha1": "9d327c030c3e2d9007990518594f70c3340ac56f",
+    "identity_atlas": {
+      "detached_layouts": 128,
+      "native_palette_and_vram_preservation": "passed",
+      "native_dma_and_late_object_eviction": "passed",
+      "native_p8_tile_tag_canary": "passed",
+      "rendering_menu_frames": 2400,
+      "rendering_vs_frames_per_console": 700,
+      "rendering_battle_sprite_frames": 5600
+    },
+    "oam_native_comparison": {
+      "varied_cells": 16384,
+      "queued_cells": 4096,
+      "direct_hud_cells": 4096,
+      "flat_queued_cells": 4096,
+      "capacity_canaries": [
+        32,
+        128
+      ],
+      "status": "passed"
+    },
+    "results_900_frames": {
+      "players": [
+        2,
+        8
+      ],
+      "modes": [
+        "vs",
+        "battle"
+      ],
+      "status": "passed"
+    },
+    "relocation": {
+      "padding_bytes": 1024,
+      "rom_functions": 1928,
+      "callbacks": 1068,
+      "status": "passed"
+    },
+    "prior_v25_course_matrix": {
+      "shared_passed": 48,
+      "normal_passed": 46,
+      "normal_failures": [
+        "battle-2",
+        "super-12"
+      ]
+    },
+    "remaining": [
+      "normal-audio worst-window performance",
+      "optional restored-audio performance",
+      "final combined course/player-count/GUI/audio checks",
+      "5-8 player asset quality"
+    ]
   }
 }

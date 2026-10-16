@@ -5,6 +5,7 @@ Every action uses the keypad or emulator wire switch; no game RAM is written.
 Each flow stops all consoles before physics at one committed-input barrier.
 """
 import argparse
+import csv
 import hashlib
 import json
 from pathlib import Path
@@ -69,11 +70,19 @@ for n in a.players:
                  '--players',str(n),'--frames',str(frames),'--input',str(inputs),
                  '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),'--dump',hex(symbols['sRing']),
                  '--watch','0x0202A400','--keys-address','0x03006B00','--key-slots','8','--screens',str(a.results/name)]+extra
+        if case in ('pause','restart','characters'):
+            command += ['--video-log',str(a.results/(name+'-video.csv')),'--video-from','3500']
         proc=subprocess.run(command,capture_output=True,text=True,timeout=300)
         (a.results/(name+'.json')).write_text(proc.stdout)
         (a.results/(name+'.stderr')).write_text(proc.stderr)
         assert proc.returncode==0 and not proc.stderr,(name,proc.stderr[:1000])
         data=json.loads(proc.stdout);assert data['collisions']==0,name
+        if case in ('pause','restart','characters'):
+            with (a.results/(name+'-video.csv')).open() as stream:
+                transitions=[{k:int(v) for k,v in row.items()} for row in csv.DictReader(stream)]
+            assert len(transitions)>1000,(name,'Missing transition coverage')
+            assert not any(row['dispcnt'] & 128 for row in transitions),(name,'Forced-white loading flash')
+            assert all(row['backdropColor']==0 for row in transitions if not row['dispcnt'] & 0x1F00),(name,'Colored loading backdrop')
         states=[]
         for node in data['nodes']:
             r=node['barrier'];g=node['game']

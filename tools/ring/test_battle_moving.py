@@ -40,7 +40,8 @@ for arena in a.arenas:
   for row,id in enumerate(order):
    tile=0xD080+character_tiles[racers[id]['character']&7]*4
    assert hud['portraits'][row]==list(range(tile,tile+4)),(name,order,hud['portraits'])
-  assert hud['identityPalette']==[[c,((c>>1)&0x3DEF)+0x4210] for c in colors],(name,'Course animation overwrote the balloon palette',hud['identityPalette'])
+  assert hud['identityPalette']==[[c,32767] for c in colors],(name,'Course animation overwrote the balloon palette',hud['identityPalette'])
+  assert all(hud['kartPalettesMatch']),(name,'A native kart palette was overwritten')
   assert len(hud['minimapDots'])==8
   for id,x,y in hud['minimapDots']:
    rx,ry,_=racers[id]['position'];shift=hud['minimapShift']

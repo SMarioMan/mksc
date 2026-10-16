@@ -69,6 +69,7 @@ for case in ('menu', 'vs', 'battle'):
         assert all(row['markers'] == 7 for row in rear), 'An opponent lost its identity marker'
         for node in state['nodes']:
             hud = node['game']['hud']
+            assert all(hud['kartPalettesMatch']), 'A native kart palette was overwritten'
             assert hud['minimapTiles'] == list(range(0xB100, 0xB140)), 'Native minimap tiles were erased'
             assert hud['skyPalette'] == [64484, 1057, 2114, 5251, 7332, 9445, 13672, 15753,
                                          51794, 53908, 56022, 58136, 60250, 62364, 64478, 0], 'Peach Circuit sky palette changed'

@@ -29,3 +29,13 @@ extern u32 sRenderStart;
 extern u32 sTickEpochFrame, sTickEpochRound;
 extern bool32 sTickEpochStarted;
 extern bool32 sBalloonArtReady;
+
+extern u16 ring_identityBackup[24][64], ring_identityTiles[24];
+extern u32 ring_identityAllocated, ring_identityOverflows, ring_identityNative8bpp;
+extern u32 ring_identityPublishLines, ring_identityRestoreLines;
+extern u16 ring_identityOldTiles[24];
+extern u32 ring_identityPendingRestore, ring_identityPendingUpload;
+extern u32 ring_identityResident[16];
+extern u32 ring_identityFirstTile;
+
+extern u32 ring_identityUploads, ring_identitySlowPrepares;

@@ -111,10 +111,10 @@ static bool32 ring_renderSingleScaledCell(OamCell* cell, BalloonOffsetCache* cac
     if (offset > 511) return -1;
     if (attr1 & 0x1000) { cell->affinePa = -cell->affinePa; cell->affinePb = -cell->affinePb; }
     if (attr1 & 0x2000) { cell->affinePc = -cell->affinePc; cell->affinePd = -cell->affinePd; }
-    if ((attr2 & 1023) == 0x9C && (attr2 >> 12) >= 8)
+    if ((attr2 & 1023) >= 0x3E8 && (attr2 & 1023) < 0x3F0 && (attr2 >> 12) < 8)
     {
         int previous;
-        id = (attr2 >> 12) - 8;
+        id = attr2 >> 12;
         previous = ring_balloonAffineIndex[id];
         if (previous < sNextAffineId &&
             sBuffer[3 + 16 * previous] == (u16)cell->affinePa &&
@@ -190,6 +190,21 @@ static void ring_renderAllCells(void)
              * initializes their masks to all ones and their bits to zero.
              * Sorting changes links and priority, never these masks. */
             ring_renderSingleScaledCell(cell, cache, TRUE);
+        else if (cell->scaleX == 256 && cell->scaleY == 256 && cell->affinePa == 256 && !cell->affinePb)
+        {
+            int count = *data++, offset = sBufferOffset;
+            /* Queued cells have the factory's default masks. Emit flat
+             * markers/particles directly, preserving affine matrix words. */
+            while (count-- > 0 && offset <= 511)
+            {
+                u32 attr0 = *data++, attr1 = *data++;
+                *(u32*)&sBuffer[offset] = ((((attr0 + cell->offsetY) & 255) | (attr0 & 0xFF00)) |
+                    ((((attr1 + cell->offsetX) & 511) | (attr1 & 0xFE00)) << 16)) & ~0x300;
+                sBuffer[offset + 2] = *data++;
+                offset += 4;
+            }
+            sBufferOffset = offset;
+        }
         else oam_renderCell(cell);
         entry = entry->next;
     }
@@ -439,13 +454,14 @@ void oam_renderCellData(const u16* data, Vec2s16* position, int scaleX, int scal
         if (!scaleX || !scaleY) scaleX = scaleY = 256;
         cell = &entry->cell;
         cell->cellData = data;
-        cell->offsetX = position->x;
-        cell->offsetY = position->y;
+        /* Entries are word-aligned. Pair adjacent halfwords so the GBA
+         * spends fewer instructions initializing each queued world sprite. */
+        *(u32*)&cell->offsetX = (u16)position->x | ((u32)(u16)position->y << 16);
         cell->attr01Bits = cell->attr2Bits = 0;
         cell->attr01Mask = cell->attr2Mask = -1;
-        cell->affinePa = cell->scaleX = scaleX;
-        cell->affinePd = cell->scaleY = scaleY;
-        cell->affinePb = cell->affinePc = 0;
+        *(u32*)&cell->affinePa = (u16)scaleX;
+        *(u32*)&cell->affinePc = (u32)(u16)scaleY << 16;
+        *(u32*)&cell->scaleX = (u16)scaleX | ((u32)(u16)scaleY << 16);
         sCellListEntryCount = index + 1;
         return;
     }
@@ -787,3 +803,14 @@ bool32 sub_802FF58(Vec2s16* a1, s16 a2)
     else
         return 1;
 }
+
+#ifdef MKSC_RING
+u16* oam_ringBuffer(void)
+{
+    return sBuffer;
+}
+unsigned oam_ringObjectCount(void)
+{
+    return sBufferOffset >> 2;
+}
+#endif
