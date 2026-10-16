@@ -50,7 +50,7 @@ def decompress(data, offset):
 base = []
 for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitlines():
     frame, slot, keys = line.split(',')
-    if int(slot) == 0 and int(frame) < 2200:
+    if int(slot) == 0 and int(frame) < 2230:
         base.append((int(frame), int(keys, 16)))
 for count in a.players:
     for arena, retro in [(i, True) for i in range(4)] + [(0, False)]:
@@ -69,16 +69,16 @@ for count in a.players:
         offset = min(changed[0] if changed else 0, len(palette) - 16) & ~1
         colors = list(struct.unpack_from('<8H', palette, offset))
         rows = [(f, i, k) for f, k in base for i in range(count if f < 1500 or f in (2000, 2015) else 1)]
-        rows += [(1600, 0, 128), (1615, 0, 0), (2450, 0, 256), (2465, 0, 0)]
+        rows += [(1600, 0, 128), (1615, 0, 0), (2850, 0, 256), (2865, 0, 0)]
         for step in range(arena):
-            rows += [(2300 + step * 40, 0, 128), (2315 + step * 40, 0, 0)]
+            rows += [(2600 + step * 40, 0, 128), (2615 + step * 40, 0, 0)]
         if not retro:
-            rows += [(2600, 0, 512), (2615, 0, 0)]
+            rows += [(3000, 0, 512), (3015, 0, 0)]
         inputs = a.results / (name + '.csv')
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f, i, k in sorted(rows)))
         proc = subprocess.run([str(a.runner), '--ring', '--ring-quantum', '2048',
             '--rom', str(a.rom), '--bios', str(a.bios), '--players', str(count),
-            '--frames', '2850', '--input', str(inputs), '--dump', '0x06004000',
+            '--frames', '3250', '--input', str(inputs), '--dump', '0x06004000',
             '--dump-words', str(len(tiles) // 4), '--keys-address', hex(0x05000000 + offset),
             '--key-slots', '8', '--screens', str(a.results / name)], capture_output=True, text=True, timeout=300)
         (a.results / (name + '.json')).write_text(proc.stdout)

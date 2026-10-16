@@ -2,6 +2,8 @@
 #include "gba/m4a_internal.h"
 #ifdef MKSC_RING
 extern void ring_noteAudioStart(struct MusicPlayerInfo*);
+extern bool32 ring_preserveRaceDisplay(void);
+extern bool32 ring_resultsAudioBlocked(struct MusicPlayerInfo*, struct SongHeader*);
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
 #include "../songs.h"
@@ -65,6 +67,9 @@ void MPlayContinue(struct MusicPlayerInfo* mplayInfo)
 
 void MPlayFadeOut(struct MusicPlayerInfo* mplayInfo, u16 speed)
 {
+#ifdef MKSC_RING
+    if (mplayInfo == gMPlayTable[0].info && ring_preserveRaceDisplay()) return;
+#endif
     if (mplayInfo->ident == ID_NUMBER)
     {
         mplayInfo->ident++;
@@ -83,7 +88,8 @@ void m4aSoundInit(void)
 
     SoundInit(&gSoundInfo);
     MPlayExtender(gCgbChans);
-    m4aSoundMode(SOUND_MODE_DA_BIT_8 | SOUND_MODE_FREQ_10512 | (12 << SOUND_MODE_MASVOL_SHIFT) |
+    m4aSoundMode(SOUND_MODE_DA_BIT_8 | SOUND_MODE_FREQ_10512 |
+                 (12 << SOUND_MODE_MASVOL_SHIFT) |
                  (6 << SOUND_MODE_MAXCHN_SHIFT));
 
     for (i = 0; i < NUM_MUSIC_PLAYERS; i++)
@@ -608,6 +614,9 @@ void MPlayStart(struct MusicPlayerInfo* mplayInfo, struct SongHeader* songHeader
     u8 unk_B;
     struct MusicPlayerTrack* track;
 
+#ifdef MKSC_RING
+    if (ring_resultsAudioBlocked(mplayInfo, songHeader)) return;
+#endif
 #ifdef MKSC_RING_MUSIC_SHARED
     /* BGM belongs to P1; racer voices and engines belong to their console. */
     if (mplayInfo == gMPlayTable[0].info && ring_sharedMusicMuted()) return;
@@ -671,6 +680,9 @@ void m4aMPlayStop(struct MusicPlayerInfo* mplayInfo)
 {
     s32 i;
     struct MusicPlayerTrack* track;
+#ifdef MKSC_RING
+    if (mplayInfo == gMPlayTable[0].info && ring_preserveRaceDisplay()) return;
+#endif
 
 #ifdef MKSC_RING_MUSIC_SHARED
     if (mplayInfo == gMPlayTable[0].info && ring_keepSharedRaceMusic()) return;

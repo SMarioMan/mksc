@@ -41,6 +41,16 @@ ifeq ($(RING),1)
 ifneq ($(filter-out normal shared,$(RING_MUSIC)),)
 $(error RING_MUSIC must be normal or shared)
 endif
+ifneq ($(filter-out original japanese,$(RING_SUNSET_ART)),)
+$(error RING_SUNSET_ART must be original or japanese)
+endif
+ifeq ($(RING_SUNSET_ART),japanese)
+ASFLAGS += --defsym MKSC_RING_JAPANESE_SUNSET=1
+endif
+ifeq ($(RING_MUSIC_RESTORE),1)
+CPPFLAGS += -DMKSC_RING_MUSIC_RESTORE=1
+ASFLAGS += --defsym MKSC_RING_MUSIC_RESTORE=1
+endif
 ROM := mksc-ring.gba
 COMPARE_TARGET :=
 OBJ_DIR := build-ring
@@ -171,7 +181,7 @@ $(ASM_BUILDDIR)/%.o: $(ASM_SUBDIR)/%.s
 
 ifeq ($(RING),1)
 $(OBJ_DIR)/retro-battle.stamp: baserom.gba tools/ring/restore_battle_assets.py tools/ring/fixtures/snes-battle-restoration.bps tools/ring/restore_sunset_assets.py tools/ring/fixtures/japanese-sunset-art.bps
-	python3 tools/ring/restore_battle_assets.py --rom baserom.gba --output $(OBJ_DIR)
+	python3 tools/ring/restore_battle_assets.py --rom baserom.gba --output $(OBJ_DIR) $(if $(filter japanese,$(RING_SUNSET_ART)),--japanese-sunset)
 	@touch $@
 
 $(OBJ_DIR)/data/courseData.o: $(OBJ_DIR)/retro-battle.stamp
@@ -195,6 +205,13 @@ $(SYMS): $(ELF)
 $(ROM): $(ELF)
 	$(OBJCOPY) -O binary $< $@
 	$(FIX) $@ -p -t"$(TITLE)" -c$(GAME_CODE) -m$(MAKER_CODE) -r$(REVISION) --silent
+
+ifeq ($(RING_MUSIC_RESTORE),1)
+ifeq ($(RING),1)
+include build-ring/restored-audio/objects.mk
+$(OBJ_DIR)/asm/ringRestoredAudio.o: build-ring/restored-audio/samples.bin
+endif
+endif
 
 -include $(C_DEPS)
 

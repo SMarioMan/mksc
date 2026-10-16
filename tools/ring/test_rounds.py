@@ -6,6 +6,7 @@ uses items. Battle drives all but player one around Shy Guy Desert's pits.
 Snapshots stop at the same committed-input barrier in the results scene.
 """
 import argparse
+import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
@@ -22,7 +23,9 @@ p.add_argument('--workers', type=int, choices=range(1,5), default=3)
 p.add_argument('--toad-150cc-retro', action='store_true', help='Reproduce host Toad finishing SNES Mario Circuit 1 at 150cc')
 p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
 p.add_argument('--shared-audio', action='store_true', help='Require a host-only common result cue after the round ends')
+p.add_argument('--results-frames', type=int, default=30, help='Observe the native results background; >=600 also checks sustained motion')
 a = p.parse_args()
+if not 30 <= a.results_frames <= 10000:p.error('Results observation must be 30..10000 frames')
 if any(n < 2 or n > 8 for n in a.players):
     p.error('Player counts must be 2 through 8')
 if hashlib.sha1(a.bios.read_bytes()).hexdigest() != '300c20df6731a33952ded8c436f7f186d25d3492':
@@ -49,13 +52,12 @@ def run(n,mode):
     name = f'{mode}-{n}'
     rows = []
     for f,k in base:
-        if mode == 'battle' and f in (2200,2215):
-            continue
+        if mode=='battle' and f in (2500,2515):continue
         rows.extend((f,i,k) for i in range(n if f < 1500 or f in (2000,2015) else 1))
     if mode == 'battle':
         rows.extend([(1600,0,128),(1615,0,0)])
         for step in range(3):
-            rows.extend([(2300+step*40,0,128),(2320+step*40,0,0)])
+            rows.extend([(2600+step*40,0,128),(2620+step*40,0,0)])
         rows.extend((3500,i,0 if i == 0 else 17) for i in range(n))
     if a.toad_150cc_retro:
         assert mode == 'vs' and n == 8, 'Finish regression uses eight-player Vs.'
@@ -66,8 +68,8 @@ def run(n,mode):
                      (2150,3,64),(2165,3,0)])
         rows.extend((2300,i,1) for i in range(n))
         rows.extend((2315,i,0) for i in range(n))
-        rows.extend((f,0,k) for f,k in ((2600,256),(2615,0),(3000,1),(3015,0),
-                    (3300,1),(3315,0),(3600,1),(3615,0),(3900,1),(3915,0)))
+        rows.extend((f,0,k) for f,k in ((2500,1),(2515,0),(2800,256),(2815,0),(3200,1),(3215,0),
+                    (3500,1),(3515,0),(3800,1),(3815,0),(4100,1),(4115,0)))
     inputs = a.results/(name+'.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
     command = [str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(rom),'--bios',str(a.bios),
@@ -75,8 +77,11 @@ def run(n,mode):
                '--input',str(inputs),'--dump',hex(dumpBase),'--dump-words',str(dumpWords),
                '--barrier-before-input', '--barrier-state',hex(symbols['sRing']),
                '--until-scene',hex(symbols['results_main'] | 1),
-               '--settle-frames','30',
+               '--settle-frames',str(a.results_frames),
+               '--release-inputs-scene',hex(symbols['results_main'] | 1),
                '--screens',str(a.results/name)]
+    if a.results_frames >= 600:
+        command += ['--video-log',str(a.results/(name+'-video.csv')),'--sound-table',hex(symbols['gMPlayTable'])]
     if a.shared_audio:
         mixer=struct.unpack_from('<I',rom_data,symbols['gMPlayTable']-0x08000000)[0]
         command += ['--keys-address',hex(mixer),'--key-slots','4']
@@ -94,6 +99,18 @@ def run(n,mode):
     result = json.loads(proc.stdout)
     assert result['bios'] == ('hle' if a.hle else 'real'), name
     assert result['collisions'] == 0, name
+    if a.results_frames >= 600:
+        with (a.results/(name+'-video.csv')).open() as stream:
+            observed=[{k:int(v) for k,v in row.items()} for row in csv.DictReader(stream)]
+        for player in range(n):
+            frames=[r for r in observed if r['player']==player and r['sceneMain']==symbols['results_main']|1]
+            assert len(frames)>=a.results_frames-5,(name,player,'Results exited prematurely',len(frames))
+            assert all(r['dispcnt']&7==1 and not r['dispcnt']&128 for r in frames[10:]),(name,player,'Results lost the native course display')
+            if mode=='vs':
+                assert len({r['kartPosition0'] for r in frames[30:]})>10,(name,player,'Results racer stopped moving')
+            if not a.shared_audio or player==0:
+                cue=struct.unpack_from('<I',rom_data,symbols['gSongTable']-0x08000000+17*8)[0]
+                assert all(r['musicHeader']==cue and r['musicStatus']&65535 and not r['musicStatus']&0x80000000 for r in frames[10:]),(name,player,'Results theme stopped')
     states = []
     rounds = []
     for node in result['nodes']:
@@ -112,7 +129,7 @@ def run(n,mode):
             header=audio[0] | audio[1]<<16
             status=audio[2] | audio[3]<<16
             if node['slot']==0:
-                cue=struct.unpack_from('<I',rom_data,symbols['gSongTable']-0x08000000+5*8)[0]
+                cue=struct.unpack_from('<I',rom_data,symbols['gSongTable']-0x08000000+17*8)[0]
                 assert header==cue and status&65535 and not status&0x80000000,(name,'Common result cue missing',header,status)
             else:assert not status&65535 or status&0x80000000,(name,'Peer result music is audible',node['slot'])
         rounds.append(barrier['round'])

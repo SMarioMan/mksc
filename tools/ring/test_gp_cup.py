@@ -23,7 +23,7 @@ for line in subprocess.check_output(['arm-none-eabi-nm', '-n', str(a.elf)], text
 base = []
 for line in (Path(__file__).parent / 'inputs/ring-vs.csv').read_text().splitlines():
     frame, slot, keys = line.split(',')
-    if int(slot) == 0 and int(frame) < 3500 and int(frame) not in (2200, 2215, 2500, 2515, 3000, 3015, 3200, 3215):
+    if int(slot) == 0 and int(frame) < 3500 and int(frame) not in (2500, 2515, 3000, 3015, 3200, 3215):
         base.append((int(frame), int(keys, 16)))
 for count in a.players:
     events = []

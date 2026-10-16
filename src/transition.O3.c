@@ -1,5 +1,17 @@
 #include "common.h"
 #include "transition.h"
+#ifdef MKSC_RING
+#include "palette.h"
+#include "ringLink.h"
+
+static void trns_setRingBackdrop(void)
+{
+    if (!ring_active()) return;
+    pltt_getBuffer(PLTT_BUFFER_BG)[0] = 0;
+    ((vu16*)PLTT)[0] = 0;
+    pltt_setDirtyFlag(TRUE);
+}
+#endif
 
 TransitionState gTransitionState;
 
@@ -56,6 +68,9 @@ void trns_start(void)
 
 void trns_initDefaultInTransition(void)
 {
+#ifdef MKSC_RING
+    trns_setRingBackdrop();
+#endif
     REG_WININ = 0;
     REG_WINOUT = 0;
     REG_DISPCNT &= ~(DISPCNT_WIN0_ON | DISPCNT_WIN1_ON);
@@ -81,6 +96,9 @@ void trns_finishDefaultInTransition(void)
 
 void trns_initDefaultOutTransition(void)
 {
+#ifdef MKSC_RING
+    trns_setRingBackdrop();
+#endif
     REG_WIN0H = WIN_RANGE(0, 240);
     REG_WIN0V = WIN_RANGE(0, 160);
     REG_WININ = WININ_WIN0_BG_ALL | WININ_WIN0_OBJ | WININ_WIN0_CLR;

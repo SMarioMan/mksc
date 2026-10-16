@@ -12094,7 +12094,15 @@ _08007BBA:
 	cmp r5, #0
 	bne _08007BB2
 _08007BC2:
+	.ifdef MKSC_RING
+	push {r1, r2, r3}
+	adds r0, r2, #0
+	bl ring_nativeCharactersPending
+	cmp r0, #0
+	pop {r1, r2, r3}
+	.else
 	cmp r2, #0
+	.endif
 	beq _08007BCA
 	bl _080084AE
 _08007BCA:
@@ -12376,6 +12384,13 @@ _08007DCE:
 	ldr r0, [r0]
 	add r0, sb
 	ldrb r0, [r0]
+	.ifdef MKSC_RING
+	push {r1, r2, r3, r4}
+	mov r4, ip
+	bl ring_nativeRandomCharacter
+	mov ip, r4
+	pop {r1, r2, r3, r4}
+	.endif
 	movs r1, #0x80
 	lsls r1, r1, #5
 	orrs r0, r1

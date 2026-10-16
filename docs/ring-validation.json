@@ -583,5 +583,101 @@
       "each_human_minimum_unique_pixel_positions": 100,
       "evidence": "/workspace/.setup/results/review-7/render-tight-battle"
     }
+  },
+  "review_9": {
+    "status": "in_progress",
+    "evidence_directory": "/workspace/.setup/results/review-9",
+    "clean_sha1": "9d327c030c3e2d9007990518594f70c3340ac56f",
+    "native_characters": {
+      "players": [
+        2,
+        8
+      ],
+      "modes": [
+        "vs",
+        "battle",
+        "gp"
+      ],
+      "host_ok": true,
+      "random_roulette": true,
+      "evidence": [
+        "character-confirmation.log",
+        "character-random.log"
+      ]
+    },
+    "sustained_results": {
+      "players": [
+        2,
+        8
+      ],
+      "moving_vs_frames": 900,
+      "native_looping_results_song": 17,
+      "evidence": "results-sustained-6.log",
+      "battle_background_evidence": "results-sustained-5.log"
+    },
+    "complete_gp_cups": {
+      "players": [
+        2,
+        8
+      ],
+      "races_per_cup": 4,
+      "retro_laps": 5,
+      "total_awarded_points": 76,
+      "evidence": "results-gp-cup.log"
+    },
+    "oam_equivalence": {
+      "sprite_cases": 16384,
+      "queued_entry_cases": 4096,
+      "direct_hud_cases": 4096,
+      "queue_capacities": [
+        32,
+        128
+      ],
+      "evidence": "oam-queue-and-direct-full.log"
+    },
+    "shared_battle_course_3_before_direct_hud_refinement": {
+      "baseline_mean": 0.9892021595680864,
+      "baseline_minimum_300_frame_rate": 0.9366666666666666,
+      "optimized_mean": 0.9977394744278044,
+      "optimized_minimum_300_frame_rate": 0.9866666666666667,
+      "audio_missed_frames": 0,
+      "evidence": [
+        "queue-baseline-battle.log",
+        "queue-fast-battle/summary.json"
+      ]
+    },
+    "optional_art": {
+      "default": "original",
+      "japanese_preview_players": [
+        2
+      ],
+      "evidence": [
+        "original-sunset.log",
+        "japanese-optional-preview.log"
+      ]
+    },
+    "optional_restored_audio": {
+      "changed_objects": 38,
+      "relocations": 378,
+      "distinct_sample_references": 89,
+      "output_rate": 10512,
+      "asset_and_relocation_checks": "passed",
+      "evidence": [
+        "hq-fast-assets.log",
+        "hq-relocation.log",
+        "hq-entry.log"
+      ],
+      "performance": "not_complete; normal Battle Course 3 still below the strict window threshold in the optional sample build",
+      "reference_21024_hz_mode": "excluded after severe eight-player Battle slowdown"
+    },
+    "remaining": [
+      "Character kart palette ownership and overhead labels",
+      "5\u20138 player artwork polish",
+      "Transition video checks",
+      "Native results score animations/presentation quality pass",
+      "All 48 courses and all 2\u20138 player counts on the final source",
+      "Optional sample-build Battle performance",
+      "Final GUI/audio and BIOS gates; HLE remains last"
+    ]
   }
 }

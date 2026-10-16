@@ -12,7 +12,7 @@ symbols={f[2]:int(f[0],16)for line in subprocess.check_output(['arm-none-eabi-nm
 rows=[]
 for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
  f,i,k=line.split(',');f=int(f)
- if int(i) or f>=2200:continue
+ if int(i) or f>=2230:continue
  rows.extend((f,slot if f<1500 or f in (2000,2015)else a.host,int(k,16))for slot in range(a.players if f<1500 or f in (2000,2015)else 1))
 rows.extend([(2500,a.host,256),(2515,a.host,0)])
 inputs=a.results/'inputs.csv';inputs.write_text(''.join(f'{f},{i},{k:x}\n'for f,i,k in sorted(rows)))

@@ -294,3 +294,7 @@ private ROM copies and must remain outside version control. The BIOS/base ROM
 are never part of a distributable release.
 
 Replacement menu art specifications and the private-reference export command are in [ring-menu-art.md](../../docs/ring-menu-art.md).
+
+Sunset Wilds art is optional (`--sunset-art japanese`; default `original`).
+The supplied higher-quality audio is optional through
+`--music-restoration-ips PATH`. See [the audio import and validation notes](../../docs/ring-restored-audio.md).

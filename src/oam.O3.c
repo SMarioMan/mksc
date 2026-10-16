@@ -400,7 +400,62 @@ bool32 oam_renderCell(OamCell* cell)
 }
 #endif
 
+#ifdef MKSC_RING
+/* Keep the queued world-sprite path free of the immediate renderer's large
+ * stack-local OamCell. Most Battle objects need no rotation and write directly
+ * into their final stable-sort entry. Rotated/UI cells retain the general path. */
+static void oam_renderCellDataGeneral(const u16*, Vec2s16*, int, int, int, struc_6*) __attribute__((noinline));
+
+void oam_renderCellData(const u16* data, Vec2s16* position, int scaleX, int scaleY, int rotation, struc_6* priority)
+{
+    if (!priority && !rotation && ((!scaleX || !scaleY) || (scaleX == 256 && scaleY == 256)) && ring_active())
+    {
+        int count = *data++, offset = sBufferOffset;
+        while (count-- > 0 && offset <= 511)
+        {
+            u32 attr0 = *data++, attr1 = *data++;
+            *(u32*)&sBuffer[offset] = ((((attr0 + position->y) & 255) | (attr0 & 0xFF00))
+                | ((((attr1 + position->x) & 511) | (attr1 & 0xFE00)) << 16)) & ~0x300;
+            sBuffer[offset + 2] = *data++;
+            offset += 4;
+        }
+        sBufferOffset = offset;
+        return;
+    }
+    if (priority && !rotation)
+    {
+        OamCellListEntry* entry;
+        OamCell* cell;
+        int index = sCellListEntryCount;
+        if (index > OAM_CELL_LAST) return;
+        entry = index < 32 ? &sCellListEntries[index] : &ring_sOamCells[index - 32];
+        entry->prev = sCellListTail;
+        entry->next = 0;
+        if (sCellListTail) sCellListTail->next = entry;
+        else sCellListHead = entry;
+        sCellListTail = entry;
+        entry->field8.field0 = priority->field0;
+        entry->field8.priority = priority->priority + ((data[3] & 0xC00) << 16);
+        if (!scaleX || !scaleY) scaleX = scaleY = 256;
+        cell = &entry->cell;
+        cell->cellData = data;
+        cell->offsetX = position->x;
+        cell->offsetY = position->y;
+        cell->attr01Bits = cell->attr2Bits = 0;
+        cell->attr01Mask = cell->attr2Mask = -1;
+        cell->affinePa = cell->scaleX = scaleX;
+        cell->affinePd = cell->scaleY = scaleY;
+        cell->affinePb = cell->affinePc = 0;
+        sCellListEntryCount = index + 1;
+        return;
+    }
+    oam_renderCellDataGeneral(data, position, scaleX, scaleY, rotation, priority);
+}
+
+static void oam_renderCellDataGeneral(const u16* cellData, Vec2s16* position, int scaleX, int scaleY, int rotation, struc_6* a6)
+#else
 void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int scaleY, int rotation, struc_6* a6)
+#endif
 {
 
     OamCellListEntry* v12;
@@ -409,22 +464,6 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
     struc_6* v16;
     OamCell* cell;
     OamCell v20;
-#ifdef MKSC_RING
-    if (!a6 && !rotation && ((!scaleX || !scaleY) || (scaleX == 256 && scaleY == 256)) && ring_active())
-    {
-        int count = *cellData++, offset = sBufferOffset;
-        while (count-- > 0 && offset <= 511)
-        {
-            u32 attr0 = *cellData++, attr1 = *cellData++;
-            *(u32*)&sBuffer[offset] = ((((attr0 + position->y) & 255) | (attr0 & 0xFF00))
-                | ((((attr1 + position->x) & 511) | (attr1 & 0xFE00)) << 16)) & ~0x300;
-            sBuffer[offset + 2] = *cellData++;
-            offset += 4;
-        }
-        sBufferOffset = offset;
-        return;
-    }
-#endif
 
     if (!a6)
     {

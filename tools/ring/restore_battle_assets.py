@@ -109,6 +109,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--rom', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--japanese-sunset', action='store_true', help='Also import the optional Japanese Sunset Wilds artwork')
     args = parser.parse_args()
     source = args.rom.read_bytes()
     restored = apply_bps(source, (Path(__file__).parent / 'fixtures/snes-battle-restoration.bps').read_bytes())
@@ -119,9 +120,10 @@ def main():
         if not path.exists() or path.read_bytes() != value:
             path.write_bytes(value)
 
-    from restore_sunset_assets import restore as restore_sunset
     courses = restore(source, restored)
-    write('japanese-sunset-cover.bin', restore_sunset(courses, source))
+    if args.japanese_sunset:
+        from restore_sunset_assets import restore as restore_sunset
+        write('japanese-sunset-cover.bin', restore_sunset(courses, source))
     write('courseData.bin', courses)
     definitions = []
     for index, record in enumerate((47, 45, 44, 46)):

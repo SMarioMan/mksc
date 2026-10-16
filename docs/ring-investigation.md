@@ -1,5 +1,24 @@
 ## Active review (2026-10-16)
 
+Review 9 adds native per-player portrait confirmation, host OK/wait behavior
+and the native Random roulette. Targeted 2/8-player Vs./Battle/GP checks pass.
+Results now preserve road display callbacks and update racers behind the
+native standings; late finishers cannot interrupt the looping results song.
+Sustained two/eight-player results checks and full Retro GP cups pass.
+The clean build remains byte-identical. Japanese Sunset art defaults off;
+the supplied restored audio samples are also optional. See
+`ring-japanese-sunset.md` and `ring-restored-audio.md` for build options.
+
+A smaller unrotated sprite queue path passes native OAM equivalence checks.
+On identical Battle Course 3 inputs its measured worst 300-frame window rises
+from 0.936667 to 0.986667 updates/video frame (shared audio, 11,000-frame run).
+The subsequent direct-HUD refinement has passed the same native equivalence
+oracle but still needs the course matrix. Restored samples add mixing cost;
+that optional build has not yet passed the strict Battle performance gate.
+Artwork, character kart palettes, transition captures and final combined gates
+remain open. New evidence is under `/workspace/.setup/results/review-9`.
+
+
 The sections below describe the previous release and are historical evidence,
 not validation of the pending changes. The current review removes solo ring
 GP and the no-music build, restores native character selection, adjusts shared

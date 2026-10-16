@@ -146,7 +146,7 @@ _080E75C4: .4byte _080EB750
 
 	.global _080E75C8
 _080E75C8:
-    .ifdef MKSC_RING
+    .ifdef MKSC_RING_JAPANESE_SUNSET
     .4byte ring_sunsetJapaneseCover
     .else
     .4byte _08091718

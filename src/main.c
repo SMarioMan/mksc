@@ -93,7 +93,10 @@ void AgbMain(void)
             break;
         if (!gSceneState.sceneMainFunc())
             break;
-        vcount_reset();
+#ifdef MKSC_RING
+        if (!ring_preserveRaceDisplay())
+#endif
+            vcount_reset();
         dmaq_reset(dmaq_getVBlankDmaQueue());
         main_frameProc();
     } while (1);

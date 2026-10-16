@@ -1074,6 +1074,11 @@ _08051EFC:
 	ands r1, r2
 	strb r1, [r0, #0x08]
 _08051F0A:
+	.ifdef MKSC_RING
+	bl ring_preserveRaceDisplay
+	cmp r0, #0
+	bne .LringKeepRaceDisplay
+	.endif
 	movs r0, #0x01
 	bl oam_802FE4C
 	ldr r0, _08051F74 @ =0x0000000B
@@ -1111,6 +1116,9 @@ _08051F30:
 	movs r0, #0x80
 	lsls r0, r0, #0x13
 	strh r5, [r0, #0x00]
+	.ifdef MKSC_RING
+.LringKeepRaceDisplay:
+	.endif
 	movs r0, #0x01
 	add sp, #0x014
 	pop {r3, r4, r5}

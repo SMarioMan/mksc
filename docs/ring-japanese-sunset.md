@@ -1,7 +1,17 @@
 # Japanese Sunset Wilds artwork
 
-The mod uses the Shy Guy artwork and course preview from the supplied Japanese
-Mario Kart Advance ROM. The clean US build retains its original artwork and
+The default mod build uses the original US artwork. Japanese Shy Guy artwork
+and the course preview are optional:
+
+```sh
+python3 tools/ring/build.py --sunset-art japanese
+```
+
+Use `--sunset-art original` (the default) to switch back. `build_release.py`
+accepts the same option and records it for every variant. Building either
+option requires only the US base ROM; the verified Japanese asset delta is
+already included. The Japanese ROM is needed only to recreate that delta.
+The clean US build retains its original artwork and
 SHA-1 `9d327c030c3e2d9007990518594f70c3340ac56f`.
 
 The import is stored as a 4,760-byte BPS asset delta, not as a Japanese ROM.
@@ -27,7 +37,7 @@ The importer also checks that all data outside the changed sprite/cell stream
 matches the US record, after adjusting its five displaced relative pointers.
 Terrain, checkpoints, object placements and gameplay palettes remain identical.
 
-`test_sunset_art.py` checks the linked record and preview against the verified
+`test_sunset_art.py` checks the linked record and preview against the selected original artwork or verified
 asset delta, then selects Sunset Wilds through the native menus with keypad
 inputs and compares the complete decompressed preview in VRAM on 2 and 8
 consoles using the real BIOS. The general all-course suite covers gameplay.
