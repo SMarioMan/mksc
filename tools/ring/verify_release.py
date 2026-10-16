@@ -23,6 +23,7 @@ for name,variant in variants.items():
  assert hashlib.sha256((build/(name+'.gba')).read_bytes()).hexdigest()==variant['sha256'],name
 assert hashlib.sha1(bios.read_bytes()).hexdigest()=='300c20df6731a33952ded8c436f7f186d25d3492'
 assert hashlib.sha1((root/'baserom.gba').read_bytes()).hexdigest()=='9d327c030c3e2d9007990518594f70c3340ac56f'
+assert hashlib.sha1((root/'mksc.gba').read_bytes()).hexdigest()=='9d327c030c3e2d9007990518594f70c3340ac56f','Clean build no longer matches the stock ROM'
 entry=threading.Event();entryOK=False;passed=[];lock=threading.Lock()
 def run(name,cmd,env=None):
  print('START',name,flush=True);t=time.time()
@@ -46,16 +47,19 @@ def logic():
  try:
   test('game','entry',extra=('--players','2','3','4','5','6','7','8','--modes','vs','battle','gp'),elf=False);entryOK=True
  finally:entry.set()
- for stem,elf in [('title',True),('lobby',True),('singleplayer',True),('rendering',False),('display_rate',False),('spawns',True),('battle_survivors',False),('course_menu',False),('battle_menu',True),('transition',True),('character_menu',True)]:
+ for stem,elf in [('title',True),('lobby',True),('singleplayer',True),('rendering',False),('display_rate',False),('spawns',True),('course_menu',False),('battle_menu',True),('transition',True),('character_menu',True)]:
   test(stem,elf=elf,extra=())
  test('lobby','lobby-shared',variant='mksc-ring-shared')
  test('gp',extra=('--players','2','3','4','5','6','7','8'))
- test('rounds','toad-150cc-retro',variant='mksc-ring-shared',extra=('--players','8','--modes','vs','--workers','1','--toad-150cc-retro'))
+ test('rounds','toad-150cc-retro',variant='mksc-ring-shared',extra=('--players','8','--modes','vs','--workers','1','--toad-150cc-retro','--shared-audio'))
  test('flows',extra=('--players','2','8'))
  test('rounds',extra=('--players','2','3','4','5','6','7','8','--workers','1'))
+ test('rounds','rounds-shared',variant='mksc-ring-shared',extra=('--players','2','3','4','5','6','7','8','--workers','1','--shared-audio'))
  test('repeat',extra=('--players','2','8','--baseline',r/'rounds'))
  test('menu_audio',variant='mksc-ring-shared',extra=('--host','3'))
- test('start_music',variant='mksc-ring-boot-shared',extra=('--boot-ring','--host','3'))
+ test('start_music',variant='mksc-ring-boot-shared',extra=('--boot-ring','--host','3','--reference-rom',build/'mksc-ring-boot.gba','--reference-elf',build/'mksc-ring-boot.elf'))
+ test('finish_music',variant='mksc-ring-shared')
+ test('sunset_art')
  test('music','music-leader',variant='mksc-ring-boot-shared',extra=('--boot-ring','--policy','shared','--host','3','--gp','--retro','--require-shrink'))
  test('audio','audio-shared',variant='mksc-ring-boot-shared',extra=('--boot-ring','--gp','--audio-policy','shared'))
  test('audio','audio-normal',extra=('--frames','24000','--audio-policy','normal'))
@@ -63,10 +67,13 @@ def logic():
  run('relocation',['python3',root/'tools/ring/audit_relocation.py','--rom',build/'mksc-ring.gba','--elf',build/'mksc-ring.elf','--shifted-rom',build/'mksc-ring-shifted.gba','--shifted-elf',build/'mksc-ring-shifted.elf'])
  test('singleplayer','shifted-singleplayer',variant='mksc-ring-shifted',extra=())
  test('game','shifted-game',variant='mksc-ring-shifted',elf=False,extra=('--players','2','8','--modes','vs','battle','gp'))
+ test('battle_menu','shifted-retro-battle-menu',variant='mksc-ring-shifted')
+ test('spawns','shifted-retro-battle-spawns',variant='mksc-ring-shifted',extra=('--players','2','8','--sets','retro'))
+ test('sunset_art','shifted-sunset-art',variant='mksc-ring-shifted',extra=('--players','2'))
 def gui_units():
  entry.wait()
  if not entryOK:raise RuntimeError('GUI requires successful private input fixtures')
- env=os.environ.copy();env.update(QT_QPA_PLATFORM='offscreen',SDL_AUDIODRIVER='dummy',MGBA_RING_GUI_ROM=str(build/'mksc-ring.gba'),MGBA_RING_GUI_BOOT_ROM=str(build/'mksc-ring-boot-shared.gba'),MGBA_RING_GUI_BIOS=str(bios),MGBA_RING_GUI_INPUTS=str(r/'entry'),MGBA_RING_GUI_STOCK_INPUTS=str(a.mgba_source/'tools/link/inputs'))
+ env={k:v for k,v in os.environ.items() if not k.startswith('MGBA_RING_GUI_')};env.update(QT_QPA_PLATFORM='offscreen',SDL_AUDIODRIVER='dummy',MGBA_RING_GUI_ROM=str(build/'mksc-ring.gba'),MGBA_RING_GUI_BOOT_ROM=str(build/'mksc-ring-boot-shared.gba'),MGBA_RING_GUI_BIOS=str(bios),MGBA_RING_GUI_INPUTS=str(r/'entry'),MGBA_RING_GUI_STOCK_INPUTS=str(a.mgba_source/'tools/link/inputs'))
  run('ctest-private',['ctest','--test-dir',a.mgba_build,'--output-on-failure','--parallel','1'],env)
  shutil.copyfile(a.mgba_build/'Testing/Temporary/LastTest.log',r/'ctest-private-detail.log')
  detail=(r/'ctest-private-detail.log').read_text();assert '13 passed, 0 failed, 0 skipped' in detail,'Private GUI gameplay did not execute all rows'
@@ -83,10 +90,17 @@ def gui_units():
 def gui_audio():
  # Host-clock delivery needs a real audio server and an otherwise idle host.
  # Keep it outside the concurrent native-cycle checks and all builds.
- env=os.environ.copy();env.update(QT_QPA_PLATFORM='offscreen',MGBA_RING_GUI_ROM=str(build/'mksc-ring-shared.gba'),MGBA_RING_GUI_BIOS=str(bios),MGBA_RING_GUI_INPUTS=str(r/'entry'),MGBA_RING_GUI_AUDIO_FRAMES='18000')
+ env={k:v for k,v in os.environ.items() if not k.startswith('MGBA_RING_GUI_')};env.update(QT_QPA_PLATFORM='offscreen',MGBA_RING_GUI_ROM=str(build/'mksc-ring-shared.gba'),MGBA_RING_GUI_BIOS=str(bios),MGBA_RING_GUI_INPUTS=str(r/'entry'),MGBA_RING_GUI_AUDIO_FRAMES='18000')
  for backend in ('1','qt'):
   env['MGBA_RING_GUI_AUDIO']=backend
   run('gui-audio-'+('sdl' if backend=='1' else 'qt'),[a.mgba_build/'qt/test-qt-ring_gui','ring:vs-8'],env)
+ env.update(MGBA_RING_GUI_AUDIO='qt',MGBA_RING_GUI_AUDIO_FRAMES='1900')
+ run('gui-audio-qt-topology-two',[a.mgba_build/'qt/test-qt-ring_gui','ring:vs-2'],env)
+ env['MGBA_RING_GUI_SAMPLE_RATE']='192000'
+ run('gui-audio-qt-high-rate-two',[a.mgba_build/'qt/test-qt-ring_gui','ring:vs-2'],env)
+# New authored starts change the driving fixture used to lose balloons.
+# Check that coverage before spending hours on the full course matrix.
+test('battle_survivors')
 with ThreadPoolExecutor(max_workers=3) as pool:
  futures=[pool.submit(matrix,'normal'),pool.submit(matrix,'shared'),pool.submit(logic)]
  failures=[]

@@ -1,4 +1,4 @@
-## Active review (2026-10-15)
+## Active review (2026-10-16)
 
 The sections below describe the previous release and are historical evidence,
 not validation of the pending changes. The current review removes solo ring
@@ -6,10 +6,11 @@ GP and the no-music build, restores native character selection, adjusts shared
 audio and adds the supplied full-rate road-display fix. New checks are being
 recorded privately under `/workspace/.setup/results/review-5`.
 
-Eight-window wall-clock audio delivery remains under investigation. Native
-simulation updates and a passing software PCM test do not establish that all
-eight host audio devices receive samples without underruns. Hardware remains
-untested. See `ring-display-rate.md` for the supplied patch analysis and
+Both SDL and Qt now pass isolated five-minute, eight-window moving gameplay
+runs with zero playback underruns and zero dropped core PCM on every console.
+Qt also passes a two-player stock/ring topology round trip after priming its
+output queue before starting the device clock. These checks used a private
+PulseAudio sink; physical listening and cable tests remain unavailable. See `ring-display-rate.md` for the supplied patch analysis and
 `ring-menu-art.md` for replacement asset specifications.
 
 The current real-BIOS build passes all 21 mode-entry cases (Vs., Battle and
@@ -24,8 +25,7 @@ priority cases. Earlier diagnostics that called `0x66` Star are superseded.
 An isolated eight-window moving-race comparison measures 97.64 FPS before
 host interrupt waits and 98.25 FPS afterward, both with one simulation update
 per video frame. This measures uncapped emulation headroom, not audio quality.
-Extended host-output validation and the full updated 48-course matrix remain
-pending; `ring-validation.json` records those distinctions.
+The full updated 48-course matrix and final combined release gates are running; `ring-validation.json` records those distinctions.
 
 ## Previous release verification: native eight-player ring release (2026-10-14)
 
@@ -618,3 +618,27 @@ Vs. now accumulates the original GP table's 9/6/3/1/0/0/0/0 awards instead of
 counting the winner's victories. Battle retains one win per round. The shared
 session field is named `sRoundScores`, and score tests compute dump ranges from
 symbols so renaming/reordering globals does not invalidate the checks.
+
+### Battle rendering follow-up
+
+The updated Battle stress fixture requires each human to visit at least 100
+distinct whole-pixel positions while steering and using items. It exposed
+slowdowns hidden by the old stationary fixture. Profiles identified projection
+and the expanded OAM queue as the main rendering costs. The queue now retains
+its first 32 entries in native IWRAM and allocates only the 96 overflow entries
+in the scene frame heap. Capacity remains 128. Object reset hides all 128
+objects while preserving tile and affine-matrix words.
+
+The native 256.0 camera focal distance permits an exact shift in place of both
+BIOS division branches. Other camera configurations retain the native divide.
+The revised C projection matches 32,768 native instruction fixtures and takes
+1,625 rather than 2,064 cycles per unclipped actor in that fixture. The OAM
+oracle compares all 1,024 bytes, affine state and return values for 16,384
+cells, checks both queue capacities and guards overflow storage with canaries.
+
+On the real-BIOS eight-moving-player preflight, normal Battle Course 3 improved
+from 0.8986 to 0.9850 simulation updates per video frame. Its worst measured
+300-frame window improved from 0.8033 to 0.9533. The two slow SNES arenas both
+reached a 1.000 mean. These are targeted checks; the final all-course sweep
+uses longer captures and must pass independently. The stock build still
+matches its original SHA-1 after these conditional mod changes.

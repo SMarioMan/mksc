@@ -41,26 +41,36 @@
       "rom_build": "builds-v8",
       "crash_reproduced": false
     },
-    "extended_check": "Underruns remain under investigation; latest host interrupt-wait and Qt queue wakeup changes are awaiting isolated measurement.",
+    "extended_check": "Targeted five-minute Qt/SDL checks passed; final combined V23 verification is running.",
     "extended_current": {
-      "build": "builds-v17",
+      "build": "builds-v22",
       "backend": "Qt/PulseAudio",
       "frames": 18000,
-      "status": "failed",
+      "status": "passed",
       "gate_requires_zero": true,
-      "fps": 60.01,
+      "fps": 60.0,
       "underrun_events_per_output": [
-        4,
-        8,
-        9,
-        6,
-        5,
-        5,
-        5,
-        8
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
       ],
-      "longest_host_frame_gap_ms": 107.58,
-      "evidence": "gui-qt-interval-extended.log"
+      "dropped_core_pcm_per_output": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "longest_host_frame_gap_ms": 63.98,
+      "evidence": "/workspace/.setup/results/review-5/gui-qt-primed-v22.log"
     },
     "interval_cache_minute": {
       "build": "builds-v16",
@@ -154,6 +164,144 @@
       "players": 8,
       "frames": 18000,
       "gate_requires_zero": true
+    },
+    "extended_latest": {
+      "sdl": {
+        "rom_sha256": "5d03096a6809849c2e3a1bdf17f4924551556c574843ea2050b4641caf76fdc1",
+        "players": 8,
+        "moving_frames": 18000,
+        "fps": 60.05,
+        "native_updates_per_video_frame": 1.0,
+        "underrun_samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dropped_core_pcm_samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "evidence": "/workspace/.setup/results/review-5/gui-sdl-v21.log"
+      },
+      "qt": {
+        "rom_sha256": "8296ad0722897258fae16500ba5a1bee005531dd2a884ec62bc502a7f69e90fb",
+        "players": 8,
+        "moving_frames": 18000,
+        "fps": 60.0,
+        "native_updates_per_video_frame": 1.0,
+        "underrun_events": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dropped_core_pcm_samples": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "evidence": "/workspace/.setup/results/review-5/gui-qt-primed-v22.log"
+      },
+      "qt_two_player_topology": {
+        "players": 2,
+        "moving_frames": 1900,
+        "underrun_events": [
+          0,
+          0
+        ],
+        "dropped_core_pcm_samples": [
+          0,
+          0
+        ],
+        "evidence": "/workspace/.setup/results/review-7/gui-primed-two.log"
+      }
+    },
+    "extended_before_priming": {
+      "build": "builds-v17",
+      "backend": "Qt/PulseAudio",
+      "frames": 18000,
+      "status": "failed",
+      "gate_requires_zero": true,
+      "fps": 60.01,
+      "underrun_events_per_output": [
+        4,
+        8,
+        9,
+        6,
+        5,
+        5,
+        5,
+        8
+      ],
+      "longest_host_frame_gap_ms": 107.58,
+      "evidence": "gui-qt-interval-extended.log"
+    },
+    "sdl_extended": {
+      "build": "builds-v21",
+      "backend": "SDL/PulseAudio",
+      "frames": 18000,
+      "status": "passed",
+      "fps": 60.05,
+      "underrun_samples_per_output": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "dropped_core_pcm_per_output": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "evidence": "/workspace/.setup/results/review-5/gui-sdl-v21.log"
+    },
+    "high_sample_rate": {
+      "build": "builds-v23",
+      "backend": "Qt/PulseAudio",
+      "sample_rate": 192000,
+      "players": 2,
+      "frames": 1900,
+      "status": "passed",
+      "fps": 60.0,
+      "underrun_events_per_output": [
+        0,
+        0
+      ],
+      "dropped_core_pcm_per_output": [
+        0,
+        0
+      ],
+      "stock_ring_topology_roundtrip": true,
+      "evidence": "/workspace/.setup/results/review-7/gui-primed-high-rate-two.log"
     }
   },
   "native_battle_spawns": {
@@ -188,30 +336,30 @@
     "mksc-ring": {
       "boot_ring": false,
       "music": "normal",
-      "sha256": "87a91dfe5cb884dbb25808cdec7cb30d58556362bf821cb5971a71417df0c772"
+      "sha256": "809a643ad0b6f2dcf82342d330c1b8fa98047b4e0f648fc0a28a14870bdd3175"
     },
     "mksc-ring-shared": {
       "boot_ring": false,
       "music": "shared",
-      "sha256": "230b3a138fc0be60fa70d6b8ccc431d28d129f91f9831cd7c781cf2b1bba6cbb"
+      "sha256": "d7e19e6b64efd4b5c5ef7a87df659034feaa1b01f794c64b3d34a6e9fa83bcd2"
     },
     "mksc-ring-boot": {
       "boot_ring": true,
       "music": "normal",
-      "sha256": "b54f46d5ad7de47876247ee18cb0a16ec139295ff0120f9a16813df7f191e8ce"
+      "sha256": "9dfd9cb7b709476be96ab1a602bf6a014870fe2e39826462ac96072c1527b634"
     },
     "mksc-ring-boot-shared": {
       "boot_ring": true,
       "music": "shared",
-      "sha256": "b6102d16a938c7e8a3684a480667e5d43cbb3c6e863fc4d1727c122a0c33f974"
+      "sha256": "89e8c6be4d9f81850443bfc320d6c5cb8a04cfa804a7f3779fe010ffa499034b"
     }
   },
   "hardware_validated": false,
-  "results_directory": "/workspace/.setup/results/review-5",
+  "results_directory": "/workspace/.setup/results/review-8",
   "native_sprite_queue": {
     "capacity": 128,
     "clean_capacity": 32,
-    "storage": "scene frame heap",
+    "storage": "32 native IWRAM entries plus 96 scene-frame-heap overflow entries",
     "targeted_battle_local_balloons": [
       3,
       3,
@@ -355,5 +503,85 @@
       "distinguishing palette colors"
     ],
     "evidence": "battle-menu-v18.log"
+  },
+  "latest_review": {
+    "status": "in_progress",
+    "results_directory": "/workspace/.setup/results/review-7",
+    "clean_sha1": "9d327c030c3e2d9007990518594f70c3340ac56f",
+    "japanese_sunset_art": {
+      "commit": "9181412",
+      "non_art_verification_commit": "10b6214",
+      "native_preview_players": [
+        2,
+        8
+      ],
+      "reference_japanese_sha1": "88ffde363b05264a99a4d5ada0c80a00196a94d7"
+    },
+    "shared_lone_finisher_music": {
+      "players": 3,
+      "separate_finisher_cases": [
+        1,
+        2
+      ],
+      "others_stay_on_lap": 1,
+      "native_final_lap_jingles": 1,
+      "course_tempo_after_finish": 320,
+      "evidence": "finish-music-v20.log"
+    },
+    "countdown_timing": {
+      "modes": [
+        "vs",
+        "battle",
+        "gp"
+      ],
+      "players": 2,
+      "physical_host_window": 2,
+      "oracle": "normal-audio native course-song request",
+      "maximum_simulation_tick_difference": 1,
+      "evidence": "start-music-native.log"
+    },
+    "rounds_v21": {
+      "players": [
+        2,
+        8
+      ],
+      "modes": [
+        "vs",
+        "battle"
+      ],
+      "vs_awards": [
+        9,
+        6,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "evidence": "rounds-v21.log"
+    },
+    "battle_hud_v21": {
+      "mixed_and_eliminated": true,
+      "order": "remaining balloons descending, player ID breaks ties",
+      "evidence": "battle-survivors-v21.log"
+    },
+    "full_48_course_matrix": "pending",
+    "build": "builds-v23",
+    "combined_verification_directory": "/workspace/.setup/results/review-8",
+    "rendering_preflight": {
+      "normal_battle_3": {
+        "mean": 0.9850074962518741,
+        "minimum_300_frame_rate": 0.9533333333333334
+      },
+      "normal_snes_battle_1": {
+        "mean": 1.0
+      },
+      "normal_snes_battle_3": {
+        "mean": 1.0
+      },
+      "each_human_minimum_unique_pixel_positions": 100,
+      "evidence": "/workspace/.setup/results/review-7/render-tight-battle"
+    }
   }
 }
