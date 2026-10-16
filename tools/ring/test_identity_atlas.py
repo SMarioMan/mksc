@@ -35,6 +35,7 @@ static u32 randomState;
 static u32 random32(void){randomState^=randomState<<13;randomState^=randomState>>17;randomState^=randomState<<5;return randomState;}
 u16* pltt_getBuffer(int buffer){return palette;}
 void pltt_setDirtyFlag(bool32 dirty){}
+void ring_publishNativeMenuPalette(void){}
 bool32 ring_showRaceIdentity(void){return TRUE;}
 u32 ring_identityWanted(void){return 0xFFFFFF;}
 int main(void){

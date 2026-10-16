@@ -52,7 +52,7 @@ link = link.replace('        data/characterTiles.o(.rodata*);', '''        data/
         src/ringSoundControl.O3.o(.text);
         src/ringIdentity.O3.o(.text);
         src/ringIdentity.O3.o(.rodata*);
-        src/ringLink.o(.rodata);
+        src/ringLink.o(.rodata*);
         asm/ringBattleData.o(.rodata);
         asm/ringRestoredAudio.o(.rodata);''')
 link = link.replace('    /* Discard everything not specifically mentioned above. */', '''    .ring_irq ALIGN(ADDR(.bss) + SIZEOF(.bss), 4) : AT(ALIGN(LOADADDR(.text) + SIZEOF(.text), 4))
@@ -77,6 +77,9 @@ for name, address in [('gKeyBuf', '0x03006B00'), ('gKeyTriggerBuf', '0x03006B10'
     import re
     symbols = re.sub(rf'^{name} = .*?;', f'{name} = {address};', symbols, flags=re.M)
 symbols = symbols.replace('gSelectedCharacters = 0x0300002C;', 'gSelectedCharacters = ring_selectedCharacters;')
+# Modern Thumb C uses EABI quotient names; the matching ROM already links
+# the equivalent agbcc signed/unsigned helpers. Keep one relocatable copy.
+symbols += '\n__aeabi_idiv = __divsi3;\n__aeabi_uidiv = __udivsi3;\n'
 (out / 'symbols.txt').write_text(symbols)
 subprocess.run(['make', 'tools', 'libraries'], cwd=root, check=True)
 if a.music_restoration_ips:

@@ -48,7 +48,7 @@ def logic():
  try:
   test('game','entry',extra=('--players','2','3','4','5','6','7','8','--modes','vs','battle','gp'),elf=False);entryOK=True
  finally:entry.set()
- for stem,elf in [('title',True),('lobby',True),('singleplayer',True),('rendering',False),('display_rate',False),('spawns',True),('course_menu',False),('battle_menu',True),('transition',True),('character_menu',True),('character_random',True)]:
+ for stem,elf in [('title',True),('lobby',True),('singleplayer',True),('rendering',False),('display_rate',False),('spawns',True),('course_menu',False),('battle_menu',True),('transition',True),('character_menu',True),('character_random',True),('cc_palette',False)]:
   test(stem,elf=elf,extra=())
  test('lobby','lobby-shared',variant='mksc-ring-shared')
  test('gp',extra=('--players','2','3','4','5','6','7','8'))

@@ -60,6 +60,12 @@ for case in ('menu', 'vs', 'battle'):
     assert len(frames) == (last - first) * 8, len(frames)
     assert all(not row['invalidObjects'] for row in frames)
     if case == 'menu':
+        cursor_colors = [(20,20,31),(8,8,27),(2,2,16),(31,25,20),(27,17,8),(16,9,2),
+                         (20,31,31),(8,27,27),(2,16,16),(27,20,27),(20,8,20),(11,2,11),(31,31,31),(0,0,0)]
+        expected_hash = 2166136261
+        for red,green,blue in cursor_colors:
+            expected_hash = ((expected_hash ^ (red | green << 5 | blue << 10)) * 16777619) & 0xFFFFFFFF
+        assert all(row['cursorPaletteHash'] == expected_hash for row in frames), 'Extended cursors borrowed changing portrait colors'
         assert all(row['dispcnt'] & 7 in (0,1) for row in frames)
         assert all(row['menuCursors'] == (16 if row['player'] >= 4 else 1 << row['player']) for row in frames), 'The native local cursor disappeared or another player cursor leaked into this view'
         print(f'PASS native menu: one correctly indexed native local cursor in each of {len(frames)} completed frames', flush=True)

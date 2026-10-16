@@ -7,6 +7,13 @@ Consecutive native-menu, eight-kart Vs. and Battle rendering checks pass.
 Sustained two/eight-player Vs./Battle results retain the live course and
 looping results theme. See `ring-player-indicators.md` for the graphics design.
 
+The ring controller now uses the optimizing compiler after correcting packed
+menu enum storage to native 32-bit fields. Both compilers produce identical
+menu layouts, and all 21 Vs./Battle/GP entry cases pass for 2–8 humans. Extra
+menu cursor colors now use stable palette-zero entries instead of animated
+portrait colors. CC tabs match native four-pak pixels at all three classes in
+2/5/6/7/8-player checks: 84 console views match the unmodified CC tabs.
+
 The clean ROM still matches SHA1 `9d327c030c3e2d9007990518594f70c3340ac56f`.
 The controlled 0x400-byte shift passes the pointer audit. Several new byte
 matches were verified as exact compressed image streams or native Thumb mask
@@ -15,7 +22,7 @@ instructions, rather than changed or exempted without inspection.
 Review 10's previous shared-audio candidate passed all 48 courses. Normal
 audio failed brief performance windows on GBA Battle Course 3 and Snow Land.
 The current work reduces indicator traversal and collision-sort memory traffic;
-strict performance checks remain open. The display-rate test now measures
+Snow Land passes the targeted normal-audio gate after reducing idle serial polling. Battle Course 3 still fails brief worst-window checks; strict performance validation remains open. The display-rate test now measures
 actual moving intervals, avoiding false failures when a kart briefly stops.
 Bounded course runs stop at results so held driving inputs cannot dismiss the
 results and invalidate the final synchronization snapshot.

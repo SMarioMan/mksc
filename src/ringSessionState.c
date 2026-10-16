@@ -40,4 +40,5 @@ u16 ring_battleSpawnTerrain[8];
 
 #ifdef MKSC_RING
 u32 ring_identityUploads, ring_identitySlowPrepares;
+u32 ring_graphicsOverruns;
 #endif

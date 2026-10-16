@@ -36,7 +36,7 @@ for line in subprocess.check_output(['arm-none-eabi-nm','-n',str(a.elf)],text=Tr
   symbols[f[2]]=int(f[0],16)
   if f[1].lower()=='t':functions.append((int(f[0],16),f[2]))
 addresses=[x[0] for x in functions]
-identity_symbols=[name for name in ('ring_identityOverflows','ring_identityNative8bpp','ring_identityPublishLines','ring_identityRestoreLines','ring_identityUploads','ring_identitySlowPrepares') if name in symbols]
+identity_symbols=[name for name in ('ring_identityOverflows','ring_identityNative8bpp','ring_identityPublishLines','ring_identityRestoreLines','ring_identityUploads','ring_identitySlowPrepares','ring_graphicsOverruns') if name in symbols]
 observed_addresses=[symbols[name] for name in ['sCourse','sRetro']+identity_symbols]
 courseBase=min(observed_addresses)
 courseWords=(max(observed_addresses)-courseBase)//4+1
@@ -105,7 +105,8 @@ def run(case):
  assert all(n['barrier']['errors']==n['barrier']['timeouts']==0 for n in data['nodes']),(case,'Transport failed')
  if identity_symbols:
   for node in data['nodes']:
-   for name in ('ring_identityOverflows','ring_identityNative8bpp'):
+   for name in ('ring_identityOverflows','ring_identityNative8bpp','ring_graphicsOverruns'):
+    if name not in symbols:continue
     assert node['dump'][(symbols[name]-courseBase)//4]==0,(case,name,node['slot'])
    assert all(node['game']['hud']['kartPalettesMatch']),(case,'Native kart palette overwritten',node['slot'])
  assert all(n['game']['humanCount']==8 for n in data['nodes'])

@@ -739,7 +739,7 @@ static void RING_IRQ ring_serialHandler(void)
          * full-rate forwarding whenever data or COMMIT is in circulation. */
         if (!word && !sRing.queued && sRing.count >= 5 && sRing.inGame &&
             sTickEpochStarted && sRing.ownReturned && !sRing.frameStarted)
-            delay = RING_TURNAROUND * 4;
+            delay = RING_TURNAROUND * 8;
         REG_TM2CNT_H = 0;
         REG_TM2CNT_L = 65536 - delay;
         REG_TM2CNT_H = 0xC0;
@@ -1746,6 +1746,26 @@ static unsigned ring_animatedNativeCharacter(unsigned id)
     return choice;
 }
 
+/* Native 4-bpp sprites never display palette-zero entries. Reserve those
+ * entries for the extra 8-bpp cursors instead of borrowing animated portrait
+ * colors. Each triple preserves the native highlight/body/shadow contrast. */
+#define CURSOR_RGB(r,g,b) ((r) | ((g) << 5) | ((b) << 10))
+static const u16 sExtraCursorPalette[14] = {
+    CURSOR_RGB(20,20,31),CURSOR_RGB(8,8,27),CURSOR_RGB(2,2,16),
+    CURSOR_RGB(31,25,20),CURSOR_RGB(27,17,8),CURSOR_RGB(16,9,2),
+    CURSOR_RGB(20,31,31),CURSOR_RGB(8,27,27),CURSOR_RGB(2,16,16),
+    CURSOR_RGB(27,20,27),CURSOR_RGB(20,8,20),CURSOR_RGB(11,2,11),
+    0x7FFF,0
+};
+#undef CURSOR_RGB
+void ring_publishNativeMenuPalette(void)
+{
+    unsigned color;
+    if (!sRing.enabled || sRing.count <= 4 || !sNativeCharacterMenu || !sNativeMenuExtras->extendedCursorReady) return;
+    for (color = 0; color < 14; color++) ((vu16*)OBJ_PLTT)[(color + 1) * 16] = sExtraCursorPalette[color];
+    pltt_setDirtyFlag(TRUE);
+}
+
 /* Reuse the original multipak cursor frames and confirmed-player badges.
  * The native chooser still owns only one safe local animation slot. */
 bool32 ring_drawNativeCharacterCursor(SpmState* menu, int slot, int x, int y)
@@ -1760,43 +1780,14 @@ bool32 ring_drawNativeCharacterCursor(SpmState* menu, int slot, int x, int y)
     Vec2s16 position;
     u16 cells[13];
     if (menu != sNativeCharacterMenu) return FALSE;
-    if (!sNativeMenuExtras->extendedCursorReady)
+    if (sRing.count > 4 && !sNativeMenuExtras->extendedCursorReady)
     {
+        static const u8 colors[16] = {0,208,32,224,16,32,48,64,80,96,112,128,144,160,176,192};
         u8 lookup[16];
         u8* output = (u8*)sNativeMenuExtras->extendedCursorTiles;
-        u16* palette = pltt_getBuffer(1);
-        u32 colorIndex, pixel;
-        /* Every native OBJ palette is occupied, including bank 15 for the
-         * animated kart. Use 8-bpp objects to address existing colors across
-         * all banks rather than overwriting CC, portraits or the kart. */
-        for (colorIndex = 0; colorIndex < 16; colorIndex++)
-        {
-            u32 color = palette[48 + colorIndex];
-            if (colorIndex != 0 && colorIndex != 1 && colorIndex != 3)
-            {
-                u32 group = colorIndex == 2 ? 0 : (colorIndex - 4) / 3;
-                u32 low = color & 31, high = low, g = color >> 5 & 31, b = color >> 10 & 31;
-                u32 target = sPlayerColors[4 + group];
-                if (g < low) low = g; if (g > high) high = g;
-                if (b < low) low = b; if (b > high) high = b;
-                color = (low + (high - low) * (target & 31) / 31) |
-                    (low + (high - low) * (target >> 5 & 31) / 31) << 5 |
-                    (low + (high - low) * (target >> 10 & 31) / 31) << 10;
-            }
-            lookup[colorIndex] = 0;
-            if (colorIndex)
-            {
-                u32 candidate, best = 0x7FFFFFFF;
-                for (candidate = 1; candidate < 240; candidate++)
-                {
-                    s32 dr = (palette[candidate] & 31) - (color & 31);
-                    s32 dg = (palette[candidate] >> 5 & 31) - (color >> 5 & 31);
-                    s32 db = (palette[candidate] >> 10 & 31) - (color >> 10 & 31);
-                    u32 error = dr * dr + dg * dg + db * db;
-                    if (error < best) { best = error; lookup[colorIndex] = candidate; }
-                }
-            }
-        }
+        u32 pixel;
+        for (pixel = 0; pixel < 16; pixel++) lookup[pixel] = colors[pixel];
+        lookup[2] = 32 + (sRing.id & 3) * 48;
         for (pixel = 0; pixel < 2048; pixel++)
         {
             const u8* source;

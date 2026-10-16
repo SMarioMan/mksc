@@ -301,7 +301,7 @@ void ring_publishIdentityPalette(void)
     static const u16 colors[8] = {31,992,1023,31775,31744,543,32736,20500};
     u32 mask = ring_identityPendingUpload, index, started, elapsed;
     vu16* palette;
-    if (!ring_showRaceIdentity()) return;
+    if (!ring_showRaceIdentity()) { ring_publishNativeMenuPalette(); return; }
     started = REG_VCOUNT;
     for (index = 0; mask; index++, mask >>= 1)
         if (mask & 1)
