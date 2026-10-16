@@ -70,14 +70,20 @@ typedef struct
     u16 curRaceStateUnknown;
     u8 engineClass;
     u8 headerTableIdx;
-    u8 gap7DE[0x12];
+    u8 gap7DE[9];
+    u8 finishLap;               /* 0x7E7: native target, 0x83 or Retro GP 0x85. */
+    u8 finishState;             /* 0x7E8: native finish coordinator. */
+    u8 gap7E9[7];
     u8 driverCount;
     u8 driverCapacity;
     u8 gap7F2[2];
     Driver* drivers[8];
     Driver* playerDriver;
-    //...
+    u8 gap818[0x420];
+    Driver* rankedDrivers[8];   /* 0xC38: native eight-racer finishing order. */
 } RaceState;
+
+typedef char RaceStateSizeCheck[sizeof(RaceState) == 0xC58 ? 1 : -1];
 
 u8 track_getRaceMaterial(RaceState* state);
 u8 track_getRaceMusic(RaceState* state);

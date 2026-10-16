@@ -134,7 +134,7 @@ int ring_sharedAudioMuted(struct MusicPlayerInfo* player, struct SongHeader* son
         RaceState* state = &gSceneState.raceState;
         u32 finished = 0;
         for (i = 0; i < state->driverCount; i++)
-            if (state->drivers[i]->lap >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
+            if (state->drivers[i]->lap >= (sGame == GP_MODE ? state->finishLap : 0x83)) finished++;
         /* One console finishing must not replace the other racers' music. */
         return finished < state->driverCount - 1;
     }
@@ -183,9 +183,9 @@ int ring_keepSharedRaceMusic(void)
     RaceState* state = &gSceneState.raceState;
     u32 i, finished = 0;
     if (!ring_sharedMusicActive() || ring_sharedMusicMuted() || !sCourseMusicStarted || sBattle ||
-        (((u8*)state)[0x7D4] & 0x40)) return FALSE;
+        (state->raceOptions & 0x40)) return FALSE;
     for (i = 0; i < state->driverCount; i++)
-        if (state->drivers[i]->lap >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
+        if (state->drivers[i]->lap >= (sGame == GP_MODE ? state->finishLap : 0x83)) finished++;
     /* Native local-finish cleanup stops the BGM before requesting a result
      * song. Preserve its playback position while other humans are racing. */
     return finished && finished < state->driverCount - 1;
@@ -207,7 +207,7 @@ static void ring_updateSharedMusic(void)
     }
     if (!ring_sharedMusicActive()) { sSharedSong = 0; sSharedFinalLap = 0; return; }
     if (!sCourseMusicStarted) return;
-    if (((u8*)state)[0x7D4] & 0x40) return;
+    if (state->raceOptions & 0x40) return;
     /* Physics begins during the native opening fanfare. Do not treat its
      * first tick as permission to replace a still-playing start song. Both
      * GP and linked races use player zero for this finite introductory cue. */
@@ -217,10 +217,10 @@ static void ring_updateSharedMusic(void)
         !(gMPlayTable[0].info->status & MUSICPLAYER_STATUS_PAUSE)) return;
     for (i = 0; i < state->driverCount; i++)
     {
-        u8* driver = (u8*)state->drivers[i];
-        if (*(u32*)(driver + 0x48) & 8) fast = 1;
-        if (driver[0xC7] >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
-        if (driver[0x17D]) alive++;
+        Driver* driver = state->drivers[i];
+        if (driver->field_48 & 8) fast = 1;
+        if (driver->lap >= (sGame == GP_MODE ? state->finishLap : 0x83)) finished++;
+        if (driver->balloonsRemaining) alive++;
     }
     /* Preserve the common result jingle during native end-of-race cleanup. */
     if ((!sBattle && finished >= state->driverCount - 1) || (sBattle && alive <= 1)) return;
@@ -265,7 +265,7 @@ bool32 ring_ignoreLocalMusic(void)
 void ring_prepareGpGrid(RaceState* state)
 {
     u32 i, rank;
-    Driver** order = (Driver**)((u8*)state + 0xC38);
+    Driver** order = state->rankedDrivers;
     if (!sRing.enabled || sGame != GP_MODE) return;
     /* Native GP assumes one human. Recreate our shared roster after its
      * single-player CPU setup, then assign every human a separate grid slot. */
@@ -280,8 +280,8 @@ void ring_prepareGpGrid(RaceState* state)
             if (rank == 8) rank = i;
         }
         else rank = i < sRing.count ? 8 - sRing.count + i : i - sRing.count;
-        *(u16*)((u8*)state->drivers[i] + 0xBA) = rank * 2;
-        ((u8*)state->drivers[i])[0xC4] = sGPPoints[i];
+        state->drivers[i]->gridPosition = rank * 2;
+        state->drivers[i]->points = sGPPoints[i];
         order[rank] = state->drivers[i];
     }
 }
@@ -1093,9 +1093,9 @@ void sub_804DCB0(RaceState* state)
         for (i = 1; i < sRing.count; i++)
         {
             u8 id = order[i];
-            u32 balloons = ((u8*)state->drivers[id])[0x17D];
+            u32 balloons = state->drivers[id]->balloonsRemaining;
             j = i;
-            while (j && ((u8*)state->drivers[order[j - 1]])[0x17D] < balloons)
+            while (j && state->drivers[order[j - 1]]->balloonsRemaining < balloons)
             { order[j] = order[j - 1]; j--; }
             order[j] = id;
         }
@@ -1129,15 +1129,13 @@ void sub_804E7EC(Driver* driver, int local)
         ring_stockMapMarker(driver, local);
     else
     {
-        const u8* bytes = (const u8*)driver;
         u16 cell[4];
         Vec2s16 position;
         int scale = sub_8032D0C(&gSceneState.raceState) + 19;
-        s32* xyz = (s32*)driver;
-        u32 id = bytes[0xEC];
+        u32 id = driver->playerId;
         if (id >= (sGame == GP_MODE ? 8 : sRing.count)) return;
-        position.x = 168 + (xyz[0] >> scale);
-        position.y = 88 + (xyz[1] >> scale);
+        position.x = 168 + (driver->actor.posX >> scale);
+        position.y = 88 + (driver->actor.posY >> scale);
         cell[0] = 1;
         /* Native 8x8 marker: offset 4 plus its central pixels at 3/4.
          * Our 2x2 dot needs offset 7 for the identical pixel center. */
@@ -2227,20 +2225,20 @@ bool32 ring_checkRoundEnd(void)
     if (!sRing.enabled || !sRing.inGame) return FALSE;
     for (i = 0; i < state->driverCount; i++)
     {
-        u8* driver = (u8*)state->drivers[i];
+        Driver* driver = state->drivers[i];
         if (sBattle)
         {
-            if (driver[0x17D]) alive++;
+            if (driver->balloonsRemaining) alive++;
             else if (sBattlePlaces[i] == 0xFF)
                 sBattlePlaces[i] = sRing.count - 1 - sEliminated++;
         }
         /* Native GP uses five laps on Retro tracks, three on Super tracks.
          * Keep its initialized finish-lap byte instead of the Vs. constant. */
-        else if (driver[0xC7] >= (sGame == GP_MODE ? ((u8*)state)[0x7E7] : 0x83)) finished++;
+        else if (driver->lap >= (sGame == GP_MODE ? state->finishLap : 0x83)) finished++;
     }
     if ((sBattle && alive <= 1) || (!sBattle && finished >= state->driverCount - 1))
     {
-        *((u8*)state + 0x7E8) = 0;
+        state->finishState = 0;
         return TRUE;
     }
     return FALSE;
@@ -2284,8 +2282,8 @@ bool32 ring_finishRace(void)
             }
             else
             {
-                Driver* driver = ((Driver**)((u8*)state + 0xC38))[i];
-                sPlaces[i] = ((u8*)driver)[0xEC];
+                Driver* driver = state->rankedDrivers[i];
+                sPlaces[i] = driver->playerId;
             }
         }
         if (sGame == GP_MODE)
@@ -2428,7 +2426,7 @@ static bool32 results_main(void)
         /* Populate native racer totals and use the original eight-racer
          * standings builder, including its own tie and human/CPU rules. */
         for (i = 0; i < 8; i++)
-            ((u8*)gSceneState.raceState.drivers[i])[0xC4] = sGPPoints[i];
+            gSceneState.raceState.drivers[i]->points = sGPPoints[i];
         results_buildStandings();
         for (i = 0; i < 8; i++)
         {
