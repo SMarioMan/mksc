@@ -10,8 +10,8 @@ source = r'''
 #include "oam.O3.c"
 u8 ring_balloonAffineIndex[8];
 OamCellListEntry* ring_sOamCells;
-static OamCellListEntry expandedQueue[128];
-void ring_allocateSpriteQueue(void) { ring_sOamCells = expandedQueue; }
+static struct {u32 before;OamCellListEntry cells[96];u32 after;} expandedQueue;
+void ring_allocateSpriteQueue(void) { ring_sOamCells = expandedQueue.cells; }
 static u16 queuedTiles[128][4];
 int gSinTable[1024];
 void* memset(void* dst,int value,unsigned count) { volatile u8* at=dst;while(count--)*at++=value;return dst; }
@@ -27,6 +27,14 @@ int main(void) {
  volatile u32* result=(volatile u32*)0x02000000;
  int test,i,offset,affine,nextOffset,nextAffine,nativeResult,actualResult;
  state=0x852974b3;
+ /* Reset must hide all objects while preserving tile and affine words. */
+ for(i=0;i<512;i++) before[i]=sBuffer[i]=random32();
+ oam_3002188=1;oam_300218C=sCopyDisabled=0;
+ oam_reset();
+ for(i=0;i<512;i++) {
+  u16 wanted=(i%4<2)?(i%4?0:0x200):before[i];
+  if(sBuffer[i]!=wanted) {result[0]=0xbad00006;result[1]=i;for(;;){}}
+ }
  for(test=0;test<16384;test++) {
   u16 data[4]; OamCell original, actual;
   result[5]=test;
@@ -61,7 +69,8 @@ int main(void) {
  for (test=0;test<2;test++) {
   Vec2s16 position={120,80}; struc_6 priority;
   u32 seen[4]={0,0,0,0}; int capacity=test?128:32;
-  ring_sOamCells=test?expandedQueue:0;
+  expandedQueue.before=0x13579bdf;expandedQueue.after=0x2468ace0;
+  ring_sOamCells=test?expandedQueue.cells:0;
   sBufferOffset=sNextAffineId=sCellListEntryCount=0;
   sCellListHead=sCellListTail=0;sCopyDisabled=1;oam_3002188=1;oam_300218C=0;
   for(i=0;i<128;i++) {
@@ -71,6 +80,7 @@ int main(void) {
   }
   if(sCellListEntryCount!=capacity) {result[0]=0xbad00002;result[1]=test;for(;;){}}
   oam_update();
+  if(expandedQueue.before!=0x13579bdf||expandedQueue.after!=0x2468ace0) {result[0]=0xbad00005;result[1]=test;for(;;){}}
   if(sBufferOffset!=capacity*4) {result[0]=0xbad00003;result[1]=test;for(;;){}}
   for(i=0;i<capacity;i++) {
    u32 tile=sBuffer[i*4+2]&1023;

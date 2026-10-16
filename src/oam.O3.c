@@ -410,7 +410,7 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
     OamCell* cell;
     OamCell v20;
 #ifdef MKSC_RING
-    if (ring_active() && !a6 && !rotation && ((!scaleX || !scaleY) || (scaleX == 256 && scaleY == 256)))
+    if (!a6 && !rotation && ((!scaleX || !scaleY) || (scaleX == 256 && scaleY == 256)) && ring_active())
     {
         int count = *cellData++, offset = sBufferOffset;
         while (count-- > 0 && offset <= 511)
@@ -466,12 +466,24 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
     }
     if (sCellListEntryCount <= OAM_CELL_LAST)
     {
+#ifdef MKSC_RING
+        /* Keep the original fast IWRAM slots. Only overflow cells need the
+         * frame-heap allocation; sorting and rendering follow the same links. */
+        v12 = sCellListEntryCount < 32 ? &sCellListEntries[sCellListEntryCount]
+             : &ring_sOamCells[sCellListEntryCount - 32];
+#else
         v12 = &OAM_CELL_ENTRIES[sCellListEntryCount];
+#endif
         v13 = sCellListHead;
         if (!v13)
         {
+#ifdef MKSC_RING
+            sCellListTail = v12;
+            sCellListHead = v12;
+#else
             sCellListTail = &OAM_CELL_ENTRIES[sCellListEntryCount];
             sCellListHead = &OAM_CELL_ENTRIES[sCellListEntryCount];
+#endif
             v12->prev = v13;
             v12->next = v13;
         }
@@ -483,11 +495,19 @@ void oam_renderCellData(const u16* cellData, Vec2s16* position, int scaleX, int 
             v12->next = 0;
             sCellListTail = v12;
         }
+#ifdef MKSC_RING
+        v16 = &v12->field8;
+#else
         v16 = &OAM_CELL_ENTRIES[sCellListEntryCount].field8;
+#endif
         v16->field0 = a6->field0;
         v16->priority = a6->priority;
         v16->priority += ((cellData[3] & 0xC00) << 16);
+#ifdef MKSC_RING
+        cell = &v12->cell;
+#else
         cell = &OAM_CELL_ENTRIES[sCellListEntryCount].cell;
+#endif
         cell->cellData = cellData;
         cell->offsetX = position->x;
         cell->offsetY = position->y;
@@ -647,11 +667,23 @@ void oam_reset(void)
     sCellListTail = 0;
     sCellListEntryCount = 0;
     i = 0;
+#ifdef MKSC_RING
+    /* Hide the same 128 objects without changing their tile/matrix words.
+     * Eight stores per iteration avoid a branch for every single object. */
+    while (i < sizeof(sBuffer) / 4)
+    {
+        u32* objects = (u32*)sBuffer + i;
+        objects[0] = objects[2] = objects[4] = objects[6] = 0x200;
+        objects[8] = objects[10] = objects[12] = objects[14] = 0x200;
+        i += 16;
+    }
+#else
     while (i < sizeof(sBuffer) / 4)
     {
         ((u32*)sBuffer)[i] = 0x200;
         i += 2;
     }
+#endif
     sCopyDisabled = 1;
 }
 

@@ -901,7 +901,7 @@ void ring_allocateSpriteQueue(void)
 {
     extern OamCellListEntry* ring_sOamCells;
     if (!ring_sOamCells)
-        ring_sOamCells = frmheap_calloc(&gSceneState.raceState.frameHeap, 128, sizeof(OamCellListEntry));
+        ring_sOamCells = frmheap_calloc(&gSceneState.raceState.frameHeap, 96, sizeof(OamCellListEntry));
     if (!ring_sOamCells) sRing.failed = TRUE;
 }
 
@@ -2392,6 +2392,11 @@ static bool32 results_main(void)
     REG_BLDCNT = 0;
     REG_WININ = REG_WINOUT = 0x3F3F;
     REG_DISPCNT = 0x100;
+#ifdef MKSC_RING_MUSIC_SHARED
+    /* Local finish cues are suppressed while others race. Start the common
+     * result cue here even when the host was the last unfinished racer. */
+    m4aSongNumStartOrChange(SONG_RACE_END_JINGLE_SUCCESS);
+#endif
     while (1)
     {
         main_frameProc();
