@@ -15,11 +15,13 @@ p.add_argument('--workers',type=int,default=3,choices=range(1,5))
 p.add_argument('--courses',nargs='+',default=[f'{s}-{i}' for s in ('battle','retro-battle') for i in range(4)]+[f'{s}-{i}' for s in ('super','retro') for i in range(20)])
 p.add_argument('--frames',type=int,default=18000)
 p.add_argument('--profile-frames',type=int,default=300)
+p.add_argument('--profile-from',type=int,default=6000,help='Start instruction profiling at this video frame')
 p.add_argument('--analyze-only',action='store_true',help='Recheck existing captured JSON/video/profile files')
 p.add_argument('--resume',action='store_true',help='Recheck completed passing cases and run the remainder')
 p.add_argument('--audio-policy',choices=('shared','normal'),default='shared')
 p.add_argument('--complete',action='store_true',help='Run each race through results, up to 70000 frames')
 a=p.parse_args();a.results.mkdir(parents=True,exist_ok=True)
+if a.profile_from<0 or a.profile_frames<0 or a.profile_from+a.profile_frames>100000:p.error('Profile interval must be within video frames 0..100000')
 assert hashlib.sha1(a.bios.read_bytes()).hexdigest()=='300c20df6731a33952ded8c436f7f186d25d3492'
 # A ROM hash alone cannot validate captures after changing the emulator.
 # Include adjacent shared cores as well: rebuilding libmgba need not relink
@@ -48,11 +50,16 @@ for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines(
  f,i,k=line.split(',')
  if int(i)==0 and int(f)<2230:base.append((int(f),int(k,16)))
 reports={};completed={}
-if a.resume and (a.results/'summary.json').exists():
+if a.analyze_only and not (a.results/'summary.json').exists():p.error('Reanalysis requires the captured summary manifest')
+if (a.resume or a.analyze_only) and (a.results/'summary.json').exists():
  previous=json.loads((a.results/'summary.json').read_text())
+ if a.analyze_only:
+  assert previous.get('profile_window',{'from':6000,'frames':300})=={'from':a.profile_from,'frames':a.profile_frames},'Reanalysis must retain the captured profile interval'
+  policies={v['audio_policy'] for v in previous['passed'].values()}
+  assert not policies or policies=={a.audio_policy},'Reanalysis must retain the captured audio policy'
  assert previous['rom_sha256']==hashlib.sha256(rom.read_bytes()).hexdigest(),'Resume requires the same ROM'
- assert previous.get('runtime_fingerprint')==runtime_fingerprint,'Resume requires the same emulator executable and shared core'
- completed={k:v for k,v in previous['passed'].items() if v.get('audio_policy')==a.audio_policy}
+ assert sorted(previous.get('runtime_fingerprint',{}).values())==sorted(runtime_fingerprint.values()),'Captured results require the same emulator executable and shared core bytes'
+ completed={k:v for k,v in previous['passed'].items() if v.get('audio_policy')==a.audio_policy and v.get('profile_from',6000)==a.profile_from and v.get('profile_frames',300)==a.profile_frames}
  if a.profile_frames:
   # Legacy instruction stepping changed the scheduler's yield points. Only
   # reuse captures made with observation inside the normal run-loop quantum.
@@ -86,7 +93,7 @@ def run(case):
  '--frames',str(70000 if a.complete and not battle else a.frames),'--input',str(inputs),
  '--video-from','6000','--video-log',str(video),
  '--sound-table',hex(symbols['gMPlayTable']),'--audio-state',hex(symbols['ring_audioTiming']),'--timing-state',hex(symbols['ring_frameTiming']),
- '--profile-file',str(profile),'--profile-until',str(6000+a.profile_frames),'--dump',hex(courseBase),'--dump-words',str(courseWords),
+ '--profile-file',str(profile),'--profile-from',str(a.profile_from),'--profile-until',str(a.profile_from+a.profile_frames),'--dump',hex(courseBase),'--dump-words',str(courseWords),
  '--barrier-before-input','--barrier-state',hex(symbols['sRing']),'--screens',str(a.results/case)]
  if not battle:command.extend(['--autodrive-frame','5500','--autofire'])
  if not battle:
@@ -122,7 +129,7 @@ def run(case):
  for i,rows in enumerate(peers):
   assert len(rows)>1000,(case,i,'Insufficient moving gameplay',len(rows))
   rates.append((rows[-1]['simulationFrames']-rows[0]['simulationFrames'])/(rows[-1]['frame']-rows[0]['frame']))
-  windows.append(min((rows[j+300]['simulationFrames']-rows[j]['simulationFrames'])/300 for j in range(0,len(rows)-300,300)))
+  windows.append(min((rows[j+300]['simulationFrames']-rows[j]['simulationFrames'])/300 for j in range(len(rows)-300)))
   mixgaps.append((rows[-1]['audioMissedFrames']-rows[0]['audioMissedFrames']) - (rows[-1]['audioRecoveredFrames']-rows[0]['audioRecoveredFrames']))
   assert max(r['invalidObjects'] for r in rows)==0,(case,i,'Invalid sprites')
   assert all(r['balloonForeignPixels']==0 for r in rows) if battle else True
@@ -133,7 +140,7 @@ def run(case):
  for row in csv.DictReader(profile.open()):
   pc=int(row['pc'],16);at=bisect.bisect_right(addresses,pc)-1;name=functions[at][1] if at>=0 else f'{pc:08x}'
   costs[name]=costs.get(name,0)+int(row['cycles'])
- summary={'course':case,'audio_policy':a.audio_policy,'profile_scheduling':data.get('profileScheduling','legacy'),'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,'distinct_racer_positions':movement,
+ summary={'course':case,'audio_policy':a.audio_policy,'profile_scheduling':data.get('profileScheduling','legacy'),'profile_from':a.profile_from,'profile_frames':a.profile_frames,'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,'distinct_racer_positions':movement,
  'profile_cycles':sorted(costs.items(),key=lambda x:-x[1])[:30],
  'timing':{k:{'median':statistics.median(r[k] for r in peers[0]),'p99':sorted(r[k] for r in peers[0])[int(len(peers[0])*.99)],'max':max(r[k] for r in peers[0])} for k in ('exchangeCycles','renderCycles','publishCycles','mixCycles')}}
  summary['timing_by_player']=[{k:{'median':statistics.median(r[k] for r in rows),'p99':sorted(r[k] for r in rows)[int(len(rows)*.99)],'max':max(r[k] for r in rows)} for k in ('exchangeCycles','renderCycles','publishCycles','mixCycles')} for rows in peers]
@@ -151,5 +158,5 @@ with ThreadPoolExecutor(max_workers=a.workers) as pool:
   try:
    report=future.result();reports[case]=report;print(f"PASS {case}: min rate {min(report['rates']):.3f}; all queued audio segments prepared",flush=True)
   except Exception as e:failures.append(str(e));print(f'FAIL {case}: {e}',flush=True)
-  (a.results/'summary.json').write_text(json.dumps({'rom_sha256':hashlib.sha256(rom.read_bytes()).hexdigest(),'runtime_fingerprint':runtime_fingerprint,'passed':reports,'failures':failures},indent=2))
+  (a.results/'summary.json').write_text(json.dumps({'rom_sha256':hashlib.sha256(rom.read_bytes()).hexdigest(),'runtime_fingerprint':runtime_fingerprint,'profile_window':{'from':a.profile_from,'frames':a.profile_frames},'audio_policy':a.audio_policy,'passed':reports,'failures':failures},indent=2))
 if failures:raise SystemExit('Course regressions failed: '+'; '.join(failures))

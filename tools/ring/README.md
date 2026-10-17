@@ -233,7 +233,7 @@ checks local voice ownership, remote-player suppression and PCM deadlines,
 and retains eight per-instance WAV files.
 
 `test_all_courses.py` profiles eight moving racers with items on all 20 Super
-courses, 20 Retro courses and four Battle arenas. `--complete` runs races
+courses, 20 Retro courses and all eight GBA/SNES Battle arenas. `--complete` runs races
 through the native result transition. Reports preserve instruction-cycle
 profiles, video-by-video simulation/audio timing and screenshots. Profiles
 record individual ARM/Thumb instruction addresses, accounting for the CPU's
@@ -249,6 +249,11 @@ checks require both a mean and every measured 300-frame window to reach 95%
 of the video rate; emulator FPS alone is insufficient.
 `--resume` rechecks already passing captures from the same ROM and runs the
 remaining cases; `--analyze-only` rechecks captures without running emulation.
+`--profile-from N --profile-frames N` targets the instruction profile at a
+slow interval identified in the video log. Every overlapping 300-frame window
+is checked, including intervals crossing the old sampling boundaries.
+Reanalysis requires the captured ROM, emulator/core bytes, music policy and
+profile interval; moving identical binaries to another directory is allowed.
 Audio recordings also accept `--audio-policy` and `--boot-ring` for testing
 each variant with the appropriate inputs and sound ownership checks.
 
