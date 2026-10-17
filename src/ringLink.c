@@ -1425,6 +1425,21 @@ static void nativeLabelSetPixel(u8* tiles, int width, int x, int y, int color)
 /* New digits preserve the stock label's border, lettering and background.
  * Only the unavailable player/count numeral is replaced. Literal LZ blocks
  * let the original menu loaders consume the generated art without overrides. */
+/* Draw at the native pixel sizes, with consistent stems and rounded corners.
+ * Resampling the connection-screen 5x7 font made the menu numerals uneven. */
+static const u8 sPlayerNumerals[4][14] = {
+    {0x7F,0xFF,0xE0,0xE0,0xE0,0xFC,0xFE,0x07,0x07,0x07,0xE7,0xE7,0x7E,0x3C},
+    {0x3C,0x7E,0xE0,0xE0,0xE0,0xFC,0xFE,0xE7,0xE7,0xE7,0xE7,0xE7,0x7E,0x3C},
+    {0xFF,0xFF,0x07,0x07,0x0E,0x0E,0x1C,0x1C,0x38,0x38,0x38,0x38,0x38,0x38},
+    {0x3C,0x7E,0xE7,0xE7,0xE7,0x7E,0x3C,0x7E,0xE7,0xE7,0xE7,0xE7,0x7E,0x3C}
+};
+static const u8 sCountNumerals[4][10] = {
+    {0x3F,0x3F,0x30,0x3E,0x3F,0x03,0x03,0x33,0x3E,0x1C},
+    {0x1E,0x3E,0x30,0x30,0x3E,0x3F,0x33,0x33,0x3F,0x1E},
+    {0x3F,0x3F,0x03,0x06,0x06,0x0C,0x0C,0x18,0x18,0x18},
+    {0x1E,0x3F,0x33,0x33,0x1E,0x1E,0x33,0x33,0x3F,0x1E}
+};
+
 static void nativeLabelNumber(u8* tiles, int width, int number)
 {
     u16 raster[18];
@@ -1433,21 +1448,25 @@ static void nativeLabelNumber(u8* tiles, int width, int number)
     int player = width == 64;
     int left = player ? 39 : 7;
     int top = player ? 2 : 3;
-    int height = player ? 13 : 10;
+    int height = player ? 14 : 10;
     int background = player ? 13 : 12;
-    /* Sampling the old digit's neighbour painted bevel pixels across whole
-     * rows. Clear only its rectangle, keeping the native border and kart. */
+    /* The stock 4 extends through x=48 and its outline through x=49.
+     * Erase the whole numeral; retain the diagonal bevel at x=47+y. */
     for (row = player ? 1 : 2; row < (player ? 16 : 14); row++)
-        for (col = player ? 38 : 6; col < (player ? 48 : 16); col++)
+    {
+        int right = player ? (row < 3 ? 47 + row : 50) : 16;
+        for (col = player ? 37 : 6; col < right; col++)
             nativeLabelSetPixel(tiles, width, col, row, background);
-    /* Scale the glyph once. Neighbour tests then use row masks, avoiding
-     * thousands of software divides while the menu audio queue is active. */
+    }
+    /* Neighbour tests use native-size row masks, avoiding resampling and
+     * software divides while the menu audio queue is active. */
     for (row = 0; row < 18; row++) raster[row] = 0;
     for (row = 0; row < height; row++)
     {
-        u32 bits = sFont[26 + number][row * 7 / height];
+        u32 bits = player ? sPlayerNumerals[number - 5][row] :
+            sCountNumerals[number - 5][row] << (row < 4 ? 0 : row < 7 ? 1 : 2);
         for (col = 0; col < 8; col++)
-            if (bits & (16 >> (col * 5 / 8))) rows[row] |= 1 << (col + 1);
+            if (bits & (128 >> col)) rows[row] |= 1 << (col + 1);
     }
     /* Match the native numeral's dark outline, inner shadow and highlight. */
     for (row = -1; row <= height; row++)
@@ -1455,7 +1474,7 @@ static void nativeLabelNumber(u8* tiles, int width, int number)
         u32 neighbours = rows[row - 1] | rows[row] | rows[row + 1];
         u32 outline = neighbours | neighbours << 1 | neighbours >> 1;
         u32 shadow = rows[row - 1] << 1;
-        int ink = player ? 10 : 1 + row * 6 / height;
+        int ink = player ? 10 : 1 + row * 6 / (height - 1);
         for (col = -1; col <= 8; col++)
         {
             u32 pixel = 1 << (col + 1);
@@ -1463,6 +1482,37 @@ static void nativeLabelNumber(u8* tiles, int width, int number)
             if (outline & pixel) nativeLabelSetPixel(tiles, width, left + col, top + row, player ? 12 : 15);
             if (shadow & pixel) nativeLabelSetPixel(tiles, width, left + col, top + row, player ? 11 : 14);
             if (rows[row] & pixel) nativeLabelSetPixel(tiles, width, left + col, top + row, ink);
+        }
+    }
+}
+
+/* The original marker has a shaded halo outside its white numeral.
+ * Replace the complete halo, rather than leaving lines from the old 1. */
+static void nativeMarkerNumber(u8* marker, int digit)
+{
+    static const u8 glyphs[4][7] = {
+        {0x3E,0x30,0x3C,0x06,0x06,0x36,0x1C},
+        {0x1C,0x30,0x3C,0x36,0x36,0x36,0x1C},
+        {0x3E,0x3E,0x06,0x0C,0x0C,0x18,0x18},
+        {0x1C,0x36,0x36,0x1C,0x36,0x36,0x1C}
+    };
+    u16 raster[11];
+    u16* rows = raster + 2;
+    int row, col;
+    for (row = 0; row < 11; row++) raster[row] = 0;
+    for (row = 0; row < 7; row++)
+        for (col = 0; col < 6; col++)
+            if (glyphs[digit - 5][row] & (32 >> col)) rows[row] |= 1 << (col + 2);
+    for (row = -1; row < 8; row++)
+    {
+        u32 neighbours = rows[row - 1] | rows[row] | rows[row + 1];
+        u32 outline = neighbours | neighbours << 1 | neighbours >> 1;
+        u32 halo = outline | outline << 1 | outline >> 1;
+        for (col = -2; col < 8; col++)
+        {
+            u32 bit = 1 << (col + 2);
+            int color = rows[row] & bit ? 1 : outline & bit ? 6 : halo & bit ? 5 : 4;
+            nativeLabelSetPixel(marker, 16, 5 + col, 4 + row, color);
         }
     }
 }
@@ -1885,16 +1935,7 @@ static int ring_chooseNativeCharacters(u8* characters, int mode, int engine)
         {
             u8* marker = (u8*)tiles + i * 128;
             CpuCopy16(native, marker, 128);
-            for (row = 3; row < 13; row++)
-                for (col = 4; col < 12; col++)
-                    nativeLabelSetPixel(marker, 16, col, row, 4);
-            for (row = 0; row < 7; row++)
-                for (col = 0; col < 5; col++)
-                    if (sFont[31 + i][row] & (16 >> col))
-                    {
-                        nativeLabelSetPixel(marker, 16, 6 + col, 5 + row, 6);
-                        nativeLabelSetPixel(marker, 16, 5 + col, 4 + row, 1);
-                    }
+            nativeMarkerNumber(marker, i + 5);
             for (row = 0; row < 16; row++)
                 for (col = 0; col < 16; col++)
                 {

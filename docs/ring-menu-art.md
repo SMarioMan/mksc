@@ -13,6 +13,11 @@ baseline. Player colors are blue, orange, cyan and purple respectively.
 Count badges should preserve the stock “-P” lettering and shaded numeral style.
 Markers should preserve the stock square frame and use a clearly legible numeral.
 
+The built-in 5–8 numerals are drawn at each asset's native size, with rounded
+stems, shaded count digits and the original borders. Replacement clears the
+entire old numeral and its halo, including the outer pixels of the stock 4,
+so old horizontal strokes cannot remain beside the new digits.
+
 Export private stock references with:
 
 ```sh
