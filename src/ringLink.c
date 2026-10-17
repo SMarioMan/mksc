@@ -1239,7 +1239,6 @@ static void screen(const char* heading)
     DMA_FILL(3, 0x0808, (void*)sMenuPixels, 240 * 26, 16);
     DMA_FILL(3, 0x0909, (void*)(sMenuPixels + 120 * 26), 240 * (160 - 26), 16);
     text(12, 10, heading, 0x001F);
-    text(6, 148, "A OK B BACK", 0x7FFF);
 }
 
 /* Sample the stock lettering already loaded by title_init. Keeping palette
@@ -1722,10 +1721,13 @@ void ring_nativeMenuFrame(void)
     if ((phase == 3 || phase == 4) && (readyBefore & (1 << sRing.id)) &&
         !(sNativeCharactersReady & (1 << sRing.id))) gKeyTriggerBuf[0] |= B_BUTTON;
     if (phase == 4 && sNativeCharacterConfirm) gKeyTriggerBuf[0] |= A_BUTTON;
-    if (sNativeCharacterBack)
+    if (sNativeCharacterBack == 1)
     {
+        /* Inject Back once. Re-entering phase 2 every frame restarts the
+         * stock exit animation forever and strands mode changes here. */
         sNativeCharacterMenu->characterPhases[0] = 2;
         gKeyTriggerBuf[0] = B_BUTTON;
+        sNativeCharacterBack = 2;
     }
 }
 
