@@ -1,4 +1,36 @@
-## Active review (2026-10-16)
+## Active review (2026-10-17)
+
+The native sixteen-entry script actor pool recycled player 1's persistent
+Lakitu on one console during an eight-player Bowser Castle 3 race. Its driver
+remained in the lap-banner state, so rescue never began and the consoles
+could not agree on results. Ring races now reserve sixteen more script actors
+from the checked scene heap. The original game build is unchanged. The failing
+real-BIOS race now reaches synchronized native results on all eight consoles,
+with one simulation update per video frame and no transport errors. Vs.,
+Battle and GP entry pass at every count from two through eight; GP fills all
+remaining slots with distinct CPUs. Evidence is in the private review-14
+script-pool captures.
+
+Native character Back is injected only once, letting its exit animation finish.
+Two/eight-player transitions from a retained late Vs. course into Battle and GP
+pass. The obsolete discovery-screen A/B instructions are removed; the lobby's
+stock link music and changing PCM remain verified. The clean ROM still matches
+SHA1 `9d327c030c3e2d9007990518594f70c3340ac56f`.
+
+Windows startup heap corruption remains under investigation. The user bisected
+it to emulator commit `07c2af334491c6d0db84c63ff9f90c6c22d81ef9`
+(repaired-history ID `4db58d156`). The separately corrected Windows argv ownership
+and null termination have portable ASan/UBSan coverage. Eight-window launch,
+gameplay, independent settings and replacement/closure pass under both Qt and
+SDL audio with the original software display on Linux. These checks do not
+certify Windows or physical audio output. OpenGL display coverage is being added.
+
+Strict course performance, player 5–8 art, optional restored-audio performance,
+and final combined BIOS/GUI/audio gates remain open. A camera-matrix cache trial
+matched 32,768 native projection cases, but its real Battle course still failed
+the worst-window gate; the trial was rejected and reverted.
+
+## Previous review (2026-10-16)
 
 New request: visible, real-time regression playback with sound is tracked in
 `ring-validation.json` under `visual_regression_review`. The launcher is

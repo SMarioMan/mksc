@@ -2,6 +2,7 @@
 #include "libunk/irq.h"
 #include "frameHeap.h"
 #include "actor.h"
+#include "actorList.h"
 #include "track.h"
 
 #define RACE_CUR_RACE_STATE_UNKNOWN_GP_MODE 0x100
@@ -61,7 +62,10 @@ typedef struct
     TrackDef* trackDef;
     u8 gapwtf[0x164];
     FrameHeap frameHeap;
-    u8 gap6EC[0xE8];
+    u8 gap6EC[0x30];
+    ActorList freeScriptActors; /* 0x71C: free 0x84-byte script actors. */
+    ActorList activeScriptActors; /* 0x724: banners, Lakitu and transient scripts. */
+    u8 gap72C[0xA8];
     u8 raceOptions;
     u8 gap7D5[2];
     u8 humanCount;

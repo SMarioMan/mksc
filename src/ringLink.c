@@ -1317,6 +1317,22 @@ u8 track_getRetroTrack(int track);
 bool32 race_main(void);
 int spm_menuCharIdxToCharId(int menuIndex);
 
+/* The native sixteen-entry script pool can evict a live Lakitu when eight
+ * humans also create lap banners and item effects. Preserve the stock pool's
+ * transient budget while allowing all eight persistent rescue actors. */
+static bool32 reserveRingScriptActors(RaceState* state)
+{
+    enum { NATIVE_SCRIPT_ACTOR_BYTES = 0x84, EXTRA_SCRIPT_ACTORS = 16 };
+    int i;
+    for (i = 0; i < EXTRA_SCRIPT_ACTORS; i++)
+    {
+        Actor* actor = frmheap_calloc(&state->frameHeap, 1, NATIVE_SCRIPT_ACTOR_BYTES);
+        if (!actor) return FALSE;
+        actlist_insertHead(&state->freeScriptActors, actor);
+    }
+    return TRUE;
+}
+
 static void prepareRace(const u8* characters, int mode, int engine, int course, int retro)
 {
     RaceState* state = &gSceneState.raceState;
@@ -1338,6 +1354,7 @@ static void prepareRace(const u8* characters, int mode, int engine, int course, 
     if (!sBattle && (course < 0 || course > 19)) { sRing.failed = TRUE; return; }
     scene_setVBlankFunc(0);
     sub_8048C74(state);
+    if (!reserveRingScriptActors(state)) { sRing.failed = TRUE; return; }
     *(vu8*)0x0300000C = 3;
     sub_8015268(0);
     sub_801528C(0);
