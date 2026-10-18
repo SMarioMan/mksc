@@ -19,8 +19,11 @@ obsolete thirteen-test total.
 The optional map-only chain member is in development. It must not consume one
 of the eight racer slots. The emulator's initial nine-node wire test passes;
 ROM discovery, full-map rendering and combined GUI validation are still open.
-The broader flow suite also exposed a reconnect (`loss-2`) failure that remains
-under investigation.
+The reconnect replay now confirms the native track page after its entrance
+animation. Its old recording stopped on that connected page rather than
+starting the race. Corrected two/eight-player cable-loss recordings pass.
+All fourteen 2–8-player GP finish/advance checks also pass with stock scoring
+and working CPUs in every open slot.
 
 Eight tiled OpenGL windows now sustain full native updates and the target wall
 rate with both synchronization options enabled. Five-minute SDL runs pass with

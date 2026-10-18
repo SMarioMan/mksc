@@ -1217,7 +1217,17 @@
       "private_gui_rows_passed": 17,
       "private_gui_rows_skipped": 0,
       "map_spectator": "in_development",
-      "reconnect_loss_2": "failed; investigate"
+      "reconnect_loss": "two/eight-player cable-loss recovery passes after recording both native course confirmations",
+      "gp_finish_and_advance_cases": 14,
+      "gp_cpu_fill_player_counts": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
     }
   }
 }

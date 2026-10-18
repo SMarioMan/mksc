@@ -55,7 +55,7 @@ for n in a.players:
                         (3600,1),(3615,0),(3800,1),(3815,0),(4000,1),(4015,0)]:
                 rows.extend((f,i,k) for i in range(n if f in (3600,3615) else 1))
         else:
-            extra=['--break-frame','3600','--restore-frame','3900'];frames=8000
+            extra=['--break-frame','3600','--restore-frame','3900'];frames=10000
             rows.extend((3920,i,0) for i in range(n))
             for f,k in [(4100,1),(4115,0),(4700,8),(4715,0),(4820,128),(4835,0),
                         (4900,1),(4915,0),(5000,128),(5015,0),(5080,128),(5095,0),
@@ -63,6 +63,10 @@ for n in a.players:
             for f,k in [(5500,8),(5515,0),(5650,1),(5665,0),(5800,1),(5815,0),
                         (6000,1),(6015,0),(6200,1),(6215,0),(6350,1),(6365,0)]:
                 rows.extend((f,i,k) for i in range(n if f in (6000,6015) else 1))
+            # Native course selection has separate cup/track confirmations.
+            # The earlier replay ended on the connected track list instead
+            # of confirming it after the page's entrance animation.
+            rows.extend((f,0,k) for f,k in ((8200,1),(8215,0),(8500,1),(8515,0)))
         if case!='characters':rows.extend((frames-100,i,1) for i in range(n))
         name=f'{case}-{n}';inputs=a.results/(name+'.csv')
         inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
