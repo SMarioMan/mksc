@@ -254,6 +254,10 @@ slow interval identified in the video log. Every overlapping 300-frame window
 is checked, including intervals crossing the old sampling boundaries.
 Reanalysis requires the captured ROM, emulator/core bytes, music policy and
 profile interval; moving identical binaries to another directory is allowed.
+`--profile-player 0..7` profiles a particular console's camera rather than
+always the host. Use `timing_by_player` in the course report to identify the
+slow participant. The selected console is part of capture provenance too;
+resume/reanalysis cannot relabel a host instruction profile as a peer profile.
 Audio recordings also accept `--audio-policy` and `--boot-ring` for testing
 each variant with the appropriate inputs and sound ownership checks.
 

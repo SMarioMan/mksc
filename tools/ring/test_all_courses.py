@@ -16,6 +16,7 @@ p.add_argument('--courses',nargs='+',default=[f'{s}-{i}' for s in ('battle','ret
 p.add_argument('--frames',type=int,default=18000)
 p.add_argument('--profile-frames',type=int,default=300)
 p.add_argument('--profile-from',type=int,default=6000,help='Start instruction profiling at this video frame')
+p.add_argument('--profile-player',type=int,choices=range(8),default=0,help='Zero-based console to profile; choose the slow camera from timing_by_player')
 p.add_argument('--analyze-only',action='store_true',help='Recheck existing captured JSON/video/profile files')
 p.add_argument('--resume',action='store_true',help='Recheck completed passing cases and run the remainder')
 p.add_argument('--audio-policy',choices=('shared','normal'),default='shared')
@@ -55,11 +56,12 @@ if (a.resume or a.analyze_only) and (a.results/'summary.json').exists():
  previous=json.loads((a.results/'summary.json').read_text())
  if a.analyze_only:
   assert previous.get('profile_window',{'from':6000,'frames':300})=={'from':a.profile_from,'frames':a.profile_frames},'Reanalysis must retain the captured profile interval'
+  assert previous.get('profile_player',0)==a.profile_player,'Reanalysis must retain the captured profile console'
   policies={v['audio_policy'] for v in previous['passed'].values()}
   assert not policies or policies=={a.audio_policy},'Reanalysis must retain the captured audio policy'
  assert previous['rom_sha256']==hashlib.sha256(rom.read_bytes()).hexdigest(),'Resume requires the same ROM'
  assert sorted(previous.get('runtime_fingerprint',{}).values())==sorted(runtime_fingerprint.values()),'Captured results require the same emulator executable and shared core bytes'
- completed={k:v for k,v in previous['passed'].items() if v.get('audio_policy')==a.audio_policy and v.get('profile_from',6000)==a.profile_from and v.get('profile_frames',300)==a.profile_frames}
+ completed={k:v for k,v in previous['passed'].items() if v.get('audio_policy')==a.audio_policy and v.get('profile_from',6000)==a.profile_from and v.get('profile_frames',300)==a.profile_frames and v.get('profile_player',0)==a.profile_player}
  if a.profile_frames:
   # Legacy instruction stepping changed the scheduler's yield points. Only
   # reuse captures made with observation inside the normal run-loop quantum.
@@ -93,7 +95,7 @@ def run(case):
  '--frames',str(70000 if a.complete and not battle else a.frames),'--input',str(inputs),
  '--video-from','6000','--video-log',str(video),
  '--sound-table',hex(symbols['gMPlayTable']),'--audio-state',hex(symbols['ring_audioTiming']),'--timing-state',hex(symbols['ring_frameTiming']),
- '--profile-file',str(profile),'--profile-from',str(a.profile_from),'--profile-until',str(a.profile_from+a.profile_frames),'--dump',hex(courseBase),'--dump-words',str(courseWords),
+ '--profile-file',str(profile),'--profile-from',str(a.profile_from),'--profile-until',str(a.profile_from+a.profile_frames),'--trace-player',str(a.profile_player),'--dump',hex(courseBase),'--dump-words',str(courseWords),
  '--barrier-before-input','--barrier-state',hex(symbols['sRing']),'--screens',str(a.results/case)]
  if not battle:command.extend(['--autodrive-frame','5500','--autofire'])
  if not battle:
@@ -140,7 +142,7 @@ def run(case):
  for row in csv.DictReader(profile.open()):
   pc=int(row['pc'],16);at=bisect.bisect_right(addresses,pc)-1;name=functions[at][1] if at>=0 else f'{pc:08x}'
   costs[name]=costs.get(name,0)+int(row['cycles'])
- summary={'course':case,'audio_policy':a.audio_policy,'profile_scheduling':data.get('profileScheduling','legacy'),'profile_from':a.profile_from,'profile_frames':a.profile_frames,'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,'distinct_racer_positions':movement,
+ summary={'course':case,'audio_policy':a.audio_policy,'profile_scheduling':data.get('profileScheduling','legacy'),'profile_from':a.profile_from,'profile_frames':a.profile_frames,'profile_player':a.profile_player,'rates':rates,'minimum_300_frame_rates':windows,'audio_missed_frames':mixgaps,'distinct_racer_positions':movement,
  'profile_cycles':sorted(costs.items(),key=lambda x:-x[1])[:30],
  'timing':{k:{'median':statistics.median(r[k] for r in peers[0]),'p99':sorted(r[k] for r in peers[0])[int(len(peers[0])*.99)],'max':max(r[k] for r in peers[0])} for k in ('exchangeCycles','renderCycles','publishCycles','mixCycles')}}
  summary['timing_by_player']=[{k:{'median':statistics.median(r[k] for r in rows),'p99':sorted(r[k] for r in rows)[int(len(rows)*.99)],'max':max(r[k] for r in rows)} for k in ('exchangeCycles','renderCycles','publishCycles','mixCycles')} for rows in peers]
@@ -158,5 +160,5 @@ with ThreadPoolExecutor(max_workers=a.workers) as pool:
   try:
    report=future.result();reports[case]=report;print(f"PASS {case}: min rate {min(report['rates']):.3f}; all queued audio segments prepared",flush=True)
   except Exception as e:failures.append(str(e));print(f'FAIL {case}: {e}',flush=True)
-  (a.results/'summary.json').write_text(json.dumps({'rom_sha256':hashlib.sha256(rom.read_bytes()).hexdigest(),'runtime_fingerprint':runtime_fingerprint,'profile_window':{'from':a.profile_from,'frames':a.profile_frames},'audio_policy':a.audio_policy,'passed':reports,'failures':failures},indent=2))
+  (a.results/'summary.json').write_text(json.dumps({'rom_sha256':hashlib.sha256(rom.read_bytes()).hexdigest(),'runtime_fingerprint':runtime_fingerprint,'profile_window':{'from':a.profile_from,'frames':a.profile_frames},'profile_player':a.profile_player,'audio_policy':a.audio_policy,'passed':reports,'failures':failures},indent=2))
 if failures:raise SystemExit('Course regressions failed: '+'; '.join(failures))
