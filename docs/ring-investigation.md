@@ -1,5 +1,27 @@
 ## Active review (2026-10-18)
 
+Vs. and Battle now award 10/8/6/4/3/2/1/0 points by finishing position.
+Grand Prix still reads the original 9/6/3/1 table. All fourteen shared-audio
+Vs./Battle round cases pass at 2–8 players; normal-audio two/eight-player
+rounds also pass. The old ROM reproduces the reported scoreboard engine
+restart on P8. Results now stop both engine players and block their start and
+resume paths while the native world continues coasting. The same eight-player
+recording passes a full minute on results with no engine restart, unfilled
+PCM segment or late segment, and with the native results theme still playing.
+
+The discovery page displays white `B BACK`. The title label restores the R's
+clipped right outline, removes its extra upper-right corner pixel and centers
+the 56-pixel strip within its two sprites. Real-BIOS title/lobby checks pass.
+The private GUI run executes all 17 scenarios without skips and all 35 CTest
+targets pass. Release validation now checks named scenarios instead of an
+obsolete thirteen-test total.
+
+The optional map-only chain member is in development. It must not consume one
+of the eight racer slots. The emulator's initial nine-node wire test passes;
+ROM discovery, full-map rendering and combined GUI validation are still open.
+The broader flow suite also exposed a reconnect (`loss-2`) failure that remains
+under investigation.
+
 Eight tiled OpenGL windows now sustain full native updates and the target wall
 rate with both synchronization options enabled. Five-minute SDL runs pass with
 zero underruns at 60.02 FPS with native rendering workers and 59.97 FPS without

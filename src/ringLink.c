@@ -458,7 +458,11 @@ bool32 ring_preserveRaceDisplay(void)
 bool32 ring_resultsAudioBlocked(struct MusicPlayerInfo* player, struct SongHeader* song)
 {
     extern const struct Song gSongTable[];
-    return ring_preserveRaceDisplay() && player == gMPlayTable[0].info &&
+    if (!ring_preserveRaceDisplay()) return FALSE;
+    /* Coasting updates still adjust and restart the race's two engine
+     * players. Results retain the moving world, with a quiet engine mix. */
+    if (player == gMPlayTable[1].info || player == gMPlayTable[3].info) return TRUE;
+    return player == gMPlayTable[0].info &&
         song != gSongTable[sGame == GP_MODE ? SONG_014 : SONG_017].header;
 }
 static bool32 connectionError_main(void);
@@ -1283,10 +1287,9 @@ void ring_initTitleOption(void)
 {
     extern const u16* off_80D8E4C[];
     /* R from PLAYER, ING from SINGLE, LINK from SINGLE-PAK LINK. */
-    /* Include each glyph's outline, excluding the adjacent E/L columns.
-     * The former crops picked up the preceding E beside R and the following
-     * L beside ING, producing stray edges when the fragments were joined. */
-    static const s16 slices[3][4] = { {0,32,6,3}, {0,-33,18,10}, {5,25,25,33} };
+    /* Keep R's complete right outline, trimming only its extra corner
+     * pixel. Center the 56-pixel label within the two 32-pixel sprites. */
+    static const s16 slices[3][4] = { {0,32,7,4}, {0,-33,18,12}, {5,25,25,35} };
     u16 tiles[256];
     int i, row, col, x, offset;
     for (i = 0; i < 256; i++) tiles[i] = 0;
@@ -1295,6 +1298,7 @@ void ring_initTitleOption(void)
             for (col = 0; col < slices[i][2]; col++)
             {
                 u32 pixel = titlePixel(off_80D8E4C[slices[i][0]], slices[i][1] + col, row - 8);
+                if (!i && row == 3 && col == 6) pixel = 0;
                 x = slices[i][3] + col;
                 offset = (x / 32) * 128 + (row / 8) * 64 + ((x % 32) / 8) * 16 + (row % 8) * 2 + (x % 8) / 4;
                 tiles[offset] |= pixel << ((x % 4) * 4);
@@ -2137,6 +2141,7 @@ bool32 ring_main(void)
     text(12, 42, "CONNECT ALL GBAS IN A RING", 0x7FFF);
     text(12, 60, "PRESS START ON ONE CONSOLE", 0x03FF);
     text(12, 78, "WAITING FOR OTHER PLAYERS", 0x7FFF);
+    text(12, 140, "B BACK", 0x7FFF);
     sMenuReady = TRUE;
     /* Discovery polls without the normal frame loop. Continue servicing
      * MP2000 every VBlank so the last title sample cannot loop indefinitely. */
@@ -2361,15 +2366,11 @@ bool32 ring_finishRace(void)
             for (i = 0; i < 8; i++) if (sPlaces[i] < 8) sGPPoints[sPlaces[i]] += _080DB0A8[i + 1];
             if (sGPRace == 3) sGPCupComplete = 1;
         }
-        else if (sBattle)
-        {
-            if (sPlaces[0] < sRing.count) sRoundScores[sPlaces[0]]++;
-        }
         else
         {
-            extern const u8 _080DB0A8[];
+            static const u8 linkPlacePoints[8] = {10,8,6,4,3,2,1,0};
             for (i = 0; i < sRing.count; i++)
-                sRoundScores[sPlaces[i]] += _080DB0A8[i + 1];
+                sRoundScores[sPlaces[i]] += linkPlacePoints[i];
         }
         scene_setMainFunc(results_main);
     }
@@ -2520,6 +2521,8 @@ static bool32 results_main(void)
 #ifdef MKSC_RING_MUSIC_SHARED
     sMusicRacing = FALSE;
 #endif
+    m4aMPlayStop(gMPlayTable[1].info);
+    m4aMPlayStop(gMPlayTable[3].info);
     results_loadStandingsGraphics();
     ring_loadResultsHeading();
     for (i = 0; i < (sGame == GP_MODE ? 8 : sRing.count); i++)

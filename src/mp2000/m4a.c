@@ -53,6 +53,9 @@ void UnusedDummyFunc(void)
 
 void MPlayContinue(struct MusicPlayerInfo* mplayInfo)
 {
+#ifdef MKSC_RING
+    if (ring_resultsAudioBlocked(mplayInfo, mplayInfo->songHeader)) return;
+#endif
 #ifdef MKSC_RING_MUSIC_SHARED
     /* All song-number resume helpers eventually use this entry point. */
     if (mplayInfo == gMPlayTable[0].info && ring_sharedMusicMuted()) return;

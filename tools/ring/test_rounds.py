@@ -86,7 +86,8 @@ def run(n,mode):
                '--release-inputs-scene',hex(symbols['results_main'] | 1),
                '--screens',str(a.results/name)]
     if a.results_frames >= 600:
-        command += ['--video-log',str(a.results/(name+'-video.csv')),'--sound-table',hex(symbols['gMPlayTable'])]
+        command += ['--video-log',str(a.results/(name+'-video.csv')),'--sound-table',hex(symbols['gMPlayTable']),
+                    '--audio-state',hex(symbols['ring_audioTiming'])]
     if a.shared_audio:
         mixer=struct.unpack_from('<I',rom_data,symbols['gMPlayTable']-0x08000000)[0]
         command += ['--keys-address',hex(mixer),'--key-slots','4']
@@ -111,6 +112,11 @@ def run(n,mode):
             frames=[r for r in observed if r['player']==player and r['sceneMain']==symbols['results_main']|1]
             assert len(frames)>=a.results_frames-5,(name,player,'Results exited prematurely',len(frames))
             assert all(r['dispcnt']&7==1 and not r['dispcnt']&128 for r in frames[10:]),(name,player,'Results lost the native course display')
+            assert all(r['engineHeader']==0 for r in frames[10:]),(name,player,'Engine audio restarted on the scoreboard')
+            for channel in (1,3):
+                assert frames[-1][f'audioStarts{channel}']==frames[10][f'audioStarts{channel}'],(name,player,'Results restarted a local or remote engine',channel)
+            assert frames[-1]['audioLateSegments']==frames[10]['audioLateSegments'],(name,player,'Scoreboard PCM missed its deadline')
+            assert frames[-1]['audioMissedFrames']-frames[10]['audioMissedFrames']==frames[-1]['audioRecoveredFrames']-frames[10]['audioRecoveredFrames'],(name,player,'Unfilled scoreboard PCM segment')
             if mode=='vs':
                 assert len({r['kartPosition0'] for r in frames[30:]})>10,(name,player,'Results racer stopped moving')
             if not a.shared_audio or player==0:
@@ -144,11 +150,8 @@ def run(n,mode):
         places = list(raw[symbols['sPlaces']-dumpBase:symbols['sPlaces']-dumpBase+n])
         scores = list(struct.unpack_from('<8H',raw,symbols['sRoundScores']-dumpBase))[:n]
         assert sorted(places) == list(range(n)), (name,places)
-        if mode == 'battle':
-            assert sum(scores) == 1 and scores[places[0]] == 1, (name,places,scores)
-        else:
-            awards = rom_data[symbols['_080DB0A8'] - 0x08000000 + 1:][:n]
-            assert [scores[player] for player in places] == list(awards), (name,places,scores, list(awards))
+        awards = [10,8,6,4,3,2,1,0][:n]
+        assert [scores[player] for player in places] == awards, (name,places,scores,awards)
         if mode == 'battle':
             arena=struct.unpack_from('<I',rom_data,symbols['gBattleCup']-0x08000000+12)[0]
             assert node['game']['headerIndex']==arena,(name,'Wrong Battle completion arena')
@@ -158,7 +161,7 @@ def run(n,mode):
             assert sum(r['lap'] >= 4 for r in node['game']['drivers'][:n]) >= n-1, (name,node['game'])
         states.append((places,scores,[r['position'] for r in node['game']['drivers'][:n]]))
     assert len(set(rounds)) == 1 and all(s == states[0] for s in states), (name,rounds,states)
-    return f'PASS {name}: complete round, {n} ranked players, matching positions and '+('win counts' if mode=='battle' else 'GP point awards')
+    return f'PASS {name}: complete round, {n} ranked players, matching positions and 10/8/6/4/3/2/1/0 link awards'
 with ThreadPoolExecutor(max_workers=a.workers) as pool:
     futures = [pool.submit(run,n,mode) for n in a.players for mode in a.modes]
     failures = []

@@ -1177,6 +1177,47 @@
       "padding": 1024,
       "opaque_asset_coincidences": 18,
       "passed": true
+    },
+    "latest_followup": {
+      "link_place_points": [
+        10,
+        8,
+        6,
+        4,
+        3,
+        2,
+        1,
+        0
+      ],
+      "gp_place_points": "native table unchanged",
+      "shared_vs_battle_complete_cases": 14,
+      "shared_player_counts": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "normal_vs_battle_complete_player_counts": [
+        2,
+        8
+      ],
+      "scoreboard_audio": {
+        "old_p8_engine_restart_reproduced": true,
+        "new_eight_player_results_frames": 3600,
+        "engine_restarts": 0,
+        "unfilled_pcm_segments": 0,
+        "late_segments": 0,
+        "results_music_and_moving_background": "passed"
+      },
+      "title_label": "complete R outline, trim upper-right corner, centered 56-pixel strip",
+      "discovery_back_hint": true,
+      "private_gui_rows_passed": 17,
+      "private_gui_rows_skipped": 0,
+      "map_spectator": "in_development",
+      "reconnect_loss_2": "failed; investigate"
     }
   }
 }
