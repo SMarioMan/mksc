@@ -41,12 +41,15 @@
       "rom_build": "builds-v8",
       "crash_reproduced": false
     },
-    "extended_check": "Historical extended checks below; latest V26 Qt/V27 SDL five-minute runs passed in review-11. The combined V27 BIOS suite still fails strict gates (review_12).",
+    "extended_check": "Current V28 five-minute Qt and SDL checks pass in review-14, including SDL with the native rendering worker off. Full retained Battle-candidate and optional-build gates remain open.",
     "extended_current": {
-      "build": "builds-v22",
+      "build": "builds-v28",
       "backend": "Qt/PulseAudio",
-      "frames": 18000,
+      "display": "OpenGL",
+      "native_render_worker": true,
+      "frames": 17918,
       "status": "passed",
+      "real_bios": true,
       "gate_requires_zero": true,
       "fps": 60.0,
       "underrun_events_per_output": [
@@ -69,8 +72,9 @@
         0,
         0
       ],
-      "longest_host_frame_gap_ms": 63.98,
-      "evidence": "/workspace/.setup/results/review-5/gui-qt-primed-v22.log"
+      "longest_host_frame_gap_ms": 72.62,
+      "change_commit": "b8dda7df1",
+      "evidence": "/workspace/.setup/results/review-14/visual-opengl-fresh-prebuffer.log"
     },
     "interval_cache_minute": {
       "build": "builds-v16",
@@ -302,6 +306,36 @@
       ],
       "stock_ring_topology_roundtrip": true,
       "evidence": "/workspace/.setup/results/review-7/gui-primed-high-rate-two.log"
+    },
+    "extended_v22": {
+      "build": "builds-v22",
+      "backend": "Qt/PulseAudio",
+      "frames": 18000,
+      "status": "passed",
+      "gate_requires_zero": true,
+      "fps": 60.0,
+      "underrun_events_per_output": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "dropped_core_pcm_per_output": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "longest_host_frame_gap_ms": 63.98,
+      "evidence": "/workspace/.setup/results/review-5/gui-qt-primed-v22.log"
     }
   },
   "native_battle_spawns": {
@@ -990,7 +1024,8 @@
       "threaded_video_zero_user_verified": true,
       "windows_safe_default": true,
       "native_windows_fix_verified": false,
-      "linux_sanitizers": "Old hardware handoff reaches uninitialized GL OAM; drain/stop before proxy reuse fixes the reproduced failure. Eight actual hardware renderers, failed-consumer shutdown, repeated software resets/reloads and full Qt-audio scripted launch pass ASan/UBSan."
+      "linux_sanitizers": "Old hardware handoff reaches uninitialized GL OAM; drain/stop before proxy reuse fixes the reproduced failure. Eight actual hardware renderers, failed-consumer shutdown, repeated software resets/reloads and full Qt-audio scripted launch pass ASan/UBSan.",
+      "worker_log_routing": "Queued to logger owner thread before accessing filters or log streams; regression and sanitizer replay pass."
     },
     "native_character_back": {
       "old_rom_reproduced": true,
@@ -1023,22 +1058,125 @@
       "stock_cc_pixel_views_matched": 84
     },
     "strict_performance": {
-      "status": "failed",
-      "battle_2_shared_mean": 0.9813395534821726,
-      "battle_2_shared_worst_300": 0.9333333333333333,
+      "status": "shared_passed_normal_failed",
       "profile_interval": [
         6304,
         6604
       ],
       "all_overlapping_windows_checked": true,
-      "camera_matrix_cache": "rejected and reverted"
+      "camera_matrix_cache": "rejected and reverted",
+      "baseline_shared_battle_2": {
+        "mean": 0.9813395534821726,
+        "worst_300": 0.9333333333333333
+      },
+      "retained_shared_idle_interval": {
+        "active_forwarding_guard_cycles": 512,
+        "idle_gap_cycles": 2048,
+        "players": 8,
+        "targeted_battle_2_mean": 0.9933355548150616,
+        "targeted_battle_2_worst_300": 0.9633333333333334,
+        "all_8_battle_arenas_long_check": "passed",
+        "no_op_poll_guard": "rejected and reverted; worsened worst window",
+        "idle_factors_2_and_16": "rejected; failed strict gate",
+        "full_shared_course_matrix": {
+          "passed": 48,
+          "failed": 0,
+          "race_completion_required": true
+        },
+        "normal_policy": "Preserves the prior 4096-cycle idle gap; the 2048-cycle trial failed Battle Course 3 and Snow Land"
+      },
+      "normal_2048_cycle_trial": {
+        "battle_2_mean": 0.9895008749270894,
+        "battle_2_worst_300": 0.86,
+        "super_12_mean": 0.9927833906961252,
+        "super_12_worst_300": 0.7833333333333333
+      },
+      "other_rejected_normal_trials": [
+        "idle factors 1, 2, 6, 8, 16",
+        "ready-mask gating",
+        "IWRAM early poll guard",
+        "later graphics publication",
+        "adaptive ready-count interval"
+      ]
     },
     "open": [
-      "Strict course performance and complete current 48-course matrices",
-      "GUI peer display pacing measurement",
-      "Current extended isolated Qt/SDL audio checks",
-      "Optional restored-sample performance",
-      "Final combined BIOS and relocation gates before HLE"
-    ]
+      "Normal-audio course performance and final combined BIOS/GUI/audio gates",
+      "Optional restored-sample gameplay performance",
+      "Native Windows confirmation; HLE only after BIOS gates",
+      "New results audio report; revised Vs./Battle awards and B Back prompt",
+      "Integrate supplied title lettering correction; optional map spectator without consuming a racer slot"
+    ],
+    "gui_pacing": {
+      "platform": "Linux/Xvfb/private PulseAudio sink",
+      "real_bios": true,
+      "players": 8,
+      "display": "OpenGL",
+      "software_gba_renderer": true,
+      "sdl_native_worker_on": {
+        "fps": 60.02,
+        "underrun_samples_per_output": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "sdl_native_worker_off": {
+        "fps": 59.97,
+        "active_path_verified_per_console": true,
+        "underrun_samples_per_output": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "qt_prebuffer_fix": {
+        "fps": 60.0,
+        "underrun_events_per_output": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "startup_underruns_reported": 0
+      },
+      "simulation_updates_per_video_frame": 1.0,
+      "dropped_core_pcm_per_output": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "native_windows_verified": false
+    },
+    "core_ctest": {
+      "passed": 35,
+      "failed": 0,
+      "private_gui_checks_run_separately": true
+    },
+    "controlled_relocation": {
+      "functions": 1933,
+      "callbacks": 1070,
+      "padding": 1024,
+      "opaque_asset_coincidences": 18,
+      "passed": true
+    }
   }
 }

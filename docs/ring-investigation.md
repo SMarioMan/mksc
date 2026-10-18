@@ -1,5 +1,33 @@
 ## Active review (2026-10-18)
 
+Eight tiled OpenGL windows now sustain full native updates and the target wall
+rate with both synchronization options enabled. Five-minute SDL runs pass with
+zero underruns at 60.02 FPS with native rendering workers and 59.97 FPS without
+them. The latter verifies the active worker-off path on every console. A Qt
+priming defect resumed an empty probe stream before its first write; PulseAudio
+explicitly triggers playback there. Starting a fresh prebuffered stream once
+PCM is ready passes the same five-minute check at 60.00 FPS, with no reported
+startup/gameplay underruns and no dropped source samples on any output. Buffer
+sizes are unchanged. Worker logs now reach their owning GUI thread before
+filtering/file output. These are Linux checks; native Windows remains unverified.
+
+The shared-audio build retains a four-step idle serial interval (2,048 cycles).
+All 48 courses pass complete real-BIOS eight-player captures, including all
+eight Battle arenas. The formerly failing Battle Course 3 window improves
+from 0.9333 to 0.9633 in its worst overlapping 300-frame interval. The active
+512-cycle forwarding guard stays intact. The normal-audio build remains
+byte-identical to its previous timing policy: the shorter idle interval fails
+Battle Course 3 (0.86 worst window) and Snow Land (0.7833). Idle-factor,
+ready-mask, polling, publication-cutoff and adaptive-delay trials also fail
+the normal Battle gate and were reverted. Normal-audio performance remains
+open. A real shortened-race check confirms that the emulator runner already
+rejects frame exhaustion before native results.
+
+The current 35 core CTest targets pass. The retained code's controlled shift
+passes 1,933 ROM functions and 1,070 callback words; all move by 1,024 bytes.
+The optional restored audio matches 38 objects, 378 relocations and 89 PCM
+references. Its gameplay performance remains to be checked.
+
 The native sixteen-entry script actor pool recycled player 1's persistent
 Lakitu on one console during an eight-player Bowser Castle 3 race. Its driver
 remained in the lap-banner state, so rescue never began and the consoles
@@ -23,7 +51,8 @@ it to emulator commit `07c2af334491c6d0db84c63ff9f90c6c22d81ef9`
 and null termination have portable ASan/UBSan coverage. Eight-window launch,
 gameplay, independent settings and replacement/closure pass under both Qt and
 SDL audio with the original software display on Linux. These checks do not
-certify Windows or physical audio output. OpenGL display coverage is being added.
+certify Windows or physical audio output. The current OpenGL checks are
+reported above.
 
 The confirmed `-C threadedVideo=0` workaround now supplies the Windows ring
 default. A hardware-enabled Linux sanitizer build reproduced an unsafe proxy
@@ -43,7 +72,7 @@ a new 150cc race. `test_results_back.py` preserves this regression.
 Player 5–8 numerals now use native-size masks rather than a scaled connection
 font. Their full old glyph/halo is erased, removing leftover horizontal strokes.
 Eight-player character confirmation/host OK passes, and all 84 CC-tab views
-match stock pixels. The current Battle Course 3 profile still fails the strict
+match stock pixels. The V28 baseline Battle Course 3 profile fails the strict
 performance gate: 0.9813 mean and 0.9333 in its worst overlapping 300-frame
 window. The profiler now targets an explicit interval and checks every
 overlapping window; reanalysis rejects mismatched capture settings.

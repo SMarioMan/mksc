@@ -30,6 +30,11 @@
 #define RING_INTERNAL 1
 #define RING_INVALID 0xFF
 #define RING_TURNAROUND 512
+#ifdef MKSC_RING_MUSIC_SHARED
+#define RING_IDLE_TURNAROUND (RING_TURNAROUND * 4)
+#else
+#define RING_IDLE_TURNAROUND (RING_TURNAROUND * 8)
+#endif
 #define RING_IRQ __attribute__((section(".ring_irq")))
 
 enum { DISCOVER = 1, ANNOUNCE = 2, COMMIT = 5, ABORT = 6, READY = 7 };
@@ -739,7 +744,10 @@ static void RING_IRQ ring_serialHandler(void)
          * full-rate forwarding whenever data or COMMIT is in circulation. */
         if (!word && !sRing.queued && sRing.count >= 5 && sRing.inGame &&
             sTickEpochStarted && sRing.ownReturned && !sRing.frameStarted)
-            delay = RING_TURNAROUND * 8;
+            /* A peer's READY can still be several hops downstream even
+             * when this input is idle. Bound its arrival delay without
+             * reducing the active forwarding guard. */
+            delay = RING_IDLE_TURNAROUND;
         REG_TM2CNT_H = 0;
         REG_TM2CNT_L = 65536 - delay;
         REG_TM2CNT_H = 0xC0;
