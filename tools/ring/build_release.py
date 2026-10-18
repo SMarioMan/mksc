@@ -21,15 +21,15 @@ for boot in (False,True):
   name='mksc-ring'+('-boot' if boot else '')+label
   with (out/(name+'-build.log')).open('w') as log:
    subprocess.run(['python3','tools/ring/build.py','--music',music,'--sunset-art',a.sunset_art]+audio_args+(['--boot-ring'] if boot else []),cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
-  for ext in ('gba','elf','sym'):publish(root/('mksc-ring.'+ext),out/(name+'.'+ext))
+  for ext in ('gba','elf','sym','map'):publish(root/('mksc-ring.'+ext),out/(name+'.'+ext))
   variants[name]={'boot_ring':boot,'music':music,'sunset_art':a.sunset_art,'music_restoration_sha256':hashlib.sha256(a.music_restoration_ips.read_bytes()).hexdigest() if a.music_restoration_ips else None,'sha256':hashlib.sha256((out/(name+'.gba')).read_bytes()).hexdigest()}
   (out/'variants.json').write_text(json.dumps(variants,indent=2)+'\n')
   print('BUILT',name,variants[name]['sha256'],flush=True)
 with (out/'shifted-build.log').open('w') as log:
  subprocess.run(['python3','tools/ring/build.py','--code-padding','0x400','--sunset-art',a.sunset_art]+audio_args,cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
-for ext in ('gba','elf','sym'):publish(root/('mksc-ring.'+ext),out/('mksc-ring-shifted.'+ext))
+for ext in ('gba','elf','sym','map'):publish(root/('mksc-ring.'+ext),out/('mksc-ring-shifted.'+ext))
 # Keep the ordinary working filenames useful for manual testing. The shifted
 # relocation fixture has its own explicit name in the release directory.
-for ext in ('gba','elf','sym'):publish(out/('mksc-ring.'+ext),root/('mksc-ring.'+ext))
+for ext in ('gba','elf','sym','map'):publish(out/('mksc-ring.'+ext),root/('mksc-ring.'+ext))
 assert hashlib.sha1((root/'mksc.gba').read_bytes()).hexdigest()=='9d327c030c3e2d9007990518594f70c3340ac56f'
 print('PASS four variants, shifted build, and stock hash',flush=True)

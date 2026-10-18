@@ -1098,7 +1098,8 @@
         "later graphics publication",
         "adaptive ready-count interval",
         "Targeted missing-input repair: worst 300-frame rate 0.85 versus 0.93 baseline; not retained",
-        "Compact sprite-sort metadata: 6.2% slower with the actual mixed IWRAM/EWRAM layout; not retained"
+        "Compact sprite-sort metadata: 6.2% slower with the actual mixed IWRAM/EWRAM layout; not retained",
+        "Two-entry sprite-sort base case: exact oracle and 16.4% faster sort, but game windows fall to 0.853333 on Battle Course 3 and 0.776667 on Snow Land; not retained"
       ],
       "generic_sixteen_console_revision": {
         "shared_battle_2_worst_300": 0.9733333333333334,
