@@ -1,4 +1,4 @@
-## Active review (2026-10-17)
+## Active review (2026-10-18)
 
 The native sixteen-entry script actor pool recycled player 1's persistent
 Lakitu on one console during an eight-player Bowser Castle 3 race. Its driver
@@ -25,7 +25,30 @@ gameplay, independent settings and replacement/closure pass under both Qt and
 SDL audio with the original software display on Linux. These checks do not
 certify Windows or physical audio output. OpenGL display coverage is being added.
 
-Strict course performance, player 5–8 art, optional restored-audio performance,
+The confirmed `-C threadedVideo=0` workaround now supplies the Windows ring
+default. A hardware-enabled Linux sanitizer build reproduced an unsafe proxy
+handoff: the old rendering worker reached the new GL backend before its OAM
+was initialized. Renderer changes/resets now drain and stop the old consumer
+before reusing its proxy; failed workers are joined before queue teardown.
+Eight active hardware renderers, repeated software resets/reloads, the failed
+consumer path and a full eight-window Qt-audio launch pass ASan/UBSan. Native
+Windows verification remains open.
+
+The newly reported post-race Back softlock reproduces in the old ROM with a
+complete 100cc Vs. keypad recording. The local one-shot Back fix passes the
+same results/retained-course/character sequence at two and eight players,
+keeps menu mixing and PCM advancing, and lets all players confirm again into
+a new 150cc race. `test_results_back.py` preserves this regression.
+
+Player 5–8 numerals now use native-size masks rather than a scaled connection
+font. Their full old glyph/halo is erased, removing leftover horizontal strokes.
+Eight-player character confirmation/host OK passes, and all 84 CC-tab views
+match stock pixels. The current Battle Course 3 profile still fails the strict
+performance gate: 0.9813 mean and 0.9333 in its worst overlapping 300-frame
+window. The profiler now targets an explicit interval and checks every
+overlapping window; reanalysis rejects mismatched capture settings.
+
+Strict course performance, optional restored-audio performance,
 and final combined BIOS/GUI/audio gates remain open. A camera-matrix cache trial
 matched 32,768 native projection cases, but its real Battle course still failed
 the worst-window gate; the trial was rejected and reverted.

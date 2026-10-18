@@ -974,5 +974,71 @@
     "spawns": "All authored GBA/SNES battle-course spawns pass at every player count",
     "logic_failure": "Vs.-to-Battle transition regression stays in Vs.; delaying Pause by 2000 frames did not resolve it. Investigation remains open.",
     "hle": "not run; BIOS gates remain open"
+  },
+  "review_14": {
+    "status": "in_progress",
+    "evidence": "/workspace/.setup/results/review-14",
+    "real_bios": true,
+    "clean_sha1": "9d327c030c3e2d9007990518594f70c3340ac56f",
+    "history": {
+      "project_trailers_repaired": 80,
+      "trees_and_identities_preserved": true,
+      "pushed": false
+    },
+    "windows_startup": {
+      "bisected_first_bad": "07c2af334491c6d0db84c63ff9f90c6c22d81ef9",
+      "threaded_video_zero_user_verified": true,
+      "windows_safe_default": true,
+      "native_windows_fix_verified": false,
+      "linux_sanitizers": "Old hardware handoff reaches uninitialized GL OAM; drain/stop before proxy reuse fixes the reproduced failure. Eight actual hardware renderers, failed-consumer shutdown, repeated software resets/reloads and full Qt-audio scripted launch pass ASan/UBSan."
+    },
+    "native_character_back": {
+      "old_rom_reproduced": true,
+      "fix": "Inject native Back once, allowing the exit animation to complete",
+      "post_100cc_race_players": [
+        2,
+        8
+      ],
+      "menu_audio_and_pcm": "advancing",
+      "reconfirm_into_150cc_race": "passed"
+    },
+    "script_actors": {
+      "extra_checked_scene_heap_actors": 16,
+      "bowser_castle_3_complete_race": "passed",
+      "entry_cases": 21,
+      "gp_cpu_fill_players": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    "menu_art": {
+      "native_size_5_to_8_numerals": true,
+      "old_numeral_halos_erased": true,
+      "eight_player_host_ok": "passed",
+      "stock_cc_pixel_views_matched": 84
+    },
+    "strict_performance": {
+      "status": "failed",
+      "battle_2_shared_mean": 0.9813395534821726,
+      "battle_2_shared_worst_300": 0.9333333333333333,
+      "profile_interval": [
+        6304,
+        6604
+      ],
+      "all_overlapping_windows_checked": true,
+      "camera_matrix_cache": "rejected and reverted"
+    },
+    "open": [
+      "Strict course performance and complete current 48-course matrices",
+      "GUI peer display pacing measurement",
+      "Current extended isolated Qt/SDL audio checks",
+      "Optional restored-sample performance",
+      "Final combined BIOS and relocation gates before HLE"
+    ]
   }
 }
