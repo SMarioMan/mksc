@@ -1096,7 +1096,9 @@
         "ready-mask gating",
         "IWRAM early poll guard",
         "later graphics publication",
-        "adaptive ready-count interval"
+        "adaptive ready-count interval",
+        "Targeted missing-input repair: worst 300-frame rate 0.85 versus 0.93 baseline; not retained",
+        "Compact sprite-sort metadata: 6.2% slower with the actual mixed IWRAM/EWRAM layout; not retained"
       ],
       "generic_sixteen_console_revision": {
         "shared_battle_2_worst_300": 0.9733333333333334,
@@ -1109,8 +1111,7 @@
     "open": [
       "Normal-audio course performance and final combined BIOS/GUI/audio gates",
       "Optional restored-sample gameplay performance",
-      "Native Windows confirmation; HLE only after BIOS gates",
-      "Sixteen-console hardware-renderer sanitizer lifecycle validation"
+      "Native Windows confirmation; HLE only after BIOS gates"
     ],
     "gui_pacing": {
       "platform": "Linux/Xvfb/private PulseAudio sink",
@@ -1175,7 +1176,8 @@
     "core_ctest": {
       "passed": 35,
       "failed": 0,
-      "private_gui_checks_run_separately": true
+      "private_gui_checks_run_separately": false,
+      "evidence": "generic16-final-ctest.log"
     },
     "controlled_relocation": {
       "functions": 1941,
@@ -1220,7 +1222,7 @@
       },
       "title_label": "Shared R/I outline at column 11; 54-pixel strip with five transparent columns on each side; native tile/palette indices preserved",
       "discovery_back_hint": true,
-      "private_gui_rows_passed": 17,
+      "private_gui_rows_passed": 19,
       "private_gui_rows_skipped": 0,
       "map_spectator": {
         "status": "passed_real_bios",
@@ -1274,7 +1276,23 @@
           "generic16-final-rounds.log",
           "generic16-final-gp.log",
           "generic16-gui-final.log"
-        ]
+        ],
+        "implementation_commit": "d4de9e2",
+        "emulator_implementation_commit": "d7722e8d8",
+        "qt_private_scenarios_passed": 19,
+        "qt_private_scenarios_skipped": 0,
+        "hardware_renderer_sanitizers": {
+          "status": "passed",
+          "consoles": 16,
+          "startup_video_frames": 600,
+          "post_reset_video_frames": 60,
+          "active_renderer_verified_before_and_after": true,
+          "all_windows_closed": true,
+          "asan_errors": 0,
+          "ubsan_errors": 0,
+          "evidence": "generic16-batched-lifecycle-asan.log"
+        },
+        "qt_native_updates_per_frame_minimum": 0.998
       },
       "reconnect_loss": "two/eight-player cable-loss recovery passes after recording both native course confirmations",
       "gp_finish_and_advance_cases": 14,

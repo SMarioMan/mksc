@@ -32,15 +32,17 @@ without claiming a racer input slot. The host waits for those acknowledgements
 as well as the eight racer inputs before COMMIT. All 9–16 counts now pass.
 Complete sixteen-console Vs./Battle results and GP finish/advance also pass.
 The sixteen-window Qt replay passes P1–P16 captions, independent settings,
-Alt menu access, closed-window replacement and 1.000 native updates per frame.
+Alt menu access, closed-window replacement and at least 0.998 native updates
+per frame in the measured gameplay window.
 The current wire unit sweeps 2–16 consoles in both normal serial modes,
 including the highest open-wire bit and rejection of the seventeenth console.
 
 The new eight-player shared Battle Course 3 capture passes with mean 0.997688 and a 0.973333 worst
 300-frame window. Normal audio still fails at 0.93. A targeted missing-vector
-recovery experiment worsens that to 0.85 and is not retained. Renderer lifecycle
-sanitizer follow-up is still in progress; native Windows and cables remain
-unverified.
+recovery experiment worsens that to 0.85 and is not retained. All sixteen actual hardware renderers pass 600-frame startup, batched
+resets, a verified post-reset window and closure under ASan/UBSan. All 35
+CTest targets pass, including all nineteen private GUI scenarios without skips.
+Native Windows and cables remain unverified.
 
 The reconnect replay now confirms the native track page after its entrance
 animation. Its old recording stopped on that connected page rather than
