@@ -8,7 +8,7 @@ commit the results directory or redistribute the BIOS/base ROM.
 from pathlib import Path
 import argparse
 from concurrent.futures import ThreadPoolExecutor,as_completed
-import hashlib,json,os,shutil,subprocess,threading,time,traceback
+import hashlib,json,os,re,shutil,subprocess,threading,time,traceback
 p=argparse.ArgumentParser(description=__doc__)
 for name in ('runner','bios','results','builds','mgba-build','mgba-source'):
  p.add_argument('--'+name,required=True,type=lambda value:Path(value).resolve())
@@ -79,7 +79,11 @@ def gui_units():
  env={k:v for k,v in os.environ.items() if not k.startswith('MGBA_RING_GUI_')};env.update(QT_QPA_PLATFORM='offscreen',SDL_AUDIODRIVER='dummy',MGBA_RING_GUI_ROM=str(build/'mksc-ring.gba'),MGBA_RING_GUI_BOOT_ROM=str(build/'mksc-ring-boot-shared.gba'),MGBA_RING_GUI_BIOS=str(bios),MGBA_RING_GUI_INPUTS=str(r/'entry'),MGBA_RING_GUI_STOCK_INPUTS=str(a.mgba_source/'tools/link/inputs'))
  run('ctest-private',['ctest','--test-dir',a.mgba_build,'--output-on-failure','--parallel','1'],env)
  shutil.copyfile(a.mgba_build/'Testing/Temporary/LastTest.log',r/'ctest-private-detail.log')
- detail=(r/'ctest-private-detail.log').read_text();assert '13 passed, 0 failed, 0 skipped' in detail,'Private GUI gameplay did not execute all rows'
+ detail=(r/'ctest-private-detail.log').read_text()
+ rows=set(re.findall(r'PASS\s*:\s*RingGuiTest::([^\n]+)',detail))
+ required={'scriptedLaunch()','threadedVideoReset()'}|{f'ring({row})' for row in ('vs-2','battle-2','vs-8','battle-8','vs-8-loss-start','vs-2-late','stock-vs-4','stock-battle-4')}
+ assert required<=rows,('Private GUI checks did not execute',sorted(required-rows))
+ assert not re.search(r'SKIP\s*:\s*RingGuiTest::',detail),'Private GUI checks must not skip'
  for stem in ('projection','oam_cell','identity_atlas','collision','sound_volume','sound_control','shared_themes','target','camera','animation'):
   test(stem,unit=True)
  for ahead in (2,3):test('audio_queue','audio-queue-'+str(ahead),unit=True,extra=('--ahead',str(ahead)))
