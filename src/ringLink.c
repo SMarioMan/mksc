@@ -760,7 +760,7 @@ static void RING_IRQ ring_serialHandler(void)
     /* Idle polling clocks have no packet to decode. Avoid the decoder's
      * register saves while peers are still rendering or mixing audio. */
     if (word) receive(word);
-    if (!sRing.monitor && sRing.count && sRing.requested && !sRing.frameStarted && !sRing.ownReturned && !(sRing.packets & 15))
+    if (sRing.count && sRing.requested && !sRing.frameStarted && !sRing.ownReturned && !(sRing.packets & 15) && !sRing.monitor)
         enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
     if (sRing.owner && sRing.frameStarted && !sRing.complete &&
         sRing.packets - sRing.commitPacket > sRing.count + 1 &&
