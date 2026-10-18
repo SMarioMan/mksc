@@ -257,6 +257,13 @@ profile interval; moving identical binaries to another directory is allowed.
 Audio recordings also accept `--audio-policy` and `--boot-ring` for testing
 each variant with the appropriate inputs and sound ownership checks.
 
+`test_rounds.py --modes vs --engine 1` completes 100cc races and records the
+actual route-following keypad inputs. Point `test_results_back.py --baseline`
+at those captures to replay results -> course preview -> course grid ->
+character selection -> Back. It checks that native Back completes, menu
+mixing/PCM continue, and all players can select characters again and start a
+150cc race. Both tools accept `--players 2 8` (or any other counts from 2–8).
+
 Ring builds compile the pure target calculations for ARM, and the collision code/
 renderer for Thumb, with explicit wrapping arithmetic and interworking. The
 projection and native positional sound/track controls also use optimized

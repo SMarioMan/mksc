@@ -19,6 +19,7 @@ for name in ('runner', 'rom', 'elf', 'bios', 'results'):
 p.add_argument('--nm', default='arm-none-eabi-nm')
 p.add_argument('--players', nargs='+', type=int, default=list(range(2,9)))
 p.add_argument('--modes', nargs='+', choices=['vs','battle'], default=['vs','battle'])
+p.add_argument('--engine', type=int, choices=range(3), default=0, help='Vs. engine class: 0=50cc, 1=100cc, 2=150cc')
 p.add_argument('--workers', type=int, choices=range(1,5), default=3)
 p.add_argument('--toad-150cc-retro', action='store_true', help='Reproduce host Toad finishing SNES Mario Circuit 1 at 150cc')
 p.add_argument('--hle', action='store_true', help='Exercise optional HLE; real BIOS is the default')
@@ -59,6 +60,10 @@ def run(n,mode):
         for step in range(3):
             rows.extend([(2600+step*40,0,128),(2620+step*40,0,0)])
         rows.extend((3500,i,0 if i == 0 else 17) for i in range(n))
+    elif not a.toad_150cc_retro:
+        for step in range(a.engine):
+            frame = 1720 + step * 35
+            rows.extend([(frame,0,128),(frame+15,0,0)])
     if a.toad_150cc_retro:
         assert mode == 'vs' and n == 8, 'Finish regression uses eight-player Vs.'
         rows = [row for row in rows if row[0] < 1500]
@@ -85,8 +90,8 @@ def run(n,mode):
     if a.shared_audio:
         mixer=struct.unpack_from('<I',rom_data,symbols['gMPlayTable']-0x08000000)[0]
         command += ['--keys-address',hex(mixer),'--key-slots','4']
-    if a.toad_150cc_retro:command += ['--record-inputs',str(a.results/(name+'-recorded.csv'))]
     if mode == 'vs':
+        command += ['--record-inputs',str(a.results/(name+'-recorded.csv'))]
         command += ['--autodrive-frame','5500' if a.toad_150cc_retro else '3500','--autofire']
     if a.hle:
         bios_index = command.index('--bios')
@@ -114,6 +119,8 @@ def run(n,mode):
     states = []
     rounds = []
     for node in result['nodes']:
+        if mode == 'vs' and not a.toad_150cc_retro:
+            assert node['game']['engineClass']==a.engine,(name,'Wrong engine class',node['game']['engineClass'],a.engine)
         if a.toad_150cc_retro:
             assert node['game']['engineClass']==2,('Finish fixture did not select 150cc',node['game']['engineClass'])
             first=struct.unpack_from('<I',rom_data,symbols['gRetroCups']-0x08000000)[0]
