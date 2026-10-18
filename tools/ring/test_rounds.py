@@ -17,6 +17,7 @@ p = argparse.ArgumentParser(description=__doc__)
 for name in ('runner', 'rom', 'elf', 'bios', 'results'):
     p.add_argument('--' + name, required=True, type=Path)
 p.add_argument('--nm', default='arm-none-eabi-nm')
+p.add_argument('--map-rom', type=Path, help='Append a dedicated display built with the same options')
 p.add_argument('--players', nargs='+', type=int, default=list(range(2,9)))
 p.add_argument('--modes', nargs='+', choices=['vs','battle'], default=['vs','battle'])
 p.add_argument('--engine', type=int, choices=range(3), default=0, help='Vs. engine class: 0=50cc, 1=100cc, 2=150cc')
@@ -44,6 +45,14 @@ rom_data = a.rom.read_bytes()
 rom = a.results / (hashlib.sha256(rom_data).hexdigest()+'.gba')
 if not rom.exists():
     rom.write_bytes(rom_data)
+map_rom = None
+if a.map_rom:
+    map_data = a.map_rom.read_bytes()
+    role = symbols['ring_defaultMapDisplay'] - 0x08000000
+    assert struct.unpack_from('<I',rom_data,role)[0] == 0 and struct.unpack_from('<I',map_data,role)[0] == 1
+    assert rom_data[:role] + rom_data[role+4:] == map_data[:role] + map_data[role+4:]
+    map_rom = a.results/(hashlib.sha256(map_data).hexdigest()+'.gba')
+    if not map_rom.exists():map_rom.write_bytes(map_data)
 base = []
 for line in (Path(__file__).parent/'inputs/ring-vs.csv').read_text().splitlines():
     f,i,k = line.split(',')
@@ -75,6 +84,7 @@ def run(n,mode):
         rows.extend((2315,i,0) for i in range(n))
         rows.extend((f,0,k) for f,k in ((2500,1),(2515,0),(2800,256),(2815,0),(3200,1),(3215,0),
                     (3500,1),(3515,0),(3800,1),(3815,0),(4100,1),(4115,0)))
+    if map_rom:rows.extend((f,n,k) for f,i,k in rows.copy() if i==0 and f<1500)
     inputs = a.results/(name+'.csv')
     inputs.write_text(''.join(f'{f},{i},{k:x}\n' for f,i,k in sorted(rows)))
     command = [str(a.runner),'--ring', '--ring-quantum', '2048','--rom',str(rom),'--bios',str(a.bios),
@@ -85,6 +95,7 @@ def run(n,mode):
                '--settle-frames',str(a.results_frames),
                '--release-inputs-scene',hex(symbols['results_main'] | 1),
                '--screens',str(a.results/name)]
+    if map_rom:command += ['--ring-map-rom',str(map_rom)]
     if a.results_frames >= 600:
         command += ['--video-log',str(a.results/(name+'-video.csv')),'--sound-table',hex(symbols['gMPlayTable']),
                     '--audio-state',hex(symbols['ring_audioTiming'])]
@@ -103,12 +114,13 @@ def run(n,mode):
     (a.results/(name+'.stderr')).write_text(proc.stderr)
     assert proc.returncode == 0 and not proc.stderr, (name,proc.stderr[:2000])
     result = json.loads(proc.stdout)
+    assert len(result['nodes']) == n + bool(map_rom)
     assert result['bios'] == ('hle' if a.hle else 'real'), name
     assert result['collisions'] == 0, name
     if a.results_frames >= 600:
         with (a.results/(name+'-video.csv')).open() as stream:
             observed=[{k:int(v) for k,v in row.items()} for row in csv.DictReader(stream)]
-        for player in range(n):
+        for player in range(n + bool(map_rom)):
             frames=[r for r in observed if r['player']==player and r['sceneMain']==symbols['results_main']|1]
             assert len(frames)>=a.results_frames-5,(name,player,'Results exited prematurely',len(frames))
             assert all(r['dispcnt']&7==1 and not r['dispcnt']&128 for r in frames[10:]),(name,player,'Results lost the native course display')
@@ -119,7 +131,12 @@ def run(n,mode):
             assert frames[-1]['audioMissedFrames']-frames[10]['audioMissedFrames']==frames[-1]['audioRecoveredFrames']-frames[10]['audioRecoveredFrames'],(name,player,'Unfilled scoreboard PCM segment')
             if mode=='vs':
                 assert len({r['kartPosition0'] for r in frames[30:]})>10,(name,player,'Results racer stopped moving')
-            if not a.shared_audio or player==0:
+            if map_rom and player==n:
+                assert all(r['dispcnt']==0x1441 for r in frames[10:]),(name,'Map left the full-course display')
+                mapping=[r for r in observed if r['player']==player and r['frame']>=4500 and r['sceneMain'] in (symbols['race_main']|1,symbols['results_main']|1)]
+                assert mapping and all(r['mapOverviewHash'] for r in mapping)
+                assert len({r['mapOverviewHash'] for r in mapping})==1,(name,'Course geometry/palette changed at results')
+            elif not a.shared_audio or player==0:
                 cue=struct.unpack_from('<I',rom_data,symbols['gSongTable']-0x08000000+17*8)[0]
                 assert all(r['musicHeader']==cue and r['musicStatus']&65535 and not r['musicStatus']&0x80000000 for r in frames[10:]),(name,player,'Results theme stopped')
     states = []
@@ -136,7 +153,7 @@ def run(n,mode):
         assert node['game']['sceneMain'] == symbols['results_main'] | 1, (name,node['game'])
         barrier = node['barrier']
         assert barrier['errors'] == barrier['timeouts'] == 0, (name,barrier)
-        assert barrier['count'] == n and barrier['id'] == node['slot'], (name,barrier)
+        assert barrier['count'] == n and barrier['id'] == (8 if map_rom and node['slot']==n else node['slot']), (name,barrier)
         if a.shared_audio:
             audio=node['menu']['heldKeys']
             header=audio[0] | audio[1]<<16

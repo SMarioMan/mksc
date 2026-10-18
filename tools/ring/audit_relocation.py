@@ -89,6 +89,7 @@ for name, following, size in (
     ('_080990CC', '_08099CFC', 0x1440),
     ('_080942E0', '_08095250', 0x1440),
     ('_08099DB4', '_0809A8CC', 0x1440),
+    ('_08096404', '_080972D4', 0x1440),
     ('title_sDriversBgTiles2', 'title_sDriversBgTiles3', 0x1600),
 ):
     start, end = symbols[name] - 0x08000000, symbols[following] - 0x08000000
@@ -132,6 +133,36 @@ while produced < 0x800:
 assert produced == 0x800 and cursor <= limit, 'Invalid sky strip boundary'
 assert original[start:cursor] == shifted[start+a.padding:cursor+a.padding], 'Compressed sky changed'
 opaque.append((start, cursor))
+# Validate the remaining split strips and all three compressed tilemaps too.
+# These are relative-offset LZ streams, not callback tables. Do not exempt
+# the whole sky blob: each accepted range must decode to its native size.
+strip_offsets = struct.unpack_from('<5H', original, sky_graphics)
+layout_offsets = struct.unpack_from('<4I', original, sky_header + 8)
+ranges = [(sky_graphics + value, sky_graphics + strip_offsets[i + 1]
+           if i + 1 < 5 else sky_header + layout_offsets[0])
+          for i, value in enumerate(strip_offsets) if value]
+ranges += [(sky_header + layout_offsets[i], sky_header + layout_offsets[i + 1])
+           for i in range(3)]
+for start, limit in ranges:
+    assert sky <= start < limit <= sky_end
+    assert original[start:start+4] == bytes((0x10, 0, 8, 0))
+    cursor, produced = start + 4, 0
+    while produced < 0x800:
+        assert cursor < limit, 'Sky stream exceeded its asset boundary'
+        flags = original[cursor]; cursor += 1
+        for bit in range(7, -1, -1):
+            if produced >= 0x800: break
+            if flags >> bit & 1:
+                assert cursor + 2 <= limit
+                first, second = original[cursor:cursor+2]; cursor += 2
+                assert ((first & 15) << 8 | second) + 1 <= produced
+                produced += (first >> 4) + 3
+            else:
+                produced += 1; cursor += 1
+    assert produced == 0x800 and 0 <= limit - cursor < 4
+    assert not any(original[cursor:limit]), 'Nonzero sky stream padding'
+    assert original[start:limit] == shifted[start+a.padding:limit+a.padding]
+    opaque.append((start, limit))
 checked = 0
 packed = 0
 sample_matches = 0
@@ -145,11 +176,11 @@ for offset in range(0, len(original) - 3):
         continue
     # Three bytes crossing native Thumb instructions can resemble an odd
     # function pointer after new code changes its address. This exact sequence
-    # constructs a fixed-point mask: movs r1,#imm; lsls r1,r1,#15/16; orrs r0,r1.
+    # constructs a fixed-point mask: movs r1,#imm; lsls r1,r1,#15/16/17; orrs r0,r1.
     # It also occurs in the unmodified embedded single-pak child executable.
     # Validate all three instructions, their alignment and their shifted bytes;
     # do not exempt general instruction regions or packed script tables.
-    if offset & 1 and original[offset:offset+5] in (b'\x21\xc9\x03\x08\x43', b'\x21\x09\x04\x08\x43'):
+    if offset & 1 and original[offset:offset+5] in (b'\x21\xc9\x03\x08\x43', b'\x21\x09\x04\x08\x43', b'\x21\x49\x04\x08\x43'):
         instruction_start = offset - 1
         moved = instruction_start + (a.padding if instruction_start >= a.start else 0)
         assert original[instruction_start:instruction_start+6] == shifted[moved:moved+6], 'Native mask instructions changed'

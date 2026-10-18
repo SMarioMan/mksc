@@ -67,6 +67,48 @@ verified coverage and outstanding acceptance criteria. No physical-cable test
 has been performed. The intended stock AGB-005 arrangement puts each large plug
 on a GBA and each small plug in the next cable's middle socket, closing the ring.
 
+### Optional full-screen map display
+
+Build the racer ROM and its map companion with **identical options** (music,
+boot mode, artwork, restored samples and code padding). Add `--map-display`
+only for the companion, and copy each output before building the other:
+
+```sh
+python3 tools/ring/build.py --boot-ring --music shared
+cp mksc-ring.gba racers.gba
+python3 tools/ring/build.py --boot-ring --music shared --map-display
+cp mksc-ring.gba map.gba
+```
+
+Alternatively, `tools/ring/build_release.py --output RELEASE --map-displays`
+builds all four ordinary variants and their matching `-map.gba` companions.
+The map variants have a separate `map-displays.json` manifest. The ordinary
+four-entry `variants.json` remains compatible with the existing regression tools.
+
+Launch eight human players plus the map window using the modified mGBA:
+
+```sh
+mGBA --ring-players 8 --ring-map-rom map.gba --instance-settings ring-settings --bios gba.bin racers.gba
+```
+
+`--ring-players` always counts humans (2–8). The map is appended after them,
+has its own settings directory (P9 with eight humans), and its title ends in
+**Map**. Without direct boot, enter Ring Link on the map console too. Press
+Start on a racer console to establish the link. Only one map console may
+join; it cannot host or occupy a character slot. It shows the native complete
+course overview with colored P1–P8 labels, including GP CPUs, stays visible
+through results, and produces no audio. It runs synchronized game logic so
+positions stay consistent with every racer. Physical nine-console operation
+has not been verified.
+
+The headless runner accepts the same `--ring-map-rom` option. Run
+`test_map_display.py` with `--runner`, `--rom`, `--elf`, `--map-rom`,
+`--map-elf`, `--bios` and `--results` to check all 2–8 counts in Vs., Battle
+and GP. `test_rounds.py` and `test_gp.py` also accept `--map-rom` to exercise
+complete results and GP advancement. Use the matching racer ELF for those
+two tools. The paired executable addresses must be identical; the tests
+reject companions that differ beyond the map-role word.
+
 The modified mGBA Qt GUI supports **File → GBA link topology... → Ring link
 (up to 8 players)**, followed by New multiplayer window and loading this ROM
 in every window. See `mgba/tools/link/GUI.md` in the emulator repository.

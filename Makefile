@@ -54,7 +54,7 @@ endif
 ROM := mksc-ring.gba
 COMPARE_TARGET :=
 OBJ_DIR := build-ring
-CPPFLAGS += -DMKSC_RING=1 -DMKSC_RING_BOOT=$(or $(RING_BOOT),0)
+CPPFLAGS += -DMKSC_RING=1 -DMKSC_RING_BOOT=$(or $(RING_BOOT),0) -DMKSC_RING_MAP_DISPLAY=$(or $(RING_MAP),0)
 ifeq ($(RING_MUSIC),shared)
 CPPFLAGS += -DMKSC_RING_MUSIC_SHARED=1
 ASFLAGS += --defsym MKSC_RING_AUDIO_AHEAD=2
@@ -152,7 +152,7 @@ $(C_BUILDDIR)/ringLink.o: RING_FAST_OPT := -O2
 $(C_BUILDDIR)/ringTarget.O3.o: RING_FAST_MODE := -marm
 # Ring renderer/target hot paths use the optimizing toolchain.
 # The clean matching build continues to use agbcc and its native byte layout.
-$(C_BUILDDIR)/ringLink.o $(C_BUILDDIR)/ringTarget.O3.o $(C_BUILDDIR)/ringProjection.O3.o $(C_BUILDDIR)/ringSoundControl.O3.o $(C_BUILDDIR)/ringIdentity.O3.o $(C_BUILDDIR)/soundQueries.o $(C_BUILDDIR)/collision.o $(C_BUILDDIR)/oam.O3.o : $(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c Makefile
+$(C_BUILDDIR)/ringLink.o $(C_BUILDDIR)/ringTarget.O3.o $(C_BUILDDIR)/ringProjection.O3.o $(C_BUILDDIR)/ringSoundControl.O3.o $(C_BUILDDIR)/ringIdentity.O3.o $(C_BUILDDIR)/ringMap.O3.o $(C_BUILDDIR)/soundQueries.o $(C_BUILDDIR)/collision.o $(C_BUILDDIR)/oam.O3.o : $(C_BUILDDIR)/%.o : $(C_SUBDIR)/%.c Makefile
 	@$(CPP) -MMD -MT $@ $(CPPFLAGS) $< -o $(C_BUILDDIR)/$*.i
 	$(BIN_DIR)/./$(PREFIX)gcc -mcpu=arm7tdmi $(RING_FAST_MODE) -mthumb-interwork $(RING_FAST_OPT) -fwrapv -fno-toplevel-reorder -fno-strict-aliasing -ffreestanding -std=gnu89 -Wa,--defsym,MKSC_RING=1 -x cpp-output -c $(C_BUILDDIR)/$*.i -o $@
 endif

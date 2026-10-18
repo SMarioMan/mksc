@@ -126,6 +126,9 @@ static bool32 main_ringPublicationFits(u32 line)
 {
     DmaQueueEntry* entry = (DmaQueueEntry*)dmaq_getVBlankDmaQueue()->list.head;
     u32 cycles = 8000 + ring_identityPublicationCost();
+    /* The display client replaces streamed perspective tiles with its
+     * complete overview and marker atlas after the native DMA queue. */
+    if (ring_isMapDisplay()) cycles += 20480;
     /* Conservative DMA cost plus chunk setup. Leave eight complete scanlines
      * for the native callback/IRQ tail. Large texture uploads keep an early
      * deadline; small Battle updates can use more of the blanking interval. */

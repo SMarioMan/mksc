@@ -16,9 +16,21 @@ The private GUI run executes all 17 scenarios without skips and all 35 CTest
 targets pass. Release validation now checks named scenarios instead of an
 obsolete thirteen-test total.
 
-The optional map-only chain member is in development. It must not consume one
-of the eight racer slots. The emulator's initial nine-node wire test passes;
-ROM discovery, full-map rendering and combined GUI validation are still open.
+The optional map-only member joins after 2–8 humans without consuming a racer
+slot. All 21 shared-audio count/mode combinations pass with exact native course
+overviews, aligned P1–P8 markers (including GP CPUs), silent audio and identical
+physics on every node. All consoles sustain one update per video frame in
+these entry captures. Normal-audio two/eight-player entry also passes in all
+three modes. Complete two/eight-player Vs./Battle results and GP finish/advance
+recordings pass with the map attached; its geometry and palette remain stable
+through results. The nine-window Qt replay passes separate P1–P9 settings,
+Map/P1–P8 captions, Alt menu access, replacement of a closed window and full
+native updates. The same nine-window launch and argument parsing pass ASan/UBSan; the
+nine-node wire/fault-mask unit tests pass under sanitizers too. All 35 CTest
+targets pass with the private BIOS/stock/ring fixtures, including the updated
+GUI capacity checks. Native Windows and physical cables remain unverified.
+`build_release.py --map-displays` builds four paired companions; each differs
+from its racer image only in one role byte, with identical symbol addresses.
 The reconnect replay now confirms the native track page after its entrance
 animation. Its old recording stopped on that connected page rather than
 starting the race. Corrected two/eight-player cable-loss recordings pass.
@@ -49,7 +61,7 @@ open. A real shortened-race check confirms that the emulator runner already
 rejects frame exhaustion before native results.
 
 The current 35 core CTest targets pass. The retained code's controlled shift
-passes 1,933 ROM functions and 1,070 callback words; all move by 1,024 bytes.
+passes 1,939 ROM functions and 1,072 callback words; all move by 1,024 bytes.
 The optional restored audio matches 38 objects, 378 relocations and 89 PCM
 references. Its gameplay performance remains to be checked.
 

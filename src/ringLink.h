@@ -6,6 +6,7 @@ void ring_initCode(void);
 void ring_allocateSpriteQueue(void);
 bool32 ring_main(void);
 bool32 ring_active(void);
+bool32 ring_isMapDisplay(void);
 void ring_queueGraphics(void);
 void ring_newVideoFrame(void);
 bool32 ring_canPublishGraphics(void);

@@ -3,7 +3,7 @@
 #ifdef MKSC_RING
 extern void ring_noteAudioStart(struct MusicPlayerInfo*);
 extern bool32 ring_preserveRaceDisplay(void);
-extern bool32 ring_resultsAudioBlocked(struct MusicPlayerInfo*, struct SongHeader*);
+extern bool32 ring_linkAudioBlocked(struct MusicPlayerInfo*, struct SongHeader*);
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
 #include "../songs.h"
@@ -54,7 +54,7 @@ void UnusedDummyFunc(void)
 void MPlayContinue(struct MusicPlayerInfo* mplayInfo)
 {
 #ifdef MKSC_RING
-    if (ring_resultsAudioBlocked(mplayInfo, mplayInfo->songHeader)) return;
+    if (ring_linkAudioBlocked(mplayInfo, mplayInfo->songHeader)) return;
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
     /* All song-number resume helpers eventually use this entry point. */
@@ -618,7 +618,7 @@ void MPlayStart(struct MusicPlayerInfo* mplayInfo, struct SongHeader* songHeader
     struct MusicPlayerTrack* track;
 
 #ifdef MKSC_RING
-    if (ring_resultsAudioBlocked(mplayInfo, songHeader)) return;
+    if (ring_linkAudioBlocked(mplayInfo, songHeader)) return;
 #endif
 #ifdef MKSC_RING_MUSIC_SHARED
     /* BGM belongs to P1; racer voices and engines belong to their console. */
