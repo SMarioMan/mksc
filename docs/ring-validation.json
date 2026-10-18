@@ -1097,14 +1097,20 @@
         "IWRAM early poll guard",
         "later graphics publication",
         "adaptive ready-count interval"
-      ]
+      ],
+      "generic_sixteen_console_revision": {
+        "shared_battle_2_worst_300": 0.9733333333333334,
+        "normal_battle_2_worst_300": 0.93,
+        "normal_status": "failed strict 0.95 window gate",
+        "targeted_missing_input_repair_trial": "rejected and not retained; worst window worsened to 0.85",
+        "shared_battle_2_mean": 0.9976882430647291
+      }
     },
     "open": [
       "Normal-audio course performance and final combined BIOS/GUI/audio gates",
       "Optional restored-sample gameplay performance",
       "Native Windows confirmation; HLE only after BIOS gates",
-      "New results audio report; revised Vs./Battle awards and B Back prompt",
-      "Integrate supplied title lettering correction; optional map spectator without consuming a racer slot"
+      "Sixteen-console hardware-renderer sanitizer lifecycle validation"
     ],
     "gui_pacing": {
       "platform": "Linux/Xvfb/private PulseAudio sink",
@@ -1172,10 +1178,10 @@
       "private_gui_checks_run_separately": true
     },
     "controlled_relocation": {
-      "functions": 1933,
-      "callbacks": 1070,
+      "functions": 1941,
+      "callbacks": 1074,
       "padding": 1024,
-      "opaque_asset_coincidences": 18,
+      "opaque_asset_coincidences": 29,
       "passed": true
     },
     "latest_followup": {
@@ -1212,11 +1218,64 @@
         "late_segments": 0,
         "results_music_and_moving_background": "passed"
       },
-      "title_label": "complete R outline, trim upper-right corner, centered 56-pixel strip",
+      "title_label": "Shared R/I outline at column 11; 54-pixel strip with five transparent columns on each side; native tile/palette indices preserved",
       "discovery_back_hint": true,
       "private_gui_rows_passed": 17,
       "private_gui_rows_skipped": 0,
-      "map_spectator": "in_development",
+      "map_spectator": {
+        "status": "passed_real_bios",
+        "physical_consoles": [
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "human_racers": 8,
+        "same_rom_all_consoles": true,
+        "automatic_role_ids": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "enabled_in_every_ring_build": true,
+        "emulator_map_options": false,
+        "separate_map_rom": false,
+        "shared_mode_cases": 24,
+        "normal_mode_cases": 6,
+        "normal_mode_test_consoles": [
+          9,
+          16
+        ],
+        "map_geometry_markers_silence_and_physics": "passed on every map console",
+        "readiness": "Each map acknowledges the barrier before the host can commit; fixes the reproduced thirteen-console Battle divergence",
+        "full_sixteen_console_results": [
+          "vs",
+          "battle"
+        ],
+        "full_sixteen_console_gp": [
+          "native points",
+          "next cup course"
+        ],
+        "qt_sixteen_console_gameplay_settings_and_captions": "passed",
+        "normal_music_fix": "Stop pre-discovery link music when the automatic map role is assigned",
+        "shared_images_byte_identical_after_normal_music_fix": true,
+        "evidence": [
+          "generic16-map-final.log",
+          "generic16-map-normal-fixed.log",
+          "generic16-final-rounds.log",
+          "generic16-final-gp.log",
+          "generic16-gui-final.log"
+        ]
+      },
       "reconnect_loss": "two/eight-player cable-loss recovery passes after recording both native course confirmations",
       "gp_finish_and_advance_cases": 14,
       "gp_cpu_fill_player_counts": [

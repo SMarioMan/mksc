@@ -52,6 +52,11 @@ def logic():
   test(stem,elf=elf,extra=())
  test('lobby','lobby-shared',variant='mksc-ring-shared')
  test('gp',extra=('--players','2','3','4','5','6','7','8'))
+ for policy in ('normal','shared'):
+  variant='mksc-ring'+('-shared' if policy=='shared' else '')
+  test('map_display','maps-'+policy,variant,extra=('--workers','1'))
+ test('rounds','maps-results',variant='mksc-ring-shared',extra=('--players','8','--consoles','16','--workers','1','--shared-audio','--results-frames','900'))
+ test('gp','maps-gp',variant='mksc-ring-shared',extra=('--players','8','--consoles','16'))
  test('rounds','toad-150cc-retro',variant='mksc-ring-shared',extra=('--players','8','--modes','vs','--workers','1','--toad-150cc-retro','--shared-audio'))
  test('flows',extra=('--players','2','8'))
  test('rounds',extra=('--players','2','3','4','5','6','7','8','--workers','1'))
@@ -81,9 +86,11 @@ def gui_units():
  shutil.copyfile(a.mgba_build/'Testing/Temporary/LastTest.log',r/'ctest-private-detail.log')
  detail=(r/'ctest-private-detail.log').read_text()
  rows=set(re.findall(r'PASS\s*:\s*RingGuiTest::([^\n]+)',detail))
- required={'scriptedLaunch()','threadedVideoReset()'}|{f'ring({row})' for row in ('vs-2','battle-2','vs-8','battle-8','vs-8-loss-start','vs-2-late','stock-vs-4','stock-battle-4')}
+ required={'scriptedLaunch()','threadedVideoReset()','controllerSlots()','ringArguments()'}|{f'ring({row})' for row in ('vs-2','battle-2','vs-8','battle-8','vs-8-loss-start','vs-2-late','stock-vs-4','stock-battle-4')}
  assert required<=rows,('Private GUI checks did not execute',sorted(required-rows))
  assert not re.search(r'SKIP\s*:\s*RingGuiTest::',detail),'Private GUI checks must not skip'
+ env['MGBA_RING_GUI_PLAYERS']='16'
+ run('gui-sixteen-consoles',[a.mgba_build/'qt/test-qt-ring_gui','scriptedLaunch'],env)
  for stem in ('projection','oam_cell','identity_atlas','collision','sound_volume','sound_control','shared_themes','target','camera','animation'):
   test(stem,unit=True)
  for ahead in (2,3):test('audio_queue','audio-queue-'+str(ahead),unit=True,extra=('--ahead',str(ahead)))

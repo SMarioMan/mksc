@@ -6,10 +6,6 @@
 #include "vcount.h"
 #include "map.h"
 
-/* Keep role selection in a separate translation unit. Racer and map ROMs
- * retain identical function addresses; only this linked data word changes. */
-const u32 ring_defaultMapDisplay = MKSC_RING_MAP_DISPLAY;
-
 extern const u16 ring_playerColors[8];
 int sub_8032D0C(RaceState* state);
 static u16* sMapCourseTiles;

@@ -37,7 +37,7 @@
 #endif
 #define RING_IRQ __attribute__((section(".ring_irq")))
 
-enum { DISCOVER = 1, ANNOUNCE = 2, COMMIT = 5, ABORT = 6, READY = 7 };
+enum { DISCOVER = 1, ANNOUNCE = 2, MAP_READY = 3, COMMIT = 5, ABORT = 6, READY = 7 };
 typedef struct
 {
     u32 queue[16];
@@ -52,10 +52,9 @@ typedef struct
     u16 committed[8];
     u8 barrierWaiting, commitPending;
     u32 commitPacket;
-    u8 monitor, hasMonitor;
+    u8 monitor, consoleCount, mapReady, mapMask;
 } RingState;
 static volatile RingState sRing __attribute__((section(".ring_state")));
-extern const u32 ring_defaultMapDisplay;
 static bool32 results_main(void);
 bool32 race_main(void);
 bool32 ring_prepareMapGraphics(void);
@@ -590,46 +589,62 @@ static void beginCommit(void)
 /* Discovery runs once per connection, outside the hot IRQ text region. */
 static bool32 receiveDiscovery(u32 word, u32 type, u32 payload)
 {
-    u32 racers = payload & 15;
-    if (payload & ~31U || racers > 8) return FALSE;
+    /* Discovery counts physical consoles, independently of the game's eight
+     * input slots. Every console runs the same image; IDs 8..15 forward the
+     * shared input vector and render the course map without submitting keys. */
+    u32 racers;
+    if (!payload || payload > 16) return FALSE;
+    racers = payload < 8 ? payload : 8;
     if (type == DISCOVER)
     {
         if (sRing.owner)
         {
-            if (racers < 2) return FALSE;
+            if (payload < 2) return FALSE;
             sRing.count = racers;
             enqueue(packet(ANNOUNCE, 0, 0, payload));
         }
         else
         {
-            if (!racers || sRing.inGame) return FALSE;
+            if (payload >= 16 || sRing.inGame) return FALSE;
             sRing.head = sRing.tail = sRing.queued = sRing.seen = 0;
             sRing.sequence = sRing.count = 0;
-            if (sRing.monitor)
-            {
-                if (payload & 16) return FALSE;
-                sRing.id = 8;
-                enqueue(packet(DISCOVER, 0, 0, payload | 16));
-            }
-            else
-            {
-                if (racers >= 8) return FALSE;
-                sRing.id = racers;
-                enqueue(packet(DISCOVER, 0, 0, payload + 1));
-            }
+            sRing.id = payload;
+            sRing.monitor = payload >= 8;
+            enqueue(packet(DISCOVER, 0, 0, payload + 1));
         }
     }
     else
     {
-        if (racers < 2 || (sRing.monitor ? !(payload & 16) : sRing.id >= racers)) return FALSE;
+        if (payload < 2 || sRing.id >= payload) return FALSE;
         sRing.count = racers;
-        sRing.hasMonitor = !!(payload & 16);
+        sRing.consoleCount = payload;
+        sRing.mapMask = payload > 8 ? (1 << (payload - 8)) - 1 : 0;
         sio2_sMPlayerId.mPlayerId = ring_viewPlayerId();
         sio2_sMPlayerId.playerCount = racers;
         sio2_sMPlayerId.field_16 = 0x8001;
         if (!sRing.owner) enqueue(word);
         else sRing.complete = TRUE;
     }
+    return TRUE;
+}
+
+/* Only map consoles emit this cold control packet. Keep its validation out
+ * of the tight IWRAM budget used by ordinary racer/idle serial interrupts. */
+static bool32 receiveMapReady(u32 word, u32 node, u32 seq, u32 id)
+{
+    if (node || id < 8 || id >= sRing.consoleCount) return FALSE;
+    if (sRing.rounds && seq == ((sRing.sequence + 15) & 15))
+    {
+        if (!sRing.owner) enqueue(word);
+        return TRUE;
+    }
+    if (seq != sRing.sequence || !sRing.count) return TRUE;
+    if (!sRing.frameStarted && id == sRing.id) sRing.ownReturned = TRUE;
+    if (sRing.owner) sRing.mapReady |= 1 << (id - 8);
+    else enqueue(word);
+    if (sRing.owner && sRing.requested && !sRing.frameStarted && sRing.ownReturned &&
+        sRing.readySeen == (1 << sRing.count) - 1 && sRing.mapReady == sRing.mapMask)
+        beginCommit();
     return TRUE;
 }
 
@@ -681,13 +696,16 @@ static void RING_IRQ receive(u32 word)
             sRing.readySeen |= 1 << node;
         }
         if (node != sRing.id) enqueue(word);
-        if (sRing.owner && sRing.requested && !sRing.frameStarted && sRing.ownReturned && sRing.readySeen == (1 << sRing.count) - 1)
+        if (sRing.owner && sRing.requested && !sRing.frameStarted && sRing.ownReturned && sRing.readySeen == (1 << sRing.count) - 1 && sRing.mapReady == sRing.mapMask)
             beginCommit();
         if (!sRing.owner && sRing.commitPending && sRing.seen == (1 << sRing.count) - 1)
         {
             word = packet(COMMIT, 0, sRing.sequence, 0);
             goto applyCommit;
         }
+        break;
+    case MAP_READY:
+        if (!receiveMapReady(word, node, seq, payload)) goto invalid;
         break;
     case COMMIT:
         /* A completed peer forwards a replay without applying it twice.
@@ -710,7 +728,7 @@ static void RING_IRQ receive(u32 word)
 applyCommit:
         sRing.commitPending = FALSE;
         for (i = 0; i < 8; i++) sRing.committed[i] = sRing.staged[i];
-        sRing.seen = sRing.readySeen = 0;
+        sRing.seen = sRing.readySeen = sRing.mapReady = 0;
         sRing.rounds++;
         sRing.sequence = (sRing.sequence + 1) & 15;
         sRing.complete = TRUE;
@@ -760,8 +778,11 @@ static void RING_IRQ ring_serialHandler(void)
     /* Idle polling clocks have no packet to decode. Avoid the decoder's
      * register saves while peers are still rendering or mixing audio. */
     if (word) receive(word);
-    if (sRing.count && sRing.requested && !sRing.frameStarted && !sRing.ownReturned && !(sRing.packets & 15) && !sRing.monitor)
-        enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
+    if (sRing.count && sRing.requested && !sRing.frameStarted && !sRing.ownReturned && !(sRing.packets & 15))
+    {
+        if (sRing.monitor) enqueue(packet(MAP_READY, 0, sRing.sequence, sRing.id));
+        else enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
+    }
     if (sRing.owner && sRing.frameStarted && !sRing.complete &&
         sRing.packets - sRing.commitPacket > sRing.count + 1 &&
         sRing.queued + sRing.count < 16 && !(sRing.packets & 15))
@@ -1008,7 +1029,6 @@ static void start(bool32 owner)
     irq_setHandler(IRQ_ID_TIMER2, ring_timerHandler);
     REG_IF = IRQ_MASK_SIO | IRQ_MASK_TIMER2;
     sRing.enabled = TRUE;
-    sRing.monitor = ring_defaultMapDisplay != 0;
     sRing.owner = owner;
     sRing.id = owner ? 0 : RING_INVALID;
     sRing.startVideoFrame = gSceneState.field14;
@@ -1056,8 +1076,11 @@ bool32 ring_exchange(void)
     }
     sRing.frameStarted = FALSE;
     sRing.startVideoFrame = gSceneState.field14;
-    if (sRing.count && !sRing.monitor)
-        enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
+    if (sRing.count)
+    {
+        if (sRing.monitor) enqueue(packet(MAP_READY, 0, sRing.sequence, sRing.id));
+        else enqueue(packet(READY, sRing.id, sRing.sequence, sRing.staged[sRing.id]));
+    }
     REG_IME = 1;
     do
     {
@@ -1332,9 +1355,10 @@ void ring_initTitleOption(void)
 {
     extern const u16* off_80D8E4C[];
     /* R from PLAYER, ING from SINGLE, LINK from SINGLE-PAK LINK. */
-    /* Keep R's complete right outline, trimming only its extra corner
-     * pixel. Center the 56-pixel label within the two 32-pixel sprites. */
-    static const s16 slices[3][4] = { {0,32,7,4}, {0,-33,18,12}, {5,25,25,35} };
+    /* R and I share their black outline at column 11, like the stock
+     * connected lettering. The 54-pixel label has five transparent columns
+     * on either side within the existing pair of 32-pixel sprites. */
+    static const s16 slices[3][4] = { {0,32,7,5}, {0,-33,18,11}, {5,25,25,34} };
     u16 tiles[256];
     int i, row, col, x, offset;
     for (i = 0; i < 256; i++) tiles[i] = 0;
@@ -1343,7 +1367,6 @@ void ring_initTitleOption(void)
             for (col = 0; col < slices[i][2]; col++)
             {
                 u32 pixel = titlePixel(off_80D8E4C[slices[i][0]], slices[i][1] + col, row - 8);
-                if (!i && row == 3 && col == 6) pixel = 0;
                 x = slices[i][3] + col;
                 offset = (x / 32) * 128 + (row / 8) * 64 + ((x % 32) / 8) * 16 + (row % 8) * 2 + (x % 8) / 4;
                 tiles[offset] |= pixel << ((x % 4) * 4);
@@ -2182,9 +2205,9 @@ bool32 ring_main(void)
     resetMenuDisplay();
     sSession = TRUE;
     for (i = 0; i < 8; i++) sRoundScores[i] = 0;
-    screen(ring_defaultMapDisplay ? "RING MAP" : "RING LINK");
+    screen("RING LINK");
     text(12, 42, "CONNECT ALL GBAS IN A RING", 0x7FFF);
-    text(12, 60, ring_defaultMapDisplay ? "WAIT FOR HOST TO PRESS START" : "PRESS START ON ONE CONSOLE", 0x03FF);
+    text(12, 60, "PRESS START ON ONE CONSOLE", 0x03FF);
     text(12, 78, "WAITING FOR OTHER PLAYERS", 0x7FFF);
     text(12, 140, "B BACK", 0x7FFF);
     sMenuReady = TRUE;
@@ -2229,6 +2252,12 @@ bool32 ring_main(void)
     }
     if (sRing.failed) goto lost;
 connected:
+#ifndef MKSC_RING_MUSIC_SHARED
+    /* Automatic map roles are assigned after link music has started. Stop
+     * that existing mixer state too; rejecting new songs alone leaves it
+     * playing indefinitely in the otherwise silent display. */
+    if (sRing.monitor) m4aMPlayAllStop();
+#endif
 #ifdef MKSC_RING_MUSIC_SHARED
     /* ANNOUNCE may finish discovery before the loop's next iteration. */
     if (sRing.id != 0) m4aMPlayStop(gMPlayTable[0].info);

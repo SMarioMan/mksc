@@ -9,28 +9,39 @@ resume paths while the native world continues coasting. The same eight-player
 recording passes a full minute on results with no engine restart, unfilled
 PCM segment or late segment, and with the native results theme still playing.
 
-The discovery page displays white `B BACK`. The title label restores the R's
-clipped right outline, removes its extra upper-right corner pixel and centers
-the 56-pixel strip within its two sprites. Real-BIOS title/lobby checks pass.
+The discovery page displays white `B BACK`. The title label now shares the R/I
+outline and centers its 54-pixel strip within its two sprites. Real-BIOS title/lobby checks pass.
 The private GUI run executes all 17 scenarios without skips and all 35 CTest
 targets pass. Release validation now checks named scenarios instead of an
 obsolete thirteen-test total.
 
-The optional map-only member joins after 2–8 humans without consuming a racer
-slot. All 21 shared-audio count/mode combinations pass with exact native course
-overviews, aligned P1–P8 markers (including GP CPUs), silent audio and identical
-physics on every node. All consoles sustain one update per video frame in
-these entry captures. Normal-audio two/eight-player entry also passes in all
-three modes. Complete two/eight-player Vs./Battle results and GP finish/advance
-recordings pass with the map attached; its geometry and palette remain stable
-through results. The nine-window Qt replay passes separate P1–P9 settings,
-Map/P1–P8 captions, Alt menu access, replacement of a closed window and full
-native updates. The same nine-window launch and argument parsing pass ASan/UBSan; the
-nine-node wire/fault-mask unit tests pass under sanitizers too. All 35 CTest
-targets pass with the private BIOS/stock/ring fixtures, including the updated
-GUI capacity checks. Native Windows and physical cables remain unverified.
-`build_release.py --map-displays` builds four paired companions; each differs
-from its racer image only in one role byte, with identical symbol addresses.
+Ring discovery counts 2–16 physical consoles. The standard ring ROM assigns
+IDs 0–7 to human racers and IDs 8–15 to silent full-course map displays.
+Maps forward the eight-racer input vector and participate in deterministic
+simulation without emitting READY input packets. All consoles load one ROM;
+there is no companion role word or map-specific emulator option. All 24
+shared-audio count/mode combinations pass with identical physics on every
+console, exact native course maps, aligned markers, silent map audio and full
+simulation updates in the entry captures. Normal audio passes all modes at
+nine/sixteen consoles after stopping the link song that preceded role discovery.
+The shared images remain byte-identical after that normal-only fix.
+
+The first thirteen-console Battle recording exposed a map one physics step
+behind the racers. Map consoles now acknowledge readiness for every barrier,
+without claiming a racer input slot. The host waits for those acknowledgements
+as well as the eight racer inputs before COMMIT. All 9–16 counts now pass.
+Complete sixteen-console Vs./Battle results and GP finish/advance also pass.
+The sixteen-window Qt replay passes P1–P16 captions, independent settings,
+Alt menu access, closed-window replacement and 1.000 native updates per frame.
+The current wire unit sweeps 2–16 consoles in both normal serial modes,
+including the highest open-wire bit and rejection of the seventeenth console.
+
+The new eight-player shared Battle Course 3 capture passes with mean 0.997688 and a 0.973333 worst
+300-frame window. Normal audio still fails at 0.93. A targeted missing-vector
+recovery experiment worsens that to 0.85 and is not retained. Renderer lifecycle
+sanitizer follow-up is still in progress; native Windows and cables remain
+unverified.
+
 The reconnect replay now confirms the native track page after its entrance
 animation. Its old recording stopped on that connected page rather than
 starting the race. Corrected two/eight-player cable-loss recordings pass.
