@@ -334,6 +334,12 @@ gameplay after BIOS boot and menu entry, then performs the regression's ordinary
 state/audio/lifecycle checks. A nonzero exit code remains a test failure. Window
 settings and save outputs are temporary; your normal GUI settings are preserved.
 
+The default window display is software. Add `--display opengl` to review the
+OpenGL window path; add `--hardware-renderer` for hardware GBA rendering too
+(requires a compatible emulator build). `--threaded-video 0` or `1` overrides
+the native software rendering worker for comparisons such as the Windows
+startup regression. The fixture verifies requested backends are actually active.
+
 Use the normal Pause command to pause/resume all consoles for inspection.
 Ctrl+C stops the review. Keep other CPU-heavy test/build jobs stopped while
 judging sound or wall-clock performance. The test reports native updates per

@@ -17,7 +17,11 @@ p.add_argument('--players', type=int, choices=range(2, 9), default=8)
 p.add_argument('--seconds', type=int, choices=range(35, 301), default=60, metavar='35..300', help='Moving gameplay duration, after BIOS and menu navigation')
 p.add_argument('--fixture', type=Path, help='Replay an existing frame,player,hex-key-mask CSV instead of the default entry fixture')
 p.add_argument('--log', type=Path, help='Also save the test output here')
+p.add_argument('--display', choices=('software', 'opengl'), default='software', help='Window display backend')
+p.add_argument('--hardware-renderer', action='store_true', help='Use the hardware GBA renderer (requires --display opengl and a compatible build)')
+p.add_argument('--threaded-video', type=int, choices=(0, 1), help='Override the native software rendering worker')
 a = p.parse_args()
+if a.hardware_renderer and a.display != 'opengl': p.error('--hardware-renderer requires --display opengl')
 for key in ('gui_test', 'rom', 'bios', 'fixture'):
     path = getattr(a, key)
     if path is not None:
@@ -47,6 +51,9 @@ with tempfile.TemporaryDirectory(prefix='mksc-visual-') as directory:
     env.update(MGBA_RING_GUI_VISUAL='1', MGBA_RING_GUI_SYNC='1', MGBA_RING_GUI_MOTION='1', MGBA_RING_GUI_AUDIO='qt',
                MGBA_RING_GUI_AUDIO_FRAMES=str(round(a.seconds * 59.7275)), MGBA_RING_GUI_ROM=str(a.rom),
                MGBA_RING_GUI_BIOS=str(a.bios), MGBA_RING_GUI_INPUTS=directory)
+    env['MGBA_RING_GUI_DISPLAY'] = str(int(a.display == 'opengl'))
+    env['MGBA_RING_GUI_HARDWARE'] = str(int(a.hardware_renderer))
+    if a.threaded_video is not None: env['MGBA_RING_GUI_THREADED'] = str(a.threaded_video)
     if a.fixture: env['MGBA_RING_GUI_REPLAY'] = str(a.fixture)
     print(f'Visual {a.mode}: {a.players} players, real BIOS, sound, {a.seconds}s moving gameplay.', flush=True)
     print('Windows are in P1..P8 order. Use the normal Pause command to pause the ring. Ctrl+C ends the review.', flush=True)
