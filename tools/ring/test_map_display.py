@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check a automatic map members with real BIOS, keys and native course geometry."""
+"""Check automatic map members with real BIOS, keys and native course geometry."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
@@ -14,9 +14,12 @@ for name in ('runner', 'rom', 'elf', 'bios', 'results'):
     p.add_argument('--' + name, required=True, type=lambda value: Path(value).resolve())
 p.add_argument('--consoles', nargs='+', type=int, choices=range(9, 17), default=list(range(9, 17)))
 p.add_argument('--modes', nargs='+', choices=('vs', 'battle', 'gp'), default=['vs', 'battle', 'gp'])
+p.add_argument('--host', type=int, default=0, help='Physical console that presses Start; role IDs rotate from this console')
 p.add_argument('--workers', type=int, choices=range(1, 5), default=2)
 p.add_argument('--frames', type=int, default=4800)
 a = p.parse_args()
+if a.host < 0 or any(a.host >= count for count in a.consoles):
+    p.error('The host must exist in every selected ring')
 if a.frames < 4800:
     p.error('Capture at least 4800 frames, including moving gameplay')
 assert hashlib.sha1(a.bios.read_bytes()).hexdigest() == '300c20df6731a33952ded8c436f7f186d25d3492'
@@ -41,7 +44,7 @@ def trunc_div(numerator, denominator):
     return numerator // denominator if numerator >= 0 else -((-numerator) // denominator)
 
 def run(count, mode):
-    name = f'{mode}-{count}'
+    name = f'{mode}-{count}-host{a.host+1}'
     fixture = f'{mode}-8'
     rows = [tuple(int(v, 16 if i == 2 else 10) for i, v in enumerate(line.split(',')))
             for line in (a.results/'inputs'/(fixture+'.csv')).read_text().splitlines()]
@@ -49,6 +52,7 @@ def run(count, mode):
     # consoles forward the host's choices without submitting local input.
     rows += [(frame, slot, keys) for slot in range(8, count)
              for frame, source, keys in rows.copy() if not source and frame < 1500]
+    rows = [(frame, (slot + a.host) % count, keys) for frame, slot, keys in rows]
     inputs = a.results/(name+'.csv')
     inputs.write_text(''.join(f'{frame},{slot},{keys:x}\n' for frame, slot, keys in sorted(rows)))
     video = a.results/(name+'-video.csv')
@@ -73,12 +77,14 @@ def run(count, mode):
     for node in data['nodes']:
         barrier, game = node['barrier'], node['game']
         assert barrier['count'] == 8 and barrier['errors'] == barrier['timeouts'] == 0
-        assert barrier['id'] == node['slot']
+        assert barrier['id'] == (node['slot'] - a.host) % count
         assert game['sceneMain'] == s['race_main'] | 1 and game['humanCount'] == 8
         assert len({driver['character'] for driver in game['drivers'][:racers]}) == racers
         states.append([(driver['position'], driver['lap'], driver['balloons']) for driver in game['drivers'][:racers]])
     assert all(state == states[0] for state in states), (name, 'Spectator changed deterministic physics')
-    for monitor in data['nodes'][8:]:
+    maps = [node for node in data['nodes'] if node['barrier']['id'] >= 8]
+    assert len(maps) == count - 8
+    for monitor in maps:
         assert monitor['game']['localId'] == 0 and monitor['watch'] & 65535 == 0x1441
         markers = monitor['game']['hud']['mapDisplayMarkers']
         assert [marker[0] for marker in markers] == list(range(racers)), (name, 'Missing map markers', markers)
@@ -87,7 +93,7 @@ def run(count, mode):
             expected = [48 + trunc_div(driver['position'][0] >> shift, 114),
                         8 + trunc_div(driver['position'][1] >> shift, 114)]
             assert abs(x-expected[0]) <= 1 and abs(y-expected[1]) <= 1, (name, index, [x,y], expected)
-        reference = struct.pack('<4096I', *data['nodes'][0]['dump'])[:2048]
+        reference = struct.pack('<4096I', *data['nodes'][a.host]['dump'])[:2048]
         actual = struct.pack('<4096I', *monitor['dump'])[8192:8192+4160]
         expected = bytes(176 + color if color else 0 for packed in reference
                          for color in (packed & 15, packed >> 4))
@@ -104,7 +110,8 @@ def run(count, mode):
         assert all(frame['invalidObjects'] == 0 for frame in frames)
         assert frames[-1]['audioLateSegments'] == frames[0]['audioLateSegments'], (name, index, 'Late PCM')
         assert frames[-1]['audioMissedFrames']-frames[0]['audioMissedFrames'] == frames[-1]['audioRecoveredFrames']-frames[0]['audioRecoveredFrames'], (name, index, 'Unfilled PCM')
-    for display in timeline[8:]:
+    for monitor in maps:
+        display = timeline[monitor['slot']]
         for frame in display:
             assert frame['dispcnt'] == 0x1441 and frame['objects'] == racers, (name, 'Map display flickered')
             assert frame['musicStatus'] & 0x80000000 or not frame['musicStatus'] & 65535, (name, 'Map played music')
@@ -123,7 +130,7 @@ with ThreadPoolExecutor(max_workers=a.workers) as pool:
         except Exception as error:
             failures.append([pending[future], str(error)])
             print('FAIL', pending[future], str(error), flush=True)
-        (a.results/'summary.json').write_text(json.dumps({'rom_sha256': hashlib.sha256(image).hexdigest(),
+        (a.results/'summary.json').write_text(json.dumps({'rom_sha256': hashlib.sha256(image).hexdigest(), 'host_console': a.host + 1,
             'passed': passed, 'failures': failures}, indent=2)+'\n')
 if failures:
     raise SystemExit('Map display checks failed')

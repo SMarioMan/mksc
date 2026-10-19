@@ -89,6 +89,11 @@ remain P1 through P16, independently of the role assigned by the game.
 
 `test_map_display.py --runner ... --rom ... --elf ... --bios ... --results ...`
 sweeps totals 9–16 in Vs., Battle, and GP with the same image everywhere.
+Use `--host N` (zero-based physical console) to check discovery with a
+different host; role IDs rotate from that console. Release manifests identify
+all four ordinary variants with `automatic_maps: true` and `ring_consoles: 16`.
+Old map-only images from earlier releases are obsolete and are never emitted
+by the current builder.
 It checks every map's geometry, marker alignment, silence, physics agreement,
 and simulation speed. `test_rounds.py` and `test_gp.py` accept
 `--players 8 --consoles 9..16` to check results and GP advancement with maps.

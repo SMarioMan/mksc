@@ -20,6 +20,7 @@ r.mkdir(parents=True,exist_ok=True)
 variants=json.loads((build/'variants.json').read_text())
 assert len(variants)==4,'Build all four variants first'
 for name,variant in variants.items():
+ assert variant.get('automatic_maps') is True and variant.get('ring_consoles')==16 and variant.get('racer_slots')==8, 'Every ring image must include automatic maps'
  assert hashlib.sha256((build/(name+'.gba')).read_bytes()).hexdigest()==variant['sha256'],name
 assert hashlib.sha1(bios.read_bytes()).hexdigest()=='300c20df6731a33952ded8c436f7f186d25d3492'
 assert hashlib.sha1((root/'baserom.gba').read_bytes()).hexdigest()=='9d327c030c3e2d9007990518594f70c3340ac56f'
@@ -55,6 +56,8 @@ def logic():
  for policy in ('normal','shared'):
   variant='mksc-ring'+('-shared' if policy=='shared' else '')
   test('map_display','maps-'+policy,variant,extra=('--workers','1'))
+ for count in (9,16):
+  test('map_display','maps-rotated-'+str(count),extra=('--consoles',str(count),'--host',str(count-1),'--modes','vs','--workers','1'))
  test('rounds','maps-results',variant='mksc-ring-shared',extra=('--players','8','--consoles','16','--workers','1','--shared-audio','--results-frames','900'))
  test('gp','maps-gp',variant='mksc-ring-shared',extra=('--players','8','--consoles','16'))
  test('rounds','toad-150cc-retro',variant='mksc-ring-shared',extra=('--players','8','--modes','vs','--workers','1','--toad-150cc-retro','--shared-audio'))
@@ -91,6 +94,8 @@ def gui_units():
  assert not re.search(r'SKIP\s*:\s*RingGuiTest::',detail),'Private GUI checks must not skip'
  env['MGBA_RING_GUI_PLAYERS']='16'
  run('gui-sixteen-consoles',[a.mgba_build/'qt/test-qt-ring_gui','scriptedLaunch'],env)
+ env['MGBA_RING_GUI_TITLE_ENTRY']='1'
+ run('gui-sixteen-title-entry',[a.mgba_build/'qt/test-qt-ring_gui','scriptedLaunch'],env)
  for stem in ('projection','oam_cell','identity_atlas','collision','sound_volume','sound_control','shared_themes','target','camera','animation'):
   test(stem,unit=True)
  for ahead in (2,3):test('audio_queue','audio-queue-'+str(ahead),unit=True,extra=('--ahead',str(ahead)))

@@ -1307,5 +1307,61 @@
         8
       ]
     }
+  },
+  "automatic_map_followup": {
+    "reported_link_error": "not reproduced with the current standard images",
+    "same_rom_on_all_consoles": true,
+    "real_bios": true,
+    "headless_cases": [
+      {
+        "consoles": 9,
+        "host_console": 1
+      },
+      {
+        "consoles": 16,
+        "host_console": 1
+      },
+      {
+        "consoles": 9,
+        "host_console": 9
+      },
+      {
+        "consoles": 16,
+        "host_console": 16
+      }
+    ],
+    "headless_mode": "vs",
+    "qt_standard_title_entry": {
+      "consoles": 16,
+      "passed": true,
+      "minimum_native_updates_per_video_frame": 0.998,
+      "silent_map_consoles": 8
+    },
+    "title_art": "Trim redundant R outline; overwrite shared I border instead of combining palette indices; verify colored ink on both sides of one border",
+    "release_variants": 4,
+    "standalone_map_variant": false,
+    "stock_sha1": "9d327c030c3e2d9007990518594f70c3340ac56f",
+    "relocation": {
+      "functions": 1941,
+      "callbacks": 1074,
+      "padding_bytes": 1024
+    },
+    "evidence_directory": "review-15",
+    "evidence": [
+      "standard-maps/summary.json",
+      "rotated9.log",
+      "rotated16.log",
+      "gui-standard16.log",
+      "title",
+      "relocation.log",
+      "release.log",
+      "gui-standard9-shared.log"
+    ],
+    "qt_shared_title_entry": {
+      "consoles": 9,
+      "passed": true,
+      "minimum_native_updates_per_video_frame": 1.0,
+      "silent_map_consoles": 1
+    }
   }
 }

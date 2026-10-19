@@ -1355,10 +1355,11 @@ void ring_initTitleOption(void)
 {
     extern const u16* off_80D8E4C[];
     /* R from PLAYER, ING from SINGLE, LINK from SINGLE-PAK LINK. */
-    /* R and I share their black outline at column 11, like the stock
-     * connected lettering. The 54-pixel label has five transparent columns
-     * on either side within the existing pair of 32-pixel sprites. */
-    static const s16 slices[3][4] = { {0,32,7,5}, {0,-33,18,11}, {5,25,25,34} };
+    /* PLAYER ends in a seven-column R with an outer trailing outline.
+     * Trim that column and let I replace the shared edge, rather than ORing
+     * palette indices together (which leaves a double-width black seam).
+     * The occupied columns 6..58 are centered on column 32 of the cell. */
+    static const s16 slices[3][4] = { {0,32,6,6}, {0,-33,18,11}, {5,25,25,34} };
     u16 tiles[256];
     int i, row, col, x, offset;
     for (i = 0; i < 256; i++) tiles[i] = 0;
@@ -1369,7 +1370,9 @@ void ring_initTitleOption(void)
                 u32 pixel = titlePixel(off_80D8E4C[slices[i][0]], slices[i][1] + col, row - 8);
                 x = slices[i][3] + col;
                 offset = (x / 32) * 128 + (row / 8) * 64 + ((x % 32) / 8) * 16 + (row % 8) * 2 + (x % 8) / 4;
-                tiles[offset] |= pixel << ((x % 4) * 4);
+                if (pixel)
+                    tiles[offset] = (tiles[offset] & ~(15 << ((x % 4) * 4))) |
+                        (pixel << ((x % 4) * 4));
             }
     CpuCopy16(tiles, (void*)(OBJ_VRAM0 + 0x7E00), sizeof(tiles));
 }

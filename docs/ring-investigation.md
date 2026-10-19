@@ -10,7 +10,11 @@ recording passes a full minute on results with no engine restart, unfilled
 PCM segment or late segment, and with the native results theme still playing.
 
 The discovery page displays white `B BACK`. The title label now shares the R/I
-outline and centers its 54-pixel strip within its two sprites. Real-BIOS title/lobby checks pass.
+outline and centers its 53-pixel strip on the native cell anchor. Real-BIOS title/lobby checks pass.
+The R crop now removes its redundant trailing edge and writes palette indices
+rather than ORing overlapping glyphs. The title regression requires colored
+ink immediately on both sides of a single shared border, catching the prior
+double-width seam.
 The private GUI run executes all 17 scenarios without skips and all 35 CTest
 targets pass. Release validation now checks named scenarios instead of an
 obsolete thirteen-test total.
@@ -43,6 +47,18 @@ recovery experiment worsens that to 0.85 and is not retained. All sixteen actual
 resets, a verified post-reset window and closure under ASan/UBSan. All 35
 CTest targets pass, including all nineteen private GUI scenarios without skips.
 Native Windows and cables remain unverified.
+
+The follow-up standard-ROM recordings pass at nine and sixteen consoles, both
+with the first console hosting and with the last console hosting. Every
+physical console loads the ordinary, normal-audio title-entry image; roles
+rotate from the host and all IDs beyond seven become silent maps. These checks
+do not reproduce the newly reported link error. The regression accepts a
+physical host index so it no longer assumes software IDs equal window indices.
+The Qt title-entry replays pass with sixteen normal-audio consoles and nine
+shared-audio consoles, checking silent automatic maps as well as gameplay,
+settings and captions. The measured native update minima are 0.998 and 1.000.
+Fresh release manifests explicitly identify sixteen-console automatic-map
+support in all four variants; the builder emits no map-only variant.
 
 The reconnect replay now confirms the native track page after its entrance
 animation. Its old recording stopped on that connected page rather than

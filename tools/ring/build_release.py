@@ -22,7 +22,7 @@ for boot in (False,True):
   with (out/(name+'-build.log')).open('w') as log:
    subprocess.run(['python3','tools/ring/build.py','--music',music,'--sunset-art',a.sunset_art]+audio_args+(['--boot-ring'] if boot else []),cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
   for ext in ('gba','elf','sym','map'):publish(root/('mksc-ring.'+ext),out/(name+'.'+ext))
-  variants[name]={'boot_ring':boot,'music':music,'sunset_art':a.sunset_art,'music_restoration_sha256':hashlib.sha256(a.music_restoration_ips.read_bytes()).hexdigest() if a.music_restoration_ips else None,'sha256':hashlib.sha256((out/(name+'.gba')).read_bytes()).hexdigest()}
+  variants[name]={'boot_ring':boot,'music':music,'ring_consoles':16,'racer_slots':8,'automatic_maps':True,'sunset_art':a.sunset_art,'music_restoration_sha256':hashlib.sha256(a.music_restoration_ips.read_bytes()).hexdigest() if a.music_restoration_ips else None,'sha256':hashlib.sha256((out/(name+'.gba')).read_bytes()).hexdigest()}
   (out/'variants.json').write_text(json.dumps(variants,indent=2)+'\n')
   print('BUILT',name,variants[name]['sha256'],flush=True)
 with (out/'shifted-build.log').open('w') as log:

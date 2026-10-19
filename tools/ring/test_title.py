@@ -48,14 +48,14 @@ first = run('speed-start', 1200, state + 0x390)['watch']
 last = run('speed-end', 1400, state + 0x390)['watch']
 assert 195 <= last - first <= 205, ('Title redraws must follow VBlank', first, last)
 # Validate the actual generated OBJ tiles, including the shared R/I outline
-# and equal left/right padding. OAM presence alone cannot catch poor kerning.
+# and centering on the native cell anchor. OAM presence alone cannot catch poor kerning.
 label = run('label-tiles', 1200, 0x04000000, 0x06017C00)
 raw = struct.pack('<256I', *label['dump'])[512:]
 def pixel(x, y):
     offset = (x//32)*256 + (y//8)*128 + ((x%32)//8)*32 + (y%8)*4 + (x%8)//2
     return (raw[offset] >> ((x&1)*4)) & 15
 occupied = [x for x in range(64) if any(pixel(x,y) for y in range(16))]
-assert (min(occupied), max(occupied)) == (5,58), ('Uncentered Ring Link label', occupied)
+assert (min(occupied), max(occupied)) == (6,58), ('Uncentered Ring Link label', occupied)
 assert all(pixel(11,y) == 6 for y in range(2,14)), 'R and I must share one continuous black outline'
-assert all(pixel(12,y) for y in range(2,14)), 'Blank gap after R/I outline'
+assert all(pixel(10,y) not in (0,6) and pixel(12,y) not in (0,6) for y in range(3,13)), 'R/I must have one border column, with colored ink immediately on both sides'
 print(f'PASS: all link labels present; centered Ring Link with shared R/I border; {last - first} menu updates in 200 video frames')
