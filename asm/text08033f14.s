@@ -55892,6 +55892,9 @@ sub_804EDAC: @ 0x0804EDAC
 	ldr r1, _0804EE3C @ =0x06002000
 	bl LZ77UnCompVram
 _0804EDF4:
+	.ifdef MKSC_RING
+	bl ring_captureMapOverview
+	.endif
 	ldr r2, _0804EE40 @ =0x00000838
 	adds r0, r4, r2
 	ldr r1, [r0]

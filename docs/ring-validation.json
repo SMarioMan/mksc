@@ -1363,5 +1363,52 @@
       "minimum_native_updates_per_video_frame": 1.0,
       "silent_map_consoles": 1
     }
+  },
+  "gp_map_followup": {
+    "status": "passed",
+    "real_bios": true,
+    "racers": 8,
+    "consoles": 9,
+    "cup": "Retro Special",
+    "courses": 4,
+    "engine_cc": 150,
+    "items": true,
+    "final_results_frames": 900,
+    "all_portraits_rendered": true,
+    "map_source": "native HUD-loader completion hook",
+    "evidence": "/workspace/.setup/results/review-16/fixed-special-150-items",
+    "reported_portrait_issue": "Not reproduced in software; P4/Bowser at 100cc passed a complete Retro Special Cup. Hardware-renderer checks remain open.",
+    "bowser_p4_100cc": {
+      "status": "passed",
+      "real_bios": true,
+      "racers": 8,
+      "consoles": 9,
+      "courses": 4,
+      "final_results_frames": 900,
+      "rendered_results_frames_checked": 9544,
+      "portraits_checked_per_frame": 8,
+      "character_id_p4": 2,
+      "evidence": "/workspace/.setup/results/review-16/bowser-p4-100cc-grid"
+    }
+  },
+  "docker_release": {
+    "status": "passed",
+    "rom_count": 18,
+    "ring_variants": 16,
+    "all_ips_reconstructed": true,
+    "independent_decoders": 2,
+    "comparison": [
+      "exact bytes",
+      "SHA-256"
+    ],
+    "stock_hash_verified": true,
+    "input_mounts": "read-only",
+    "runtime_network": "none",
+    "runtime_user": "unprivileged",
+    "original_samples_only_rom_count": 10,
+    "image_contains_supplied_roms_bios_or_ips": false,
+    "gameplay_tests_run_by_packaging": false,
+    "evidence": "/workspace/.setup/results/review-16/docker-audit.log",
+    "guide": "../tools/release/README.md"
   }
 }

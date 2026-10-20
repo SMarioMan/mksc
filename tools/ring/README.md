@@ -396,3 +396,35 @@ Fixture export without running an emulator is also available:
 python3 tools/ring/test_game.py --inputs-only --results visual-inputs \
   --players 2 3 4 5 6 7 8 --modes vs battle gp
 ```
+
+## Complete Grand Prix cups and results graphics
+
+The GP regression can drive every course of a Retro cup, including automatic
+map consoles. For the reported Retro Special Cup case:
+
+```sh
+python3 tools/ring/test_gp_cup.py --runner ../mgba/BUILD/mgba-link \
+  --rom mksc-ring.gba --elf mksc-ring.elf --bios /path/to/gba.bin \
+  --results gp-special --players 8 --consoles 9 --cup 4 --engine 1 \
+  --bowser-p4 --autofire --video-log --results-frames 900
+```
+
+Engine values are 0=50cc, 1=100cc, 2=150cc. `--bowser-p4` exchanges the
+initial P4/Toad and P8/Bowser selections using native keypad navigation. The
+test verifies the resulting character IDs, scores, sorted standings, common
+physics, and five laps per Retro course. Graphics checks compare all eight
+portrait textures with the ROM and their opaque pixels with the displayed
+image. Each map must remain visible and stable through racing and results;
+all four courses must use different map geometry. Screenshots are saved on
+every results entry, alongside a frame log and a graphics report.
+
+`--races 1` stops at the first results. `--results-frames` observes the final
+results without confirming, and `--analyze-only` rechecks an existing recording
+without running emulation. Reanalysis requires the same ROM and menu options.
+Use a fresh directory for a new run; existing recordings are protected.
+
+The `*-recorded.csv` file contains actual keypad actions, including adaptive
+driving, and can be passed to `review_gui.py --fixture` with `--mode gp` to
+review the race visibly. Course-by-course screenshots and strict graphics
+assertions belong to the headless run; the desktop review remains an additional
+sound/graphics check.

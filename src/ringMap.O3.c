@@ -9,7 +9,7 @@
 extern const u16 ring_playerColors[8];
 int sub_8032D0C(RaceState* state);
 static u16* sMapCourseTiles;
-static u32 sMapSourceReadyFrame;
+static bool32 sMapCaptureFailed;
 static u16 sMapCoursePalette[16] ALIGNED(4);
 
 static const u16 sMapLabels[8][64] ALIGNED(4) = {
@@ -19,7 +19,7 @@ static const u16 sMapLabels[8][64] ALIGNED(4) = {
 void ring_resetMapGraphics(void)
 {
     sMapCourseTiles = 0;
-    sMapSourceReadyFrame = 0;
+    sMapCaptureFailed = FALSE;
 }
 
 /* Perspective road tiles are a moving cache, rather than a complete course.
@@ -37,8 +37,22 @@ static bool32 cacheCourseOverview(RaceState* state)
         sMapCourseTiles[i * 2] = (a ? 176 + a : 0) | ((b ? 176 + b : 0) << 8);
         sMapCourseTiles[i * 2 + 1] = (c ? 176 + c : 0) | ((d ? 176 + d : 0) << 8);
     }
+    /* Native frmheap_calloc clears only part of a reused allocation. The
+     * padding tile must stay transparent even on later courses. */
+    for (i = 2048; i < 2080; i++) sMapCourseTiles[i] = 0;
     CpuCopy16(pltt_getBuffer(0) + 176, sMapCoursePalette, sizeof(sMapCoursePalette));
     return TRUE;
+}
+
+/* Called immediately after the stock HUD loader decompresses this course's
+ * overview. A prior course's HUD cells survive heap resets, so they cannot
+ * serve as evidence that the next overview has reached VRAM. */
+void ring_captureMapOverview(void)
+{
+    extern bool32 ring_isMapDisplay(void);
+    if (!ring_isMapDisplay()) return;
+    if (!sMapCourseTiles && !cacheCourseOverview(&gSceneState.raceState))
+        sMapCaptureFailed = TRUE;
 }
 
 /* Display the complete native course overview with one north-up affine
@@ -47,6 +61,7 @@ static void mapDisplayVblank(void)
 {
     vu8* map = (vu8*)0x0600B000;
     u32 i;
+    if (!sMapCourseTiles) return;
     DmaStop(0);
     REG_DISPSTAT_STRUCT->vcountIrq = FALSE;
     REG_IF = IRQ_MASK_VCOUNT;
@@ -84,21 +99,8 @@ bool32 ring_prepareMapGraphics(void)
     u16* palette = pltt_getBuffer(1);
     u32 i, minimapShift;
     if (!state->trackData || !state->driverCount) return TRUE;
-    if (!sMapCourseTiles)
-    {
-        const u16* hud = map_getBufferPtr(0);
-        /* The loader sets the map cells before its queued graphics reach
-         * VRAM. Wait for that complete native layout and its publication. */
-        for (i = 0; i < 64; i++)
-            if (hud[(12 + i / 8) * 32 + 22 + i % 8] != 0xB100 + i) return TRUE;
-        if (!sMapSourceReadyFrame)
-        {
-            sMapSourceReadyFrame = gSceneState.field14 + 2;
-            return TRUE;
-        }
-        if (gSceneState.field14 < sMapSourceReadyFrame) return TRUE;
-        if (!cacheCourseOverview(state)) return FALSE;
-    }
+    if (sMapCaptureFailed) return FALSE;
+    if (!sMapCourseTiles) return TRUE;
     /* Retire the perspective callback before resetting its list. Merely
      * clearing DISPSTAT leaves a pending VCOUNT IRQ able to call a null
      * list entry after VBlank. Keep the library's interrupt mask in sync. */
