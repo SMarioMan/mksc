@@ -23,3 +23,8 @@ _ReSharper*/
 
 __pycache__/
 *.pyc
+
+# Local Docker release inputs and generated deliverables.
+/inputs
+/release
+/releases

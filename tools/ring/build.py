@@ -5,6 +5,7 @@ import subprocess
 import argparse
 import hashlib
 p = argparse.ArgumentParser(description=__doc__)
+p.add_argument("--jobs", type=int, choices=range(1, 65), default=5, help="Parallel compiler jobs")
 p.add_argument("--boot-ring", action="store_true", help="Boot directly into the ring connection menu")
 p.add_argument("--sunset-art", choices=("original", "japanese"), default="original",
                help="Choose Sunset Wilds artwork; the default preserves the US art")
@@ -85,6 +86,6 @@ symbols += '\n__aeabi_idiv = __divsi3;\n__aeabi_uidiv = __udivsi3;\n'
 (out / 'symbols.txt').write_text(symbols)
 subprocess.run(['make', 'tools', 'libraries'], cwd=root, check=True)
 if a.music_restoration_ips:
-    subprocess.run(['make', '-j4'], cwd=root, check=True)
+    subprocess.run(['make', f'-j{a.jobs}'], cwd=root, check=True)
     subprocess.run(['python3', 'tools/ring/restore_audio_assets.py', '--patch', str(a.music_restoration_ips)], cwd=root, check=True)
-subprocess.run(['make', 'RING=1', f'RING_MUSIC_RESTORE={int(bool(a.music_restoration_ips))}', f'RING_BOOT={int(a.boot_ring)}', f'RING_MUSIC={a.music}', f'RING_SUNSET_ART={a.sunset_art}', '-j5', 'mksc-ring.gba', 'mksc-ring.sym'], cwd=root, check=True)
+subprocess.run(['make', 'RING=1', f'RING_MUSIC_RESTORE={int(bool(a.music_restoration_ips))}', f'RING_BOOT={int(a.boot_ring)}', f'RING_MUSIC={a.music}', f'RING_SUNSET_ART={a.sunset_art}', f'-j{a.jobs}', 'mksc-ring.gba', 'mksc-ring.sym'], cwd=root, check=True)

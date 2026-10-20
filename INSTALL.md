@@ -76,3 +76,10 @@ mksc.gba: FAILED
 shasum: WARNING: 1 computed checksum did NOT match
 ```
 If you have any issues on supported platforms ask for help in the Discord (see [README.md](README.md))
+
+## Complete releases with Docker
+
+See [the Docker release guide](tools/release/README.md) to build all 16 ring
+variants, the matching stock ROM, and the homebrew proof of concept. Each ROM
+has an IPS patch whose reconstructed bytes and SHA-256 are checked against
+the build. The guide includes Windows PowerShell and Linux commands.
