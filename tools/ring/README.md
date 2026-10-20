@@ -428,3 +428,32 @@ driving, and can be passed to `review_gui.py --fixture` with `--mode gp` to
 review the race visibly. Course-by-course screenshots and strict graphics
 assertions belong to the headless run; the desktop review remains an additional
 sound/graphics check.
+
+For independent checks of saved GUI PNGs or headless PPMs, use
+`check_results_images.py --rom ROM --elf ELF --images IMAGE... --report FILE`.
+It requires Pillow and `arm-none-eabi-nm`, and checks all eight opaque portraits against native ROM
+art and palettes, including their presence in the actual displayed image.
+Native GL's RGB rounding is allowed two levels per channel; missing or
+displaced portraits still fail.
+
+To review a recorded GP finish with sound and preserve its results screens:
+
+```sh
+python3 tools/ring/test_gp_cup.py --runner ../mgba/BUILD/mgba-link \
+  --rom mksc-ring.gba --elf mksc-ring.elf --bios /path/to/gba.bin \
+  --results gp-first --players 8 --cup 4 --engine 1 --bowser-p4 --races 1
+python3 tools/ring/review_gui.py --gui-test ../mgba/BUILD/qt/test-qt-ring_gui \
+  --rom mksc-ring.gba --bios /path/to/gba.bin --mode gp --players 8 \
+  --fixture gp-first/gp-cup-4-8-recorded.csv --engine 100 \
+  --results-symbols mksc-ring.elf --screenshots gp-review
+```
+
+Use the ELF exported alongside that ROM; the launcher reads its local results
+symbol and checks the function bytes against the ROM without requiring an ARM
+toolchain on your desktop. The ordinary `.sym` file contains globals only and
+does not include this local C function. The engine class must match the
+recording. Recordings must use the same console count as the desktop review,
+so the `gp-first` example omits map consoles. The review currently
+opens 2–8 racer windows. Map-console recordings remain covered by the headless
+test and ordinary GUI play. A fresh PNG is required for every window even
+when the screenshot directory already contains older captures.

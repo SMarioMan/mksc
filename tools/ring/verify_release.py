@@ -76,6 +76,7 @@ def logic():
  test('audio','audio-normal',extra=('--frames','24000','--audio-policy','normal'))
  test('gp_cup',extra=('--players','2','3','4','5','6','7','8','--autofire'))
  test('gp_cup','retro-special-cup-maps',variant='mksc-ring-shared',extra=('--players','8','--consoles','9','--cup','4','--engine','1','--bowser-p4','--autofire','--video-log','--results-frames','900'))
+ test('gp_cup','retro-special-ring16',variant='mksc-ring-shared',extra=('--players','8','--consoles','16','--cup','4','--engine','1','--bowser-p4','--races','1','--autofire','--video-log'))
  run('relocation',['python3',root/'tools/ring/audit_relocation.py','--rom',build/'mksc-ring.gba','--elf',build/'mksc-ring.elf','--shifted-rom',build/'mksc-ring-shifted.gba','--shifted-elf',build/'mksc-ring-shifted.elf'])
  test('singleplayer','shifted-singleplayer',variant='mksc-ring-shifted',extra=())
  test('game','shifted-game',variant='mksc-ring-shifted',elf=False,extra=('--players','2','8','--modes','vs','battle','gp'))

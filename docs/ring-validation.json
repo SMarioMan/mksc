@@ -1377,7 +1377,7 @@
     "all_portraits_rendered": true,
     "map_source": "native HUD-loader completion hook",
     "evidence": "/workspace/.setup/results/review-16/fixed-special-150-items",
-    "reported_portrait_issue": "Not reproduced in software; P4/Bowser at 100cc passed a complete Retro Special Cup. Hardware-renderer checks remain open.",
+    "reported_portrait_issue": "Not reproduced: 100cc P4/Bowser passes headless and Linux Qt software/native OpenGL. The intermittent reported symptom remains open.",
     "bowser_p4_100cc": {
       "status": "passed",
       "real_bios": true,
@@ -1388,7 +1388,55 @@
       "rendered_results_frames_checked": 9544,
       "portraits_checked_per_frame": 8,
       "character_id_p4": 2,
-      "evidence": "/workspace/.setup/results/review-16/bowser-p4-100cc-grid"
+      "evidence": "/workspace/.setup/results/review-16/bowser-p4-100cc-grid",
+      "eight_console_first_results": {
+        "status": "passed",
+        "results_frames": 1800,
+        "rendered_results_frames_checked": 14184,
+        "evidence": "/workspace/.setup/results/review-16/bowser-p4-100cc-eight"
+      }
+    },
+    "sixteen_console_gp": {
+      "status": "passed",
+      "racers": 8,
+      "map_consoles": 8,
+      "courses": 1,
+      "engine_cc": 100,
+      "map_geometry_identical": true,
+      "protocol_errors": 0,
+      "timeouts": 0,
+      "evidence": "/workspace/.setup/results/review-16/bowser-p4-100cc-sixteen"
+    },
+    "qt_portraits": {
+      "status": "passed",
+      "real_bios": true,
+      "engine_cc": 100,
+      "local_p4_character": "Bowser",
+      "racers": 8,
+      "renderers": [
+        "software",
+        "native OpenGL"
+      ],
+      "captures_per_renderer": 8,
+      "all_native_portraits_visible": true,
+      "rgb_rounding_max_error": 2,
+      "evidence": "/workspace/.setup/results/review-16/qt-hardware-and-desktop-portraits.json"
+    },
+    "additional_bowser_engine_checks": {
+      "50": {
+        "status": "passed",
+        "courses": 1,
+        "results_frames": 900,
+        "rendered_results_frames_checked": 6984,
+        "evidence": "/workspace/.setup/results/review-16/bowser-p4-50cc-eight"
+      },
+      "150": {
+        "status": "passed",
+        "courses": 1,
+        "results_frames": 900,
+        "rendered_results_frames_checked": 6984,
+        "evidence": "/workspace/.setup/results/review-16/bowser-p4-150cc-eight"
+      }
     }
   },
   "docker_release": {
@@ -1410,5 +1458,56 @@
     "gameplay_tests_run_by_packaging": false,
     "evidence": "/workspace/.setup/results/review-16/docker-audit.log",
     "guide": "../tools/release/README.md"
+  },
+  "desktop_gp_results_review": {
+    "status": "passed",
+    "real_bios": true,
+    "players": 8,
+    "engine_cc": 100,
+    "elapsed_ms": 255676,
+    "measurement_frames": 2090,
+    "measurement_scope": "35-second final observation window after recorded GP finish",
+    "video_fps": 60.0,
+    "simulation_updates_per_video_frame": 1.0,
+    "underrun_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "dropped_pcm_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "fresh_results_pngs": 8,
+    "evidence": "/workspace/.setup/results/review-16/desktop-gp-results.log"
+  },
+  "qt_frame_readback": {
+    "status": "passed",
+    "scales": [
+      "default",
+      "zero",
+      "negative",
+      "2x"
+    ],
+    "renderers": [
+      "software",
+      "native OpenGL"
+    ],
+    "paused_frame_view": true,
+    "evidence": [
+      "/workspace/.setup/results/review-16/qt-frame-view-software.log",
+      "/workspace/.setup/results/review-16/qt-frame-view-hardware-ready.log"
+    ]
   }
 }

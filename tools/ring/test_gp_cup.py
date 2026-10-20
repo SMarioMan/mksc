@@ -136,6 +136,7 @@ for count in a.players:
         assert sum(points) == 19 * a.races, (name, points)
         drivers = node['game']['drivers']
         assert len(drivers) == 8 and node['game']['humanCount'] == count
+        assert node['game']['engineClass'] == a.engine, 'Recorded engine class differs from the requested fixture'
         if a.bowser_p4:
             assert drivers[3]['character'] & 7 == 2, 'P4 must be Bowser'
             assert drivers[7]['character'] & 7 == 6, 'P8 must be Toad'
@@ -200,9 +201,10 @@ for count in a.players:
         (a.results/(name+'-graphics.json')).write_text(json.dumps(report,indent=2)+'\n')
         # Verify the displayed image too: nonempty VRAM alone did not catch
         # the reported black screen. These captures are taken after settling.
-        map_captures = list(a.results.glob(name+'-results-f*-p8.ppm'))
+        map_captures = [capture for slot in range(8,a.consoles or 8)
+                        for capture in a.results.glob(name+f'-results-f*-p{slot}.ppm')]
         if a.consoles:
-            assert len(map_captures) == a.races, 'Missing course-by-course map screenshots'
+            assert len(map_captures) == a.races * (a.consoles - 8), 'Missing course-by-course map screenshots'
             for capture in map_captures:
                 header, size, maximum, pixels = capture.read_bytes().split(b'\n',3)
                 assert header == b'P6' and size == b'240 160' and maximum == b'255'
@@ -214,7 +216,10 @@ for count in a.players:
         if a.consoles:
             assert all(map_frames[h,slot] >= 300 for h in expected_headers for slot in range(8,a.consoles)), 'Missing map course coverage'
             assert all(len(geometry[h,slot]) == 1 for h in expected_headers for slot in range(8,a.consoles)), 'Course map changed during results'
-            assert len({next(iter(geometry[h,8])) for h in expected_headers}) == a.races, 'A previous course map was reused'
+            assert all(len({next(iter(geometry[h,slot])) for h in expected_headers}) == a.races
+                       for slot in range(8,a.consoles)), 'A previous course map was reused'
+            assert all(geometry[h,slot] == geometry[h,8] for h in expected_headers
+                       for slot in range(8,a.consoles)), 'Map consoles show different course geometry'
         report['status'] = 'passed'
         (a.results/(name+'-graphics.json')).write_text(json.dumps(report,indent=2)+'\n')
     print(f'PASS {name}: {a.races} five-lap races, common {19*a.races}-point total, {count} humans/{8-count} CPUs', flush=True)
